@@ -23,6 +23,80 @@
 		};
 		return paths[icon] ?? paths.doc;
 	}
+
+	const miniDayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+	const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+	const sidebarCalendarSeed = $page.data.sidebarCalendar as
+		| { year: number; month: number; markers: Record<string, number> }
+		| null
+		| undefined;
+	let miniYear = $state(sidebarCalendarSeed?.year ?? new Date().getFullYear());
+	let miniMonth = $state(sidebarCalendarSeed?.month ?? new Date().getMonth());
+	let miniMarkers = $state<Record<string, number>>(sidebarCalendarSeed?.markers ?? {});
+	let miniLoading = $state(false);
+
+	$effect(() => {
+		const seed = $page.data.sidebarCalendar as
+			| { year: number; month: number; markers: Record<string, number> }
+			| null
+			| undefined;
+		if (!seed) return;
+		miniYear = seed.year;
+		miniMonth = seed.month;
+		miniMarkers = seed.markers;
+	});
+
+	function localDateKey(date: Date): string {
+		const y = date.getFullYear();
+		const m = String(date.getMonth() + 1).padStart(2, '0');
+		const d = String(date.getDate()).padStart(2, '0');
+		return `${y}-${m}-${d}`;
+	}
+
+	function miniMonthGrid(): Array<{ date: Date; inMonth: boolean; hasPost: boolean; count: number }> {
+		const anchor = new Date(miniYear, miniMonth, 1);
+		const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+		const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+		const offsetToMonday = (monthStart.getDay() + 6) % 7;
+		const gridStart = new Date(monthStart);
+		gridStart.setDate(monthStart.getDate() - offsetToMonday);
+		return Array.from({ length: 42 }, (_, i) => {
+			const date = new Date(gridStart);
+			date.setDate(gridStart.getDate() + i);
+			const key = localDateKey(date);
+			const count = miniMarkers[key] ?? 0;
+			return {
+				date,
+				inMonth: date >= monthStart && date <= monthEnd,
+				hasPost: count > 0,
+				count
+			};
+		});
+	}
+
+	async function loadMiniMonth(year: number, month: number) {
+		miniLoading = true;
+		try {
+			const res = await fetch(`/api/sidebar-calendar?year=${year}&month=${month}`);
+			if (!res.ok) return;
+			const payload = (await res.json()) as {
+				year: number;
+				month: number;
+				markers: Record<string, number>;
+			};
+			miniYear = payload.year;
+			miniMonth = payload.month;
+			miniMarkers = payload.markers;
+		} finally {
+			miniLoading = false;
+		}
+	}
+
+	function moveMiniMonth(dir: -1 | 1) {
+		const anchor = new Date(miniYear, miniMonth, 1);
+		anchor.setMonth(anchor.getMonth() + dir);
+		loadMiniMonth(anchor.getFullYear(), anchor.getMonth());
+	}
 </script>
 
 <!-- Mobile backdrop (only when sidebar open) -->
@@ -36,7 +110,7 @@
 {/if}
 
 <aside
-	class="sidebar fixed left-0 top-0 z-50 h-full w-[220px] -translate-x-full transition-transform duration-200 ease-out md:translate-x-0"
+	class="sidebar fixed left-0 top-0 z-50 h-full w-[280px] -translate-x-full transition-transform duration-200 ease-out md:translate-x-0"
 	class:translate-x-0={$sidebarOpen}
 	aria-label="Main navigation"
 >
@@ -60,6 +134,52 @@
 		</div>
 		<!-- Main menu -->
 		<nav class="flex-1 overflow-y-auto p-3">
+			<div class="mb-4 rounded-lg border border-[var(--sidebar-border)] bg-black/10 p-2">
+				<div class="mb-2 flex items-center justify-between px-1">
+					<button
+						type="button"
+						onclick={() => moveMiniMonth(-1)}
+						class="inline-flex h-7 w-7 items-center justify-center rounded text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)]"
+						aria-label="Previous month"
+					>
+						←
+					</button>
+					<p class="text-xs font-semibold text-[var(--sidebar-text)]">
+						{monthNames[miniMonth]} {miniYear}
+					</p>
+					<button
+						type="button"
+						onclick={() => moveMiniMonth(1)}
+						class="inline-flex h-7 w-7 items-center justify-center rounded text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)]"
+						aria-label="Next month"
+					>
+						→
+					</button>
+				</div>
+				<div class="grid grid-cols-7 gap-1 px-1 pb-1">
+					{#each miniDayNames as dayName}
+						<div class="text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--sidebar-text-muted)]">
+							{dayName}
+						</div>
+					{/each}
+				</div>
+				<div class="grid grid-cols-7 gap-1">
+					{#each miniMonthGrid() as cell}
+						<div
+							class="relative flex h-7 items-center justify-center rounded text-[11px] {cell.inMonth ? 'text-[var(--sidebar-text)]' : 'text-[var(--sidebar-text-muted)] opacity-50'}"
+							title={cell.count > 0 ? `${cell.count} post(s)` : undefined}
+						>
+							{cell.date.getDate()}
+							{#if cell.hasPost}
+								<span class="absolute bottom-0.5 h-1.5 w-1.5 rounded-full bg-violet-300"></span>
+							{/if}
+						</div>
+					{/each}
+				</div>
+				{#if miniLoading}
+					<p class="mt-1 px-1 text-[10px] text-[var(--sidebar-text-muted)]">Loading…</p>
+				{/if}
+			</div>
 			<p class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-[var(--sidebar-text-muted)]">Main menu</p>
 			<ul class="space-y-0.5">
 				{#each navItems as item}
@@ -84,9 +204,25 @@
 		<div class="border-t border-[var(--sidebar-border)] p-3 space-y-2">
 			{#if $page.data.session}
 				<div class="px-3">
-					<p class="truncate text-xs text-[var(--sidebar-text-muted)]">
-						{$page.data.session.user?.email ?? $page.data.session.user?.name ?? 'Signed in'}
-					</p>
+					<div class="flex items-center gap-2">
+						{#if $page.data.session.user?.image}
+							<img
+								src={$page.data.session.user.image}
+								alt="Profile"
+								class="h-7 w-7 rounded-full border border-[var(--sidebar-border)] object-cover"
+								loading="lazy"
+							/>
+						{:else}
+							<span class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[var(--sidebar-border)] bg-[var(--sidebar-hover)] text-[11px] font-semibold text-[var(--sidebar-text)]">
+								{($page.data.session.user?.email ?? $page.data.session.user?.name ?? 'U')
+									.slice(0, 1)
+									.toUpperCase()}
+							</span>
+						{/if}
+						<p class="truncate text-xs text-[var(--sidebar-text-muted)]">
+							{$page.data.session.user?.email ?? $page.data.session.user?.name ?? 'Signed in'}
+						</p>
+					</div>
 				</div>
 				<form method="POST" action="/auth/login?/signout" class="px-0">
 					<input type="hidden" name="options.redirectTo" value="/auth/login" />

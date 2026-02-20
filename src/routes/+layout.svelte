@@ -41,7 +41,7 @@ import { page } from '$app/stores';
 	{/if}
 
 	<main
-		class="min-h-screen { $page.url.pathname.startsWith('/auth') ? 'bg-[var(--bg)]' : 'bg-[var(--sidebar-bg)] md:pl-[220px]' }"
+		class="min-h-screen { $page.url.pathname.startsWith('/auth') ? 'bg-[var(--bg)]' : 'bg-[var(--sidebar-bg)] md:pl-[280px]' }"
 	>
 		<div class="{ $page.url.pathname.startsWith('/auth') ? 'mx-auto max-w-md px-4 pb-8 pt-10' : 'mx-2 pt-2 mb-4 md:mx-4 md:pt-4 md:mb-4 flex min-h-[calc(100vh-2rem)] flex-col md:min-h-[calc(100vh-3rem)]' }">
 			<div class="content-area flex flex-1 flex-col rounded-xl border border-[var(--sidebar-border)] bg-[var(--surface)]">
