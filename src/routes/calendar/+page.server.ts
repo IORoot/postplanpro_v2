@@ -33,12 +33,26 @@ function rangeFor(view: CalendarView, anchor: Date): { start: Date; end: Date } 
 	start.setHours(0, 0, 0, 0);
 	end.setHours(23, 59, 59, 999);
 
-	if (view === 'day') return { start, end };
-	if (view === 'week') {
+	if (view === 'day') {
+		// Day view still renders one day of posts, but the quick week strip needs
+		// markers for every day in the current week.
 		const offsetToMonday = (start.getDay() + 6) % 7;
 		start.setDate(start.getDate() - offsetToMonday);
 		end.setTime(start.getTime());
 		end.setDate(start.getDate() + 6);
+		end.setHours(23, 59, 59, 999);
+		return { start, end };
+	}
+	if (view === 'week') {
+		// Week view UI shows all weeks for the current month in the week strip.
+		// Load the whole month span expanded to Monday..Sunday boundaries so
+		// markers are visible for every week chip, not only the active week.
+		start.setDate(1);
+		const offsetToMonday = (start.getDay() + 6) % 7;
+		start.setDate(start.getDate() - offsetToMonday);
+		end.setFullYear(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+		const offsetToSunday = (7 - end.getDay()) % 7;
+		end.setDate(end.getDate() + offsetToSunday);
 		end.setHours(23, 59, 59, 999);
 		return { start, end };
 	}
@@ -52,7 +66,12 @@ function rangeFor(view: CalendarView, anchor: Date): { start: Date; end: Date } 
 		end.setMonth(11, 31);
 		return { start, end };
 	}
-	// agenda + schedule use a forward-looking 60-day range from anchor
+	if (view === 'schedule') {
+		start.setMonth(0, 1);
+		end.setMonth(11, 31);
+		return { start, end };
+	}
+	// agenda fallback range (not used in query; kept for labels)
 	end.setDate(start.getDate() + 59);
 	return { start, end };
 }
@@ -72,8 +91,17 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
 	const db = getDatabase();
 	const posts: CalendarPostRow[] = accountId
-		? (db
-				.prepare(
+		? ((view === 'agenda'
+				? db.prepare(
+					`
+		SELECT p.id, p.title, p.image_url, p.color, p.scheduled_at, p.status, w.name as webhook_name
+		FROM post p
+		JOIN webhook_config w ON p.webhook_id = w.id
+		WHERE p.account_id = ? AND p.scheduled_at IS NOT NULL
+		ORDER BY p.scheduled_at
+	`
+				  ).all(accountId)
+				: db.prepare(
 					`
 		SELECT p.id, p.title, p.image_url, p.color, p.scheduled_at, p.status, w.name as webhook_name
 		FROM post p
@@ -81,8 +109,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		WHERE p.account_id = ? AND p.scheduled_at IS NOT NULL AND p.scheduled_at >= ? AND p.scheduled_at <= ?
 		ORDER BY p.scheduled_at
 	`
-				)
-				.all(accountId, startStr, endStr) as CalendarPostRow[])
+				  ).all(accountId, startStr, endStr)) as CalendarPostRow[])
 		: [];
 
 	return {

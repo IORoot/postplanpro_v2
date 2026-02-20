@@ -165,15 +165,17 @@
 				</div>
 				<div class="grid grid-cols-7 gap-1">
 					{#each miniMonthGrid() as cell}
-						<div
-							class="relative flex h-7 items-center justify-center rounded text-[11px] {cell.inMonth ? 'text-[var(--sidebar-text)]' : 'text-[var(--sidebar-text-muted)] opacity-50'}"
+						<a
+							href={`/calendar?view=day&date=${localDateKey(cell.date)}`}
+							class="relative flex h-7 items-center justify-center rounded text-[11px] {cell.inMonth ? 'text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)]' : 'text-[var(--sidebar-text-muted)] opacity-50 hover:bg-[var(--sidebar-hover)]'}"
 							title={cell.count > 0 ? `${cell.count} post(s)` : undefined}
+							onclick={closeSidebar}
 						>
 							{cell.date.getDate()}
 							{#if cell.hasPost}
 								<span class="absolute bottom-0.5 h-1.5 w-1.5 rounded-full bg-violet-300"></span>
 							{/if}
-						</div>
+						</a>
 					{/each}
 				</div>
 				{#if miniLoading}

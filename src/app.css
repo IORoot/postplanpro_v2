@@ -57,12 +57,29 @@ body {
 .content-card {
   background-color: var(--surface);
   border-radius: 0.75rem;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
+  box-shadow: none;
   border: 1px solid var(--border);
 }
 .content-card-accent {
   border-left-width: 4px;
   border-left-color: var(--primary);
+}
+
+/* Flat UI preference: disable all Tailwind drop shadows globally */
+.shadow-sm,
+.shadow,
+.shadow-md,
+.shadow-lg,
+.shadow-xl,
+.shadow-2xl,
+.drop-shadow-sm,
+.drop-shadow,
+.drop-shadow-md,
+.drop-shadow-lg,
+.drop-shadow-xl,
+.drop-shadow-2xl {
+  box-shadow: none !important;
+  filter: none !important;
 }
 
 /* High-contrast alerts and status badges (WCAG AA) */
