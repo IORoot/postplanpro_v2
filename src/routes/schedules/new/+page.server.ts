@@ -7,7 +7,9 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	create: async ({ request }) => {
+	create: async ({ request, locals }) => {
+		const accountId = locals.userId;
+		if (!accountId) return fail(401, { error: 'Unauthorized' });
 		const data = await request.formData();
 		const name = (data.get('name') as string)?.trim();
 		const description = (data.get('description') as string)?.trim() || null;
@@ -15,7 +17,7 @@ export const actions: Actions = {
 
 		const db = getDatabase();
 		const id = crypto.randomUUID();
-		db.prepare('INSERT INTO schedule (id, name, description) VALUES (?, ?, ?)').run(id, name, description);
+		db.prepare('INSERT INTO schedule (id, account_id, name, description) VALUES (?, ?, ?, ?)').run(id, accountId, name, description);
 
 		// Rules (recurring) or legacy slots
 		const rulesJson = (data.get('rules_json') as string)?.trim();

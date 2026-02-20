@@ -81,7 +81,23 @@
 				{/each}
 			</ul>
 		</nav>
-		<div class="p-3">
+		<div class="border-t border-[var(--sidebar-border)] p-3 space-y-2">
+			{#if $page.data.session}
+				<div class="px-3">
+					<p class="truncate text-xs text-[var(--sidebar-text-muted)]">
+						{$page.data.session.user?.email ?? $page.data.session.user?.name ?? 'Signed in'}
+					</p>
+				</div>
+				<form method="POST" action="/auth/login?/signout" class="px-0">
+					<input type="hidden" name="options.redirectTo" value="/auth/login" />
+					<button
+						type="submit"
+						class="flex w-full items-center gap-3 rounded-r-lg px-3 py-2.5 text-sm font-medium text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)] min-h-[44px]"
+					>
+						Sign out
+					</button>
+				</form>
+			{/if}
 			<button
 				type="button"
 				class="flex w-full items-center gap-3 rounded-r-lg px-3 py-2.5 text-sm font-medium text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)] min-h-[44px]"

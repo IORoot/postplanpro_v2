@@ -3,7 +3,7 @@
  * Mirrors generateSlots logic without DB; used for mini calendar previews in schedule UI.
  */
 
-import cronParser from 'cron-parser';
+import { CronExpressionParser } from 'cron-parser';
 
 const MAX_PREVIEW_SLOTS_PER_RULE = 100;
 const PREVIEW_DAYS = 42;
@@ -110,7 +110,7 @@ function generateFromRule(
 			try {
 				const options: { currentDate?: Date; endDate?: Date } = { currentDate: start };
 				options.endDate = effectiveEnd;
-				const interval = cronParser.parseExpression(expr, options);
+				const interval = CronExpressionParser.parse(expr, options);
 				for (let i = 0; i < limit; i++) {
 					const next = interval.next();
 					const d = next.toDate();

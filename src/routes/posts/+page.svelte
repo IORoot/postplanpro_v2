@@ -70,15 +70,23 @@
 	{:else}
 		{#each data.posts as post}
 			{@const statusClass = post.status === 'draft' ? 'status-draft' : post.status === 'scheduled' ? 'status-scheduled' : post.status === 'sent' ? 'status-sent' : 'status-failed'}
-			<div class="content-card content-card-accent rounded-xl p-4 shadow-sm">
+			<div
+				class="content-card content-card-accent rounded-xl p-4 shadow-sm"
+				style={`background-color: ${post.color ?? 'var(--surface)'}; border-left-color: ${post.color ?? 'var(--primary)'};`}
+			>
 				<div class="flex flex-wrap items-start justify-between gap-4">
-					<div class="min-w-0 flex-1">
+					<div class="min-w-0 flex flex-1 items-start gap-3">
+						{#if post.image_url}
+							<img src={post.image_url} alt={"Preview for " + post.title} class="h-14 w-14 rounded object-cover border border-[var(--border)]" loading="lazy" />
+						{/if}
+						<div class="min-w-0 flex-1">
 						<a href="/posts/{post.id}" class="font-semibold text-[var(--primary)] hover:underline">{post.title}</a>
-						<div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--text-muted)]">
+							<div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--text-muted)]">
 							<span>{post.webhook_name}</span>
 							<span>{post.scheduled_at ? new Date(post.scheduled_at).toLocaleString() : '—'}</span>
 							<span class="rounded px-2 py-0.5 text-xs font-medium {statusClass}">{post.status}</span>
 						</div>
+					</div>
 					</div>
 					<div class="flex flex-wrap items-center gap-2">
 						<button

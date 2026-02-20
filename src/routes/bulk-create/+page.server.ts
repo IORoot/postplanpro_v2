@@ -1,11 +1,14 @@
 import { getDatabase } from '$lib/db/index.js';
+import { randomTailwindPostColor } from '$lib/postColors.js';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ locals }) => {
+	const accountId = locals.userId;
+	if (!accountId) return { webhooks: [], schedules: [] };
 	const db = getDatabase();
-	const webhooks = db.prepare('SELECT id, name FROM webhook_config ORDER BY name').all() as { id: string; name: string }[];
-	const schedules = db.prepare('SELECT id, name FROM schedule ORDER BY name').all() as { id: string; name: string }[];
+	const webhooks = db.prepare('SELECT id, name FROM webhook_config WHERE account_id = ? ORDER BY name').all(accountId) as { id: string; name: string }[];
+	const schedules = db.prepare('SELECT id, name FROM schedule WHERE account_id = ? ORDER BY name').all(accountId) as { id: string; name: string }[];
 	return { webhooks, schedules };
 };
 
@@ -27,7 +30,8 @@ function stringValue(v: unknown): string {
 }
 
 export const actions: Actions = {
-	fetchWordPress: async ({ request }) => {
+	fetchWordPress: async ({ request, locals }) => {
+		if (!locals.userId) return fail(401, { error: "Unauthorized" });
 		const data = await request.formData();
 		const siteUrl = (data.get('site_url') as string)?.trim()?.replace(/\/$/, '');
 		const auth = (data.get('auth') as string)?.trim() || '';
@@ -46,7 +50,9 @@ export const actions: Actions = {
 			return fail(400, { error: msg });
 		}
 	},
-	importFromWordPress: async ({ request }) => {
+	importFromWordPress: async ({ request, locals }) => {
+		const accountId = locals.userId;
+		if (!accountId) return fail(401, { error: "Unauthorized" });
 		const data = await request.formData();
 		const siteUrl = (data.get('site_url') as string)?.trim()?.replace(/\/$/, '');
 		const auth = (data.get('auth') as string)?.trim() || '';
@@ -78,8 +84,18 @@ export const actions: Actions = {
 		}
 
 		const db = getDatabase();
+		const webhook = db
+			.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
+			.get(webhookId, accountId) as { id: string } | undefined;
+		if (!webhook) return fail(400, { error: 'Invalid webhook' });
+		if (scheduleId) {
+			const schedule = db
+				.prepare('SELECT id FROM schedule WHERE id = ? AND account_id = ?')
+				.get(scheduleId, accountId) as { id: string } | undefined;
+			if (!schedule) return fail(400, { error: 'Invalid schedule' });
+		}
 		const insertPost = db.prepare(
-			'INSERT INTO post (id, webhook_id, title, content, status) VALUES (?, ?, ?, ?, ?)'
+			'INSERT INTO post (id, account_id, webhook_id, title, content, color, status) VALUES (?, ?, ?, ?, ?, ?, ?)'
 		);
 		const insertField = db.prepare('INSERT INTO post_field (id, post_id, key, type, value) VALUES (?, ?, ?, ?, ?)');
 
@@ -89,7 +105,15 @@ export const actions: Actions = {
 				const title = stringValue(getAtPath(item, titlePath));
 				const content = stringValue(getAtPath(item, contentPath));
 				const id = crypto.randomUUID();
-				insertPost.run(id, webhookId, title || '(no title)', content, 'draft');
+				insertPost.run(
+					id,
+					accountId,
+					webhookId,
+					title || '(no title)',
+					content,
+					randomTailwindPostColor(),
+					'draft'
+				);
 				createdIds.push(id);
 				for (const m of customMapping) {
 					const val = getAtPath(item, m.path);
@@ -103,11 +127,17 @@ export const actions: Actions = {
 
 		// Optionally apply schedule
 		if (scheduleId && createdIds.length > 0) {
-			const slots = db.prepare('SELECT id, scheduled_at, order_index FROM schedule_slot WHERE schedule_id = ? ORDER BY order_index').all(scheduleId) as { id: string; scheduled_at: string; order_index: number }[];
-			const scheduleFields = db.prepare('SELECT key, type, value FROM schedule_field WHERE schedule_id = ?').all(scheduleId) as { key: string; type: string; value: string | null }[];
-			const updatePost = db.prepare('UPDATE post SET scheduled_at = ?, schedule_id = ?, status = ?, updated_at = datetime("now") WHERE id = ?');
+			const slots = db
+				.prepare(
+					'SELECT id, scheduled_at, order_index FROM schedule_slot WHERE schedule_id = ? ORDER BY order_index'
+				)
+				.all(scheduleId) as { id: string; scheduled_at: string; order_index: number }[];
+			const scheduleFields = db
+				.prepare('SELECT key, type, value FROM schedule_field WHERE schedule_id = ?')
+				.all(scheduleId) as { key: string; type: string; value: string | null }[];
+			const updatePost = db.prepare("UPDATE post SET scheduled_at = ?, schedule_id = ?, status = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
 			for (let i = 0; i < Math.min(createdIds.length, slots.length); i++) {
-				updatePost.run(slots[i].scheduled_at, scheduleId, 'scheduled', createdIds[i]);
+				updatePost.run(slots[i].scheduled_at, scheduleId, 'scheduled', createdIds[i], accountId);
 				for (const sf of scheduleFields) {
 					const fieldId = crypto.randomUUID();
 					db.prepare('INSERT INTO post_field (id, post_id, key, type, value) VALUES (?, ?, ?, ?, ?)').run(fieldId, createdIds[i], sf.key, sf.type, sf.value ?? '');

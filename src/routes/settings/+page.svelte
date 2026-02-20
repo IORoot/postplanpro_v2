@@ -22,6 +22,30 @@
 	// Global edit state
 	let editingGlobalId = $state<string | null>(null);
 	let newGlobal = $state(false);
+
+	// Template edit state
+	let editingTemplateId = $state<string | null>(null);
+	let newTemplate = $state(false);
+	let editingTemplateFields = $state<{ key: string; type: string; value: string }[]>([]);
+	let newTemplateFields = $state<{ key: string; type: string; value: string }[]>([
+		{ key: '', type: 'string', value: '' }
+	]);
+
+	function openEditTemplate(template: { id: string; fields?: { key: string; type: string; value: string }[] }) {
+		editingTemplateId = template.id;
+		editingTemplateFields = (template.fields ?? []).map((f) => ({
+			key: f.key,
+			type: f.type,
+			value: f.value
+		}));
+		if (editingTemplateFields.length === 0) {
+			editingTemplateFields = [{ key: '', type: 'string', value: '' }];
+		}
+	}
+	function openNewTemplate() {
+		newTemplate = true;
+		newTemplateFields = [{ key: '', type: 'string', value: '' }];
+	}
 </script>
 
 <svelte:head>
@@ -148,6 +172,120 @@
 	</div>
 	{#if !newWebhook}
 		<button type="button" onclick={openNewWebhook} class="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add webhook</button>
+	{/if}
+</section>
+
+<!-- Custom field templates -->
+<section class="mt-10">
+	<h2 class="text-lg font-medium text-[var(--text)]">Custom field templates</h2>
+	<p class="mt-1 text-sm text-[var(--text-muted)]">Reusable field structures for post custom fields. Use dotted keys for nested output (e.g. instagram.title).</p>
+
+	<div class="mt-4 space-y-3">
+		{#each data.templates as t}
+			{#if editingTemplateId === t.id}
+				<form
+					method="POST"
+					action="?/updateTemplate"
+					use:enhance={() => {
+						editingTemplateId = null;
+						return invalidateAll();
+					}}
+					class="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4"
+				>
+					<input type="hidden" name="id" value={t.id} />
+					<input type="hidden" name="fields_json" value={JSON.stringify(editingTemplateFields)} />
+					<div>
+						<label for="edit-template-name" class="block text-sm font-medium text-[var(--text)]">Template name</label>
+						<input id="edit-template-name" type="text" name="name" value={t.name} required class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)]" />
+					</div>
+					<div class="mt-3 space-y-2">
+						{#each editingTemplateFields as _, i}
+							<div class="flex flex-wrap gap-2">
+								<input type="text" bind:value={editingTemplateFields[i].key} placeholder="field.path or array[0]" class="rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-w-[180px]" />
+								<select bind:value={editingTemplateFields[i].type} class="rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)]">
+									<option value="string">string</option>
+									<option value="number">number</option>
+									<option value="boolean">boolean</option>
+									<option value="json">json</option>
+								</select>
+								<input type="text" bind:value={editingTemplateFields[i].value} placeholder="Value (JSON for json type)" class="flex-1 min-w-[200px] rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)]" />
+								<button type="button" onclick={() => editingTemplateFields = editingTemplateFields.filter((_, j) => j !== i)} class="rounded border border-red-400 px-2 py-1 text-sm text-red-800 dark:border-red-500 dark:text-red-200 min-h-[44px]">Remove</button>
+							</div>
+						{/each}
+					</div>
+					<button type="button" onclick={() => editingTemplateFields = [...editingTemplateFields, { key: '', type: 'string', value: '' }]} class="mt-2 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add field</button>
+					<div class="mt-3 flex gap-2">
+						<button type="submit" class="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 min-h-[44px]">Save</button>
+						<button type="button" onclick={() => (editingTemplateId = null)} class="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">Cancel</button>
+					</div>
+				</form>
+			{:else}
+				<div class="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+					<div class="flex flex-wrap items-center justify-between gap-2">
+						<div>
+							<p class="font-medium text-[var(--text)]">{t.name}</p>
+							<p class="text-xs text-[var(--text-muted)]">{t.is_default ? 'Default template' : 'User template'}</p>
+						</div>
+						<div class="flex gap-2">
+							{#if !t.is_default}
+								<button type="button" onclick={() => openEditTemplate(t)} class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] min-w-[44px]">Edit</button>
+								<form method="POST" action="?/deleteTemplate" use:enhance={() => invalidateAll()} class="inline">
+									<input type="hidden" name="id" value={t.id} />
+									<button type="submit" class="rounded-lg border border-red-400 px-3 py-2 text-sm text-red-800 hover:bg-red-100 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/40 min-h-[44px] min-w-[44px]">Delete</button>
+								</form>
+							{/if}
+						</div>
+					</div>
+					<div class="mt-2 space-y-1 text-xs text-[var(--text-muted)]">
+						{#each t.fields as field}
+							<div><code>{field.key}</code> ({field.type})</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
+		{/each}
+
+		{#if newTemplate}
+			<form
+				method="POST"
+				action="?/createTemplate"
+				use:enhance={() => {
+					newTemplate = false;
+					return invalidateAll();
+				}}
+				class="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4"
+			>
+				<input type="hidden" name="fields_json" value={JSON.stringify(newTemplateFields)} />
+				<div>
+					<label for="new-template-name" class="block text-sm font-medium text-[var(--text)]">Template name</label>
+					<input id="new-template-name" type="text" name="name" required placeholder="e.g. Instagram Reel" class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)]" />
+				</div>
+				<div class="mt-3 space-y-2">
+					{#each newTemplateFields as _, i}
+						<div class="flex flex-wrap gap-2">
+							<input type="text" bind:value={newTemplateFields[i].key} placeholder="field.path or array[0]" class="rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-w-[180px]" />
+							<select bind:value={newTemplateFields[i].type} class="rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)]">
+								<option value="string">string</option>
+								<option value="number">number</option>
+								<option value="boolean">boolean</option>
+								<option value="json">json</option>
+							</select>
+							<input type="text" bind:value={newTemplateFields[i].value} placeholder="Value (JSON for json type)" class="flex-1 min-w-[200px] rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)]" />
+							<button type="button" onclick={() => newTemplateFields = newTemplateFields.filter((_, j) => j !== i)} class="rounded border border-red-400 px-2 py-1 text-sm text-red-800 dark:border-red-500 dark:text-red-200 min-h-[44px]">Remove</button>
+						</div>
+					{/each}
+				</div>
+				<button type="button" onclick={() => newTemplateFields = [...newTemplateFields, { key: '', type: 'string', value: '' }]} class="mt-2 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add field</button>
+				<div class="mt-3 flex gap-2">
+					<button type="submit" class="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 min-h-[44px]">Add template</button>
+					<button type="button" onclick={() => (newTemplate = false)} class="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">Cancel</button>
+				</div>
+			</form>
+		{/if}
+	</div>
+
+	{#if !newTemplate}
+		<button type="button" onclick={openNewTemplate} class="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add template</button>
 	{/if}
 </section>
 

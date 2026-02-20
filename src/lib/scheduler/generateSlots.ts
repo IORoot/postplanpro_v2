@@ -1,5 +1,5 @@
 import { getDatabase } from '$lib/db/index.js';
-import cronParser from 'cron-parser';
+import { CronExpressionParser } from 'cron-parser';
 
 const MAX_SLOTS_PER_RULE = 500;
 const MAX_TOTAL_SLOTS = 2000;
@@ -111,7 +111,7 @@ function generateFromRule(
 			try {
 				const options: { currentDate?: Date; endDate?: Date } = { currentDate: start };
 				if (end) options.endDate = end;
-				const interval = cronParser.parseExpression(expr, options);
+				const interval = CronExpressionParser.parse(expr, options);
 				for (let i = 0; i < cap; i++) {
 					const next = interval.next();
 					const d = next.toDate();
@@ -219,13 +219,28 @@ function generateFromRule(
  * Uses schedule_rule first; if no rules, falls back to schedule_slot (fixed slots).
  * Returns ISO-like strings "YYYY-MM-DD HH:MM:SS" for SQLite.
  */
-export function generateSlots(scheduleId: string, count: number, fromDate?: Date): string[] {
+export function generateSlots(
+	scheduleId: string,
+	count: number,
+	fromDate?: Date,
+	accountId?: string
+): string[] {
 	const db = getDatabase();
 	const from = fromDate ?? new Date();
 
 	const rules = db
-		.prepare('SELECT type, config, start_at, end_at, order_index FROM schedule_rule WHERE schedule_id = ? ORDER BY order_index')
-		.all(scheduleId) as { type: string; config: string; start_at: string | null; end_at: string | null; order_index: number }[];
+		.prepare(
+			'SELECT r.type, r.config, r.start_at, r.end_at, r.order_index FROM schedule_rule r JOIN schedule s ON s.id = r.schedule_id WHERE r.schedule_id = ?' +
+				(accountId ? ' AND s.account_id = ?' : '') +
+				' ORDER BY r.order_index'
+		)
+		.all(...(accountId ? [scheduleId, accountId] : [scheduleId])) as {
+		type: string;
+		config: string;
+		start_at: string | null;
+		end_at: string | null;
+		order_index: number;
+	}[];
 
 	if (rules.length > 0) {
 		const allSlots: string[] = [];
@@ -248,8 +263,12 @@ export function generateSlots(scheduleId: string, count: number, fromDate?: Date
 
 	// Fallback: fixed schedule_slot (legacy)
 	const slots = db
-		.prepare('SELECT scheduled_at FROM schedule_slot WHERE schedule_id = ? ORDER BY order_index')
-		.all(scheduleId) as { scheduled_at: string }[];
+		.prepare(
+			'SELECT ss.scheduled_at FROM schedule_slot ss JOIN schedule s ON s.id = ss.schedule_id WHERE ss.schedule_id = ?' +
+				(accountId ? ' AND s.account_id = ?' : '') +
+				' ORDER BY ss.order_index'
+		)
+		.all(...(accountId ? [scheduleId, accountId] : [scheduleId])) as { scheduled_at: string }[];
 	return slots.slice(0, count).map((r) => r.scheduled_at);
 }
 
@@ -267,17 +286,30 @@ function normalizeSlot(s: string): string {
  * Return the next available slot for a schedule that is not already used by another post with this schedule.
  * When editing, pass excludePostId so the current post's slot is not considered "taken".
  */
-export function getNextFreeSlot(scheduleId: string, excludePostId?: string | null): string | null {
+export function getNextFreeSlot(
+	scheduleId: string,
+	excludePostId?: string | null,
+	accountId?: string
+): string | null {
 	const db = getDatabase();
 	const taken = db
 		.prepare(
 			'SELECT scheduled_at FROM post WHERE schedule_id = ? AND scheduled_at IS NOT NULL' +
+				(accountId ? ' AND account_id = ?' : '') +
 				(excludePostId ? ' AND id != ?' : '')
 		)
-		.all(excludePostId ? [scheduleId, excludePostId] : [scheduleId]) as { scheduled_at: string }[];
+		.all(
+			...(excludePostId
+				? accountId
+					? [scheduleId, accountId, excludePostId]
+					: [scheduleId, excludePostId]
+				: accountId
+					? [scheduleId, accountId]
+					: [scheduleId])
+		) as { scheduled_at: string }[];
 	const takenSet = new Set(taken.map((r) => normalizeSlot(r.scheduled_at)));
 	const from = new Date();
-	const slots = generateSlots(scheduleId, 500, from);
+	const slots = generateSlots(scheduleId, 500, from, accountId);
 	for (const slot of slots) {
 		const norm = normalizeSlot(slot);
 		if (!takenSet.has(norm)) {

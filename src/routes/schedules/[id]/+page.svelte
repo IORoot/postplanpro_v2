@@ -120,7 +120,7 @@
 				<input type="hidden" name="rules_json" value={rules.length > 0 ? rulesJson() : ''} />
 
 
-				<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr,minmax(320px,420px)] lg:items-start">
+				<div class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
 					<div class="min-w-0">
 						<h1 class="text-2xl font-bold text-[var(--text)]">Edit schedule</h1>
 						<div class="mt-6">

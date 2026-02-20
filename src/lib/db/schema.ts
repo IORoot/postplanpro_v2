@@ -1,7 +1,43 @@
 export const schema = `
+-- Auth users
+CREATE TABLE IF NOT EXISTS user (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE,
+  name TEXT,
+  image TEXT,
+  password_hash TEXT,
+  email_verified_at TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- OAuth account linkage (provider account -> user)
+CREATE TABLE IF NOT EXISTS oauth_account (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL,
+  provider_account_id TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(provider, provider_account_id)
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_account_user ON oauth_account(user_id);
+
+-- One-time tokens for email verification and password reset
+CREATE TABLE IF NOT EXISTS auth_token (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  purpose TEXT NOT NULL CHECK (purpose IN ('verify_email', 'reset_password')),
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TEXT NOT NULL,
+  used_at TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_auth_token_user ON auth_token(user_id);
+CREATE INDEX IF NOT EXISTS idx_auth_token_purpose ON auth_token(purpose);
+
 -- Webhook configurations (Settings)
 CREATE TABLE IF NOT EXISTS webhook_config (
   id TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   url TEXT NOT NULL,
   api_token TEXT,
@@ -20,14 +56,17 @@ CREATE INDEX IF NOT EXISTS idx_webhook_header_webhook ON webhook_header(webhook_
 -- Global variables merged into every outbound JSON
 CREATE TABLE IF NOT EXISTS global_variable (
   id TEXT PRIMARY KEY,
-  key TEXT NOT NULL UNIQUE,
+  account_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  key TEXT NOT NULL,
   value TEXT,
-  type TEXT DEFAULT 'string'
+  type TEXT DEFAULT 'string',
+  UNIQUE(account_id, key)
 );
 
 -- Schedules (ordered list of slots)
 CREATE TABLE IF NOT EXISTS schedule (
   id TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
   created_at TEXT DEFAULT (datetime('now'))
@@ -59,6 +98,26 @@ CREATE TABLE IF NOT EXISTS schedule_rule (
 
 CREATE INDEX IF NOT EXISTS idx_schedule_rule_schedule ON schedule_rule(schedule_id);
 
+-- Reusable custom-field templates (global defaults + per-user)
+CREATE TABLE IF NOT EXISTS field_template (
+  id TEXT PRIMARY KEY,
+  account_id TEXT REFERENCES user(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  is_default INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_field_template_account ON field_template(account_id);
+
+CREATE TABLE IF NOT EXISTS field_template_field (
+  id TEXT PRIMARY KEY,
+  template_id TEXT NOT NULL REFERENCES field_template(id) ON DELETE CASCADE,
+  key TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'string',
+  value TEXT,
+  order_index INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_field_template_field_template ON field_template_field(template_id);
+
 -- Schedule-level custom fields (applied to posts when schedule is used)
 CREATE TABLE IF NOT EXISTS schedule_field (
   id TEXT PRIMARY KEY,
@@ -71,10 +130,14 @@ CREATE TABLE IF NOT EXISTS schedule_field (
 -- Posts
 CREATE TABLE IF NOT EXISTS post (
   id TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
   webhook_id TEXT NOT NULL REFERENCES webhook_config(id),
   schedule_id TEXT REFERENCES schedule(id),
   title TEXT NOT NULL,
   content TEXT,
+  image_url TEXT,
+  color TEXT,
+  payload_override TEXT,
   scheduled_at TEXT,
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'sent', 'failed')),
   sent_at TEXT,
@@ -102,6 +165,7 @@ CREATE INDEX IF NOT EXISTS idx_schedule_field_schedule ON schedule_field(schedul
 -- Send log: one row per send (manual or cron) for reports
 CREATE TABLE IF NOT EXISTS send_log (
   id TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
   post_id TEXT NOT NULL REFERENCES post(id) ON DELETE CASCADE,
   sent_at TEXT NOT NULL DEFAULT (datetime('now')),
   request_json TEXT NOT NULL,
@@ -111,4 +175,10 @@ CREATE TABLE IF NOT EXISTS send_log (
 );
 CREATE INDEX IF NOT EXISTS idx_send_log_post ON send_log(post_id);
 CREATE INDEX IF NOT EXISTS idx_send_log_sent_at ON send_log(sent_at);
+CREATE INDEX IF NOT EXISTS idx_webhook_config_account ON webhook_config(account_id);
+CREATE INDEX IF NOT EXISTS idx_global_variable_account ON global_variable(account_id);
+CREATE INDEX IF NOT EXISTS idx_schedule_account ON schedule(account_id);
+CREATE INDEX IF NOT EXISTS idx_post_account ON post(account_id);
+CREATE INDEX IF NOT EXISTS idx_post_account_scheduled_at ON post(account_id, scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_send_log_account ON send_log(account_id);
 `;

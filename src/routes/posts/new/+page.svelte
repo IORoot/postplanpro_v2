@@ -1,8 +1,40 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { TAILWIND_POST_COLORS, normalizePostColor } from '$lib/postColors';
 
 	let { data, form } = $props();
-	let fieldCount = $state(0);
+	let fieldRows = $state<{ key: string; type: string; value: string }[]>([
+		{ key: '', type: 'string', value: '' }
+	]);
+	let selectedColor = $state<string>('#dbeafe');
+	let hexColorInput = $state<string>('#dbeafe');
+	$effect(() => {
+		const defaultColor = normalizePostColor(data.defaultColor) ?? '#dbeafe';
+		selectedColor = defaultColor;
+		hexColorInput = defaultColor;
+	});
+
+	function addField() {
+		fieldRows = [...fieldRows, { key: '', type: 'string', value: '' }];
+	}
+	function removeField(idx: number) {
+		fieldRows = fieldRows.filter((_, i) => i !== idx);
+		if (fieldRows.length === 0) addField();
+	}
+	function appendTemplate(templateId: string) {
+		const t = data.templates.find((x) => x.id === templateId);
+		if (!t) return;
+		const toAppend = t.fields.map((f) => ({ key: f.key, type: f.type, value: f.value }));
+		fieldRows = [...fieldRows, ...toAppend];
+	}
+	function chooseColor(color: string) {
+		selectedColor = color;
+		hexColorInput = color;
+	}
+	function onHexColorInput(value: string) {
+		hexColorInput = value;
+		selectedColor = normalizePostColor(value) ?? selectedColor;
+	}
 </script>
 
 <svelte:head>
@@ -25,6 +57,49 @@
 	<div>
 		<label for="content" class="block text-sm font-medium text-[var(--text)]">Content</label>
 		<textarea id="content" name="content" rows="5" class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]"></textarea>
+	</div>
+
+	<div>
+		<label for="image_url" class="block text-sm font-medium text-[var(--text)]">Image URL (optional)</label>
+		<input id="image_url" type="url" name="image_url" placeholder="https://..." class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]" />
+	</div>
+
+	<div>
+		<p class="block text-sm font-medium text-[var(--text)]">Post color</p>
+		<p class="mt-0.5 text-xs text-[var(--text-muted)]">Starts with a random Tailwind palette color. Optionally choose any HEX color.</p>
+		<div class="mt-2 flex flex-wrap gap-2">
+			{#each TAILWIND_POST_COLORS as color}
+				<button
+					type="button"
+					onclick={() => chooseColor(color)}
+					class="h-8 w-8 rounded border-2 transition {selectedColor === color ? 'border-[var(--text)]' : 'border-[var(--border)]'}"
+					style={`background-color: ${color};`}
+					title={color}
+					aria-label={`Pick ${color}`}
+				></button>
+			{/each}
+		</div>
+		<div class="mt-2 flex items-center gap-2">
+			<input
+				type="color"
+				value={hexColorInput}
+				oninput={(e) => onHexColorInput((e.currentTarget as HTMLInputElement).value)}
+				class="h-10 w-14 rounded border border-[var(--border)] bg-[var(--surface)]"
+				aria-label="Pick custom color"
+			/>
+			<input
+				type="text"
+				value={hexColorInput}
+				oninput={(e) => onHexColorInput((e.currentTarget as HTMLInputElement).value)}
+				placeholder="#aabbcc"
+				class="w-32 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
+			/>
+			<span class="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
+				<span class="inline-block h-4 w-4 rounded border border-[var(--border)]" style={`background-color: ${selectedColor};`}></span>
+				{selectedColor}
+			</span>
+		</div>
+		<input type="hidden" name="color" value={selectedColor} />
 	</div>
 
 	<div>
@@ -70,22 +145,34 @@
 
 	<div>
 		<p class="text-sm font-medium text-[var(--text)]">Custom fields</p>
-		<p class="text-xs text-[var(--text-muted)]">Key-value pairs included in the webhook JSON.</p>
+		<p class="text-xs text-[var(--text-muted)]">Use dotted paths for nesting (e.g. <code>instagram.title</code>). Use <code>json</code> type for objects/arrays (e.g. <code>[]</code>, <code>&#123;"a":1&#125;</code>).</p>
+		<div class="mt-2 flex flex-wrap items-center gap-2">
+			{#each data.templates as t}
+				<button
+					type="button"
+					onclick={() => appendTemplate(t.id)}
+					class="rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]"
+				>
+					+ {t.name}{t.is_default ? ' (default)' : ''}
+				</button>
+			{/each}
+		</div>
 		<div class="mt-2 space-y-2" id="custom-fields">
-			{#each Array(fieldCount) as _, i}
+			{#each fieldRows as _, i}
 				<div class="flex flex-wrap gap-2">
-					<input type="text" name="field_key_{i}" placeholder="Key" class="rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-w-[100px] min-h-[44px]" />
-					<select name="field_type_{i}" class="rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]">
+					<input type="text" name="field_key_{i}" bind:value={fieldRows[i].key} placeholder="field.path" class="rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-w-[140px] min-h-[44px]" />
+					<select name="field_type_{i}" bind:value={fieldRows[i].type} class="rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]">
 						<option value="string">string</option>
 						<option value="number">number</option>
 						<option value="boolean">boolean</option>
 						<option value="json">json</option>
 					</select>
-					<input type="text" name="field_value_{i}" placeholder="Value" class="flex-1 min-w-[120px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]" />
+					<input type="text" name="field_value_{i}" bind:value={fieldRows[i].value} placeholder="Value" class="flex-1 min-w-[120px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]" />
+					<button type="button" onclick={() => removeField(i)} class="rounded border border-red-400 px-2 py-1 text-sm text-red-800 dark:border-red-500 dark:text-red-200 min-h-[44px]">Remove</button>
 				</div>
 			{/each}
 		</div>
-		<button type="button" onclick={() => fieldCount++} class="mt-2 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add field</button>
+		<button type="button" onclick={addField} class="mt-2 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add field</button>
 	</div>
 
 	<div class="flex gap-2 pt-4">
