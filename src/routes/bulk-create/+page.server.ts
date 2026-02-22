@@ -329,6 +329,7 @@ export const actions: Actions = {
 		const customMappingJson = (data.get('custom_mapping') as string)?.trim() || '[]';
 		const perPage = Math.min(100, Math.max(1, parseInt((data.get('per_page') as string) || '20', 10)));
 		const fetchFullPerItem = (data.get('fetch_full_per_item') as string) !== 'off';
+		const skipDuplicates = (data.get('skip_duplicates') as string) === 'on';
 		if (!siteUrl || !webhookId) return fail(400, { error: 'Site URL and webhook are required' });
 		if (!postTypeRoute.startsWith('/wp/v2/')) return fail(400, { error: 'Invalid post type route' });
 
@@ -403,14 +404,26 @@ export const actions: Actions = {
 			if (!schedule) return fail(400, { error: 'Invalid schedule' });
 		}
 		const insertPost = db.prepare(
-			'INSERT INTO post (id, account_id, webhook_id, title, content, color, status) VALUES (?, ?, ?, ?, ?, ?, ?)'
+			'INSERT INTO post (id, account_id, webhook_id, title, content, color, status, import_source_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
 		);
 		const insertField = db.prepare('INSERT INTO post_field (id, post_id, key, type, value) VALUES (?, ?, ?, ?, ?)');
+		const existingBySource =
+			skipDuplicates
+				? db.prepare('SELECT 1 FROM post WHERE account_id = ? AND import_source_id = ? LIMIT 1')
+				: null;
+
+		function importSourceId(item: Record<string, unknown>): string | null {
+			const id = item?.id;
+			if (id == null) return null;
+			return `wordpress:${siteUrl}:${id}`;
+		}
 
 		const createdIds: string[] = [];
 		const transaction = db.transaction(() => {
 			for (const item of items as Record<string, unknown>[]) {
 				if (!evaluateFilter(item, filterConfig)) continue;
+				const sourceId = importSourceId(item);
+				if (skipDuplicates && sourceId && existingBySource?.get(accountId, sourceId)) continue;
 				const title = resolveValue(item, titlePath, titleUnescapeNewlines, 'string');
 				const content = resolveValue(item, contentPath, contentUnescapeNewlines, 'string');
 				const id = crypto.randomUUID();
@@ -421,7 +434,8 @@ export const actions: Actions = {
 					title || '(no title)',
 					content,
 					randomTailwindPostColor(),
-					'draft'
+					'draft',
+					sourceId
 				);
 				createdIds.push(id);
 				for (const m of customMapping) {
@@ -439,7 +453,7 @@ export const actions: Actions = {
 		});
 		transaction();
 
-		// Optionally apply schedule
+		// Optionally apply schedule to all created posts
 		if (scheduleId && createdIds.length > 0) {
 			const slots = db
 				.prepare(
@@ -449,12 +463,18 @@ export const actions: Actions = {
 			const scheduleFields = db
 				.prepare('SELECT key, type, value FROM schedule_field WHERE schedule_id = ?')
 				.all(scheduleId) as { key: string; type: string; value: string | null }[];
-			const updatePost = db.prepare("UPDATE post SET scheduled_at = ?, schedule_id = ?, status = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
-			for (let i = 0; i < Math.min(createdIds.length, slots.length); i++) {
-				updatePost.run(slots[i].scheduled_at, scheduleId, 'scheduled', createdIds[i], accountId);
+			const setScheduleOnly = db.prepare("UPDATE post SET schedule_id = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+			const setScheduleAndSlot = db.prepare("UPDATE post SET scheduled_at = ?, schedule_id = ?, status = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+			for (let i = 0; i < createdIds.length; i++) {
+				const postId = createdIds[i];
+				if (i < slots.length) {
+					setScheduleAndSlot.run(slots[i].scheduled_at, scheduleId, 'scheduled', postId, accountId);
+				} else {
+					setScheduleOnly.run(scheduleId, postId, accountId);
+				}
 				for (const sf of scheduleFields) {
 					const fieldId = crypto.randomUUID();
-					db.prepare('INSERT INTO post_field (id, post_id, key, type, value) VALUES (?, ?, ?, ?, ?)').run(fieldId, createdIds[i], sf.key, sf.type, sf.value ?? '');
+					db.prepare('INSERT INTO post_field (id, post_id, key, type, value) VALUES (?, ?, ?, ?, ?)').run(fieldId, postId, sf.key, sf.type, sf.value ?? '');
 				}
 			}
 		}

@@ -60,6 +60,16 @@ function getDb(): Database.Database {
 		} catch {
 			// Column already exists
 		}
+		try {
+			db.exec('ALTER TABLE post ADD COLUMN import_source_id TEXT');
+		} catch {
+			// Column already exists
+		}
+		try {
+			db.exec('CREATE INDEX IF NOT EXISTS idx_post_import_source ON post(account_id, import_source_id)');
+		} catch {
+			// Index already exists
+		}
 		// Safety check after schema init.
 		const postCols = db
 			.prepare('PRAGMA table_info(post)')

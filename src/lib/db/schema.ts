@@ -142,6 +142,7 @@ CREATE TABLE IF NOT EXISTS post (
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'sent', 'failed')),
   sent_at TEXT,
   error_message TEXT,
+  import_source_id TEXT,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -158,6 +159,7 @@ CREATE TABLE IF NOT EXISTS post_field (
 CREATE INDEX IF NOT EXISTS idx_post_webhook ON post(webhook_id);
 CREATE INDEX IF NOT EXISTS idx_post_scheduled_at ON post(scheduled_at);
 CREATE INDEX IF NOT EXISTS idx_post_status ON post(status);
+CREATE INDEX IF NOT EXISTS idx_post_import_source ON post(account_id, import_source_id);
 CREATE INDEX IF NOT EXISTS idx_schedule_slot_schedule ON schedule_slot(schedule_id);
 CREATE INDEX IF NOT EXISTS idx_post_field_post ON post_field(post_id);
 CREATE INDEX IF NOT EXISTS idx_schedule_field_schedule ON schedule_field(schedule_id);

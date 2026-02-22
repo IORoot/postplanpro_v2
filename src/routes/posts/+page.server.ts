@@ -4,7 +4,7 @@ import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url, locals }) => {
 	const accountId = locals.userId;
-	if (!accountId) return { posts: [], webhooks: [], filters: { status: '', webhookId: '', scheduled: '' } };
+	if (!accountId) return { posts: [], webhooks: [], schedules: [], filters: { status: '', webhookId: '', scheduled: '' } };
 	const db = getDatabase();
 	const status = url.searchParams.get('status') ?? '';
 	const webhookId = url.searchParams.get('webhook') ?? '';
@@ -48,9 +48,15 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	}[];
 
 	const webhooks = db.prepare('SELECT id, name FROM webhook_config WHERE account_id = ? ORDER BY name').all(accountId) as { id: string; name: string }[];
+	const schedules = db.prepare('SELECT id, name FROM schedule WHERE account_id = ? ORDER BY name').all(accountId) as { id: string; name: string }[];
 
-	return { posts, webhooks, filters: { status, webhookId, scheduled } };
+	return { posts, webhooks, schedules, filters: { status, webhookId, scheduled } };
 };
+
+function getIds(formData: FormData): string[] {
+	const ids = formData.getAll('ids');
+	return Array.isArray(ids) ? (ids as string[]).filter(Boolean) : [];
+}
 
 export const actions: Actions = {
 	deletePost: async ({ request, locals }) => {
@@ -60,5 +66,47 @@ export const actions: Actions = {
 		if (!id) return fail(400, { error: 'ID required' });
 		getDatabase().prepare('DELETE FROM post WHERE id = ? AND account_id = ?').run(id, accountId);
 		return { success: true };
+	},
+	bulkDelete: async ({ request, locals }) => {
+		const accountId = locals.userId;
+		if (!accountId) return fail(401, { error: 'Unauthorized' });
+		const data = await request.formData();
+		const ids = getIds(data);
+		if (ids.length === 0) return fail(400, { error: 'No posts selected' });
+		const db = getDatabase();
+		const stmt = db.prepare('DELETE FROM post WHERE id = ? AND account_id = ?');
+		for (const id of ids) stmt.run(id, accountId);
+		return { success: true, bulkDeleted: ids.length };
+	},
+	bulkUpdateSchedule: async ({ request, locals }) => {
+		const accountId = locals.userId;
+		if (!accountId) return fail(401, { error: 'Unauthorized' });
+		const data = await request.formData();
+		const ids = getIds(data);
+		const scheduleId = (data.get('schedule_id') as string)?.trim() || null;
+		if (ids.length === 0) return fail(400, { error: 'No posts selected' });
+		const db = getDatabase();
+		if (scheduleId) {
+			const schedule = db.prepare('SELECT id FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { id: string } | undefined;
+			if (!schedule) return fail(400, { error: 'Invalid schedule' });
+		}
+		const stmt = db.prepare("UPDATE post SET schedule_id = ?, scheduled_at = NULL, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+		for (const id of ids) stmt.run(scheduleId, id, accountId);
+		return { success: true, bulkUpdated: ids.length };
+	},
+	bulkUpdateWebhook: async ({ request, locals }) => {
+		const accountId = locals.userId;
+		if (!accountId) return fail(401, { error: 'Unauthorized' });
+		const data = await request.formData();
+		const ids = getIds(data);
+		const webhookId = (data.get('webhook_id') as string)?.trim();
+		if (ids.length === 0) return fail(400, { error: 'No posts selected' });
+		if (!webhookId) return fail(400, { error: 'Webhook required' });
+		const db = getDatabase();
+		const webhook = db.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?').get(webhookId, accountId) as { id: string } | undefined;
+		if (!webhook) return fail(400, { error: 'Invalid webhook' });
+		const stmt = db.prepare("UPDATE post SET webhook_id = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+		for (const id of ids) stmt.run(webhookId, id, accountId);
+		return { success: true, bulkUpdated: ids.length };
 	}
 };

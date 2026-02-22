@@ -5,6 +5,27 @@
 	let { data } = $props();
 	let sendingId = $state<string | null>(null);
 	let sendError = $state<string | null>(null);
+	let selectedIds = $state<Set<string>>(new Set());
+	let bulkActionError = $state<string | null>(null);
+
+	function toggleSelection(id: string) {
+		const next = new Set(selectedIds);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		selectedIds = next;
+	}
+
+	function toggleAll() {
+		if (selectedIds.size === data.posts.length) selectedIds = new Set();
+		else selectedIds = new Set(data.posts.map((p) => p.id));
+	}
+
+	function clearSelection() {
+		selectedIds = new Set();
+	}
+
+	const allSelected = $derived(data.posts.length > 0 && selectedIds.size === data.posts.length);
+	const someSelected = $derived(selectedIds.size > 0);
 
 	async function sendNow(postId: string) {
 		sendingId = postId;
@@ -61,6 +82,38 @@
 	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-error">{sendError}</p>
 {/if}
 
+{#if someSelected}
+	<div class="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm">
+		<span class="text-sm font-medium text-[var(--text)]">{selectedIds.size} selected</span>
+		<button type="button" class="text-sm text-[var(--text-muted)] hover:underline" onclick={clearSelection}>Clear</button>
+		<form method="post" action="?/bulkDelete" use:enhance={() => { bulkActionError = null; return async ({ result }) => { if (result.type === 'success') { clearSelection(); await invalidateAll(); } else if (result.type === 'failure' && result.data && typeof (result.data as { error?: string }).error === 'string') bulkActionError = (result.data as { error: string }).error; }; }} class="inline-flex items-center gap-2">
+			{#each [...selectedIds] as id}<input type="hidden" name="ids" value={id} />{/each}
+			<button type="submit" class="rounded-lg border border-red-400 px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-50 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/30">Delete</button>
+		</form>
+		<form method="post" action="?/bulkUpdateSchedule" use:enhance={() => { bulkActionError = null; return async ({ result }) => { if (result.type === 'success') { clearSelection(); await invalidateAll(); } else if (result.type === 'failure' && result.data && typeof (result.data as { error?: string }).error === 'string') bulkActionError = (result.data as { error: string }).error; }; }} class="inline-flex items-center gap-2">
+			{#each [...selectedIds] as id}<input type="hidden" name="ids" value={id} />{/each}
+			<select name="schedule_id" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm">
+				<option value="">No schedule</option>
+				{#each data.schedules ?? [] as sched}
+					<option value={sched.id}>{sched.name}</option>
+				{/each}
+			</select>
+			<button type="submit" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)]">Change schedule</button>
+		</form>
+		<form method="post" action="?/bulkUpdateWebhook" use:enhance={() => { bulkActionError = null; return async ({ result }) => { if (result.type === 'success') { clearSelection(); await invalidateAll(); } else if (result.type === 'failure' && result.data && typeof (result.data as { error?: string }).error === 'string') bulkActionError = (result.data as { error: string }).error; }; }} class="inline-flex items-center gap-2">
+			{#each [...selectedIds] as id}<input type="hidden" name="ids" value={id} />{/each}
+			<select name="webhook_id" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" required>
+				<option value="">Choose webhook…</option>
+				{#each data.webhooks ?? [] as wh}
+					<option value={wh.id}>{wh.name}</option>
+				{/each}
+			</select>
+			<button type="submit" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)]">Change webhook</button>
+		</form>
+	</div>
+	{#if bulkActionError}<p class="mt-2 text-sm text-red-600 dark:text-red-400">{bulkActionError}</p>{/if}
+{/if}
+
 <!-- List as cards -->
 <div class="mt-6 space-y-4">
 	{#if data.posts.length === 0}
@@ -68,6 +121,12 @@
 			<p class="text-[var(--text-muted)]">No posts yet. <a href="/posts/new" class="font-medium text-[var(--primary)] hover:underline">Create one</a>.</p>
 		</div>
 	{:else}
+		<div class="flex items-center gap-3 pb-2">
+			<label class="flex items-center gap-2 text-sm text-[var(--text-muted)] cursor-pointer">
+				<input type="checkbox" checked={allSelected} onchange={toggleAll} class="rounded border-[var(--border)]" />
+				Select all
+			</label>
+		</div>
 		{#each data.posts as post}
 			{@const statusClass = post.status === 'draft' ? 'status-draft' : post.status === 'scheduled' ? 'status-scheduled' : post.status === 'sent' ? 'status-sent' : 'status-failed'}
 			<div
@@ -76,6 +135,9 @@
 			>
 				<div class="flex flex-wrap items-start justify-between gap-4">
 					<div class="min-w-0 flex flex-1 items-start gap-3">
+						<label class="flex items-center shrink-0 cursor-pointer" title="Select for bulk action">
+							<input type="checkbox" checked={selectedIds.has(post.id)} onchange={() => toggleSelection(post.id)} class="rounded border-[var(--border)]" />
+						</label>
 						{#if post.image_url}
 							<img src={post.image_url} alt={"Preview for " + post.title} class="h-14 w-14 rounded object-cover border border-[var(--border)]" loading="lazy" />
 						{/if}
