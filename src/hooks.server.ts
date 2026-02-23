@@ -21,7 +21,7 @@ const appAuthGuard: Handle = async ({ event, resolve }) => {
 	}
 	// Allow POST actions on /auth/login (e.g. signout), but keep GET redirected.
 	if (session && pathname === '/auth/login' && event.request.method === 'GET') {
-		throw redirect(303, '/calendar');
+		throw redirect(303, '/');
 	}
 
 	return resolve(event);

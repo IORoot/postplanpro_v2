@@ -98,6 +98,11 @@
 		return `${y}-${m}-${d}`;
 	}
 
+	function isToday(date: Date): boolean {
+		const t = new Date();
+		return date.getFullYear() === t.getFullYear() && date.getMonth() === t.getMonth() && date.getDate() === t.getDate();
+	}
+
 	function withOffset(source: Date, viewName: CalendarView, dir: -1 | 1): Date {
 		const next = new Date(source);
 		if (viewName === 'day') next.setDate(next.getDate() + dir);
@@ -588,13 +593,13 @@
 		<div class="grid grid-cols-7">
 			{#each monthGridDays() as cell}
 				<div
-					class="min-h-[130px] border-r border-b border-[var(--border)] p-2 last:border-r-0"
+					class="min-h-[130px] border-r border-b border-[var(--border)] p-2 last:border-r-0 {isToday(cell.date) ? 'calendar-today' : ''}"
 					role="group"
 					aria-label="Drop to reschedule"
 					ondragover={(e) => monthDragOver(e, cell.date)}
 					ondrop={(e) => monthDrop(e, cell.date)}
 				>
-					<div class="text-right text-xs {cell.inMonth ? 'text-[var(--text)]' : 'text-[var(--text-muted)] opacity-50'}">
+					<div class="text-right text-xs {cell.inMonth ? 'text-[var(--text)]' : 'text-[var(--text-muted)] opacity-50'} {isToday(cell.date) ? 'calendar-today-num inline-block' : ''}">
 						{cell.date.getDate()}
 					</div>
 					<div class="mt-2 space-y-1">
@@ -697,7 +702,7 @@
 				>
 					<div class="border-b border-[var(--border)] bg-[var(--surface)]"></div>
 					{#each weekDays() as d}
-						<div class="border-b border-l border-[var(--border)] bg-[var(--surface)] px-2 py-2 text-center">
+					<div class="border-b border-l border-[var(--border)] bg-[var(--surface)] px-2 py-2 text-center {isToday(d) ? 'calendar-today' : ''}">
 							<p class="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{d.toLocaleDateString(undefined, { weekday: 'short' })}</p>
 							<p class="text-sm font-semibold text-[var(--text)]">{d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
 						</div>
@@ -716,7 +721,7 @@
 
 					{#each weekDays() as d, dayIndex}
 						<div
-							class="relative border-l border-[var(--border)] bg-[var(--bg)]"
+							class="relative border-l border-[var(--border)] bg-[var(--bg)] {isToday(d) ? 'calendar-today' : ''}"
 							style={`height: ${24 * WEEK_HOUR_SLOT_PX}px;`}
 							role="group"
 							aria-label="Drop to reschedule"
@@ -786,12 +791,13 @@
 			<div class="grid grid-cols-7 gap-2">
 				{#each weekDays() as d}
 					{@const isActiveDay = localDateKey(d) === localDateKey(anchor)}
+					{@const isTodayDay = isToday(d)}
 					{@const dayPosts = postsForDay(d)}
 					<a
 						href={hrefFor('day', d)}
 						class="relative rounded-lg px-2 py-2 text-center text-xs transition {isActiveDay
 							? 'bg-[var(--primary)] text-white'
-							: 'bg-[var(--bg)] text-[var(--text)] hover:bg-[var(--surface-hover)]'}"
+							: 'bg-[var(--bg)] text-[var(--text)] hover:bg-[var(--surface-hover)]'} {isTodayDay && !isActiveDay ? 'calendar-today' : ''}"
 						title={dayPosts.length > 0 ? `${dayPosts.length} post(s)` : undefined}
 					>
 						<div class="text-2xl">{d.toLocaleDateString(undefined, { weekday: 'short' })}</div>
@@ -907,8 +913,9 @@
 			{#each yearMonths() as monthDate}
 				{@const monthIndex = monthDate.getMonth()}
 				{@const monthPosts = postsForMonth(monthIndex)}
+				{@const isCurrentMonth = new Date().getMonth() === monthIndex && new Date().getFullYear() === anchor.getFullYear()}
 				<div
-					class="rounded-xl bg-[var(--surface)] p-3"
+					class="rounded-xl bg-[var(--surface)] p-3 {isCurrentMonth ? 'calendar-today' : ''}"
 					role="group"
 					aria-label="Drop to reschedule"
 					ondragover={(e) => yearDragOver(e, monthIndex)}
@@ -944,7 +951,9 @@
 		{:else}
 			<div class="space-y-2">
 				{#each posts as post (post.id)}
-					<div class="rounded-lg p-2" style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}>
+					{@const postDate = new Date(post.scheduled_at)}
+					{@const isPostToday = isToday(postDate)}
+					<div class="rounded-lg p-2 {isPostToday ? 'calendar-today' : ''}" style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}>
 						<div class="flex items-center gap-2">
 							{#if post.image_url}
 								<img src={post.image_url} alt={"Preview for " + post.title} class="h-8 w-8 rounded object-cover border border-[var(--border)]" loading="lazy" />
@@ -975,7 +984,7 @@
 					<div class="grid grid-cols-7 gap-1">
 						{#each miniMonthGrid(monthDate) as cell}
 							{@const dayPosts = postsForDay(cell.date)}
-							<div class="relative h-8 rounded bg-[var(--bg)]/60 px-1 pt-1 {cell.inMonth ? '' : 'opacity-35'}">
+							<div class="relative h-8 rounded bg-[var(--bg)]/60 px-1 pt-1 {cell.inMonth ? '' : 'opacity-35'} {isToday(cell.date) ? 'calendar-today' : ''}">
 								<div class="text-[10px] leading-none text-[var(--text-muted)]">{cell.date.getDate()}</div>
 								<div class="mt-0.5 flex flex-wrap gap-0.5">
 									{#each dayPosts as post (post.id)}
