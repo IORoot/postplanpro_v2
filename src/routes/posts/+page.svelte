@@ -7,6 +7,20 @@
 	let sendError = $state<string | null>(null);
 	let selectedIds = $state<Set<string>>(new Set());
 	let bulkActionError = $state<string | null>(null);
+	let searchQuery = $state('');
+
+	const searchLower = $derived(searchQuery.trim().toLowerCase());
+	const filteredPosts = $derived(
+		searchLower
+			? data.posts.filter(
+					(p) =>
+						(p.title ?? '').toLowerCase().includes(searchLower) ||
+						(p.webhook_name ?? '').toLowerCase().includes(searchLower) ||
+						(p.content ?? '').toLowerCase().includes(searchLower) ||
+						(p.status ?? '').toLowerCase().includes(searchLower)
+				)
+			: data.posts
+	);
 
 	function toggleSelection(id: string) {
 		const next = new Set(selectedIds);
@@ -16,15 +30,15 @@
 	}
 
 	function toggleAll() {
-		if (selectedIds.size === data.posts.length) selectedIds = new Set();
-		else selectedIds = new Set(data.posts.map((p) => p.id));
+		if (selectedIds.size === filteredPosts.length && filteredPosts.length > 0) selectedIds = new Set();
+		else selectedIds = new Set(filteredPosts.map((p) => p.id));
 	}
 
 	function clearSelection() {
 		selectedIds = new Set();
 	}
 
-	const allSelected = $derived(data.posts.length > 0 && selectedIds.size === data.posts.length);
+	const allSelected = $derived(filteredPosts.length > 0 && selectedIds.size === filteredPosts.length);
 	const someSelected = $derived(selectedIds.size > 0);
 
 	async function sendNow(postId: string) {
@@ -78,6 +92,21 @@
 	<button type="submit" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] shadow-sm">Filter</button>
 </form>
 
+<div class="mt-3">
+	<input
+		id="posts-search"
+		type="search"
+		aria-label="Search posts"
+		placeholder="Search posts by title, webhook, content, status…"
+		bind:value={searchQuery}
+		class="w-full max-w-md rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] min-h-[44px] shadow-sm"
+		autocomplete="off"
+	/>
+	{#if searchQuery.trim()}
+		<p class="mt-1 text-xs text-[var(--text-muted)]">{filteredPosts.length} of {data.posts.length} post{data.posts.length === 1 ? '' : 's'}</p>
+	{/if}
+</div>
+
 {#if sendError}
 	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-error">{sendError}</p>
 {/if}
@@ -120,6 +149,10 @@
 		<div class="content-card rounded-xl p-6 text-center">
 			<p class="text-[var(--text-muted)]">No posts yet. <a href="/posts/new" class="font-medium text-[var(--primary)] hover:underline">Create one</a>.</p>
 		</div>
+	{:else if filteredPosts.length === 0}
+		<div class="content-card rounded-xl p-6 text-center">
+			<p class="text-[var(--text-muted)]">No posts match your search.{#if searchQuery.trim()} <button type="button" class="font-medium text-[var(--primary)] hover:underline" onclick={() => (searchQuery = '')}>Clear search</button>{/if}</p>
+		</div>
 	{:else}
 		<div class="flex items-center gap-3 pb-2">
 			<label class="flex items-center gap-2 text-sm text-[var(--text-muted)] cursor-pointer">
@@ -127,7 +160,7 @@
 				Select all
 			</label>
 		</div>
-		{#each data.posts as post}
+		{#each filteredPosts as post}
 			{@const statusClass = post.status === 'draft' ? 'status-draft' : post.status === 'scheduled' ? 'status-scheduled' : post.status === 'sent' ? 'status-sent' : 'status-failed'}
 			<div
 				class="content-card content-card-accent rounded-xl p-4 shadow-sm"
