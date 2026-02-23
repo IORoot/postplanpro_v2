@@ -206,11 +206,15 @@
 		<div class="border-t border-[var(--sidebar-border)] p-3 space-y-2">
 			{#if $page.data.session}
 				<div class="px-3">
-					<div class="flex items-center gap-2">
+					<a
+						href="/account"
+						class="flex items-center gap-2 rounded-lg py-1 pr-2 -ml-2 pl-2 hover:bg-[var(--sidebar-hover)] transition-colors"
+					>
 						{#if $page.data.session.user?.image}
 							<img
 								src={$page.data.session.user.image}
-								alt="Profile"
+								alt=""
+								referrerpolicy="no-referrer"
 								class="h-7 w-7 rounded-full border border-[var(--sidebar-border)] object-cover"
 								loading="lazy"
 							/>
@@ -221,10 +225,10 @@
 									.toUpperCase()}
 							</span>
 						{/if}
-						<p class="truncate text-xs text-[var(--sidebar-text-muted)]">
+						<p class="truncate text-xs text-[var(--sidebar-text-muted)] hover:text-[var(--sidebar-text)]">
 							{$page.data.session.user?.email ?? $page.data.session.user?.name ?? 'Signed in'}
 						</p>
-					</div>
+					</a>
 				</div>
 				<form method="POST" action="/auth/login?/signout" class="px-0">
 					<input type="hidden" name="options.redirectTo" value="/auth/login" />

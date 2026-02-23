@@ -328,7 +328,11 @@ export const actions: Actions = {
 		const titleUnescapeNewlines = (data.get('title_unescape_newlines') as string) === 'on';
 		const contentUnescapeNewlines = (data.get('content_unescape_newlines') as string) === 'on';
 		const customMappingJson = (data.get('custom_mapping') as string)?.trim() || '[]';
-		const perPage = Math.min(100, Math.max(1, parseInt((data.get('per_page') as string) || '20', 10)));
+		const importStart = Math.max(1, parseInt((data.get('import_start') as string) || '1', 10));
+		const importCount = Math.min(100, Math.max(1, parseInt((data.get('per_page') as string) || '20', 10)));
+		if (importStart + importCount - 1 > 100) {
+			return fail(400, { error: 'Start + count cannot exceed 100 (WordPress API limit per request). Use start ≤ 100 − count + 1.' });
+		}
 		const fetchFullPerItem = (data.get('fetch_full_per_item') as string) !== 'off';
 		const skipDuplicates = (data.get('skip_duplicates') as string) === 'on';
 		if (!siteUrl || !webhookId) return fail(400, { error: 'Site URL and webhook are required' });
@@ -363,10 +367,12 @@ export const actions: Actions = {
 
 		let items: unknown[];
 		try {
-			const listUrl = `${baseUrl}?per_page=${perPage}&page=1`;
+			const fetchCount = Math.min(100, importStart + importCount - 1);
+			const listUrl = `${baseUrl}?per_page=${fetchCount}&page=1`;
 			const res = await fetch(listUrl, { headers });
 			if (!res.ok) return fail(400, { error: `WordPress API error: ${res.status}` });
-			items = (await res.json()) as unknown[];
+			const raw = (await res.json()) as unknown[];
+			items = raw.slice(importStart - 1, importStart - 1 + importCount);
 		} catch (e) {
 			return fail(400, { error: e instanceof Error ? e.message : 'Fetch failed' });
 		}

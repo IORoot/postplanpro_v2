@@ -8,6 +8,7 @@
 	let siteUrl = $state('');
 	let auth = $state('');
 	let perPage = $state(10);
+	let importStart = $state(1);
 	let titlePath = $state('title.rendered');
 	let contentPath = $state('content.rendered');
 	let titleUnescapeNewlines = $state(true);
@@ -379,23 +380,6 @@
 
 			<div class="min-w-0 space-y-6">
 				<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
-					<h3 class="text-sm font-semibold text-[var(--text)]">Import count</h3>
-				<div>
-				<label for="import_count" class="mt-2 block text-sm text-[var(--text-muted)]">Number of posts to import</label>
-				<input
-					id="import_count"
-					type="number"
-					name="per_page"
-					bind:value={perPage}
-					min="1"
-					max="100"
-					class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]"
-				/>
-				<p class="mt-1 text-xs text-[var(--text-muted)]">The app will fetch this many posts and create them using the mapping below.</p>
-				</div>
-				</div>
-
-				<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
 					<h3 class="text-sm font-semibold text-[var(--text)]">Field mapping</h3>
 					<p class="mt-1 text-xs text-[var(--text-muted)]">Map WordPress fields to your post. Use the reference panel on the right for path syntax.</p>
 			<div class="mt-4">
@@ -456,6 +440,39 @@
 					<button type="button" onclick={addCustomMapping} class="min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]">+ Add custom field</button>
 				</div>
 			</div>
+				</div>
+
+				<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
+					<h3 class="text-sm font-semibold text-[var(--text)]">Import range</h3>
+					<p class="mt-1 text-xs text-[var(--text-muted)]">Choose which posts to import by start position and count (e.g. start 37, count 10 → posts 37–46).</p>
+					<div class="mt-4 grid gap-4 sm:grid-cols-2">
+						<div>
+							<label for="import_start" class="block text-sm font-medium text-[var(--text)]">Start at post</label>
+							<input
+								id="import_start"
+								type="number"
+								name="import_start"
+								bind:value={importStart}
+								min="1"
+								max="100"
+								class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]"
+							/>
+							<p class="mt-0.5 text-xs text-[var(--text-muted)]">1-based index of first post</p>
+						</div>
+						<div>
+							<label for="import_count" class="block text-sm font-medium text-[var(--text)]">Number of posts</label>
+							<input
+								id="import_count"
+								type="number"
+								name="per_page"
+								bind:value={perPage}
+								min="1"
+								max="100"
+								class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]"
+							/>
+							<p class="mt-0.5 text-xs text-[var(--text-muted)]">Imports posts {importStart}–{Math.min(100, importStart + perPage - 1)} (start + count ≤ 100)</p>
+						</div>
+					</div>
 				</div>
 
 			<div class="rounded-xl border-2 border-[var(--border)] bg-[var(--surface)] p-5 ring-1 ring-[var(--border)]/50">
