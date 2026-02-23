@@ -115,7 +115,7 @@
 	<div class="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm">
 		<span class="text-sm font-medium text-[var(--text)]">{selectedIds.size} selected</span>
 		<button type="button" class="text-sm text-[var(--text-muted)] hover:underline" onclick={clearSelection}>Clear</button>
-		<form method="post" action="?/bulkDelete" use:enhance={() => { bulkActionError = null; return async ({ result }) => { if (result.type === 'success') { clearSelection(); await invalidateAll(); } else if (result.type === 'failure' && result.data && typeof (result.data as { error?: string }).error === 'string') bulkActionError = (result.data as { error: string }).error; }; }} class="inline-flex items-center gap-2">
+		<form method="post" action="?/bulkDelete" use:enhance={({ cancel }) => { if (!confirm('Permanently delete the selected posts?')) cancel(); bulkActionError = null; return async ({ result }) => { if (result.type === 'success') { clearSelection(); await invalidateAll(); } else if (result.type === 'failure' && result.data && typeof (result.data as { error?: string }).error === 'string') bulkActionError = (result.data as { error: string }).error; }; }} class="inline-flex items-center gap-2">
 			{#each [...selectedIds] as id}<input type="hidden" name="ids" value={id} />{/each}
 			<button type="submit" class="rounded-lg border border-red-400 px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-50 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/30">Delete</button>
 		</form>
@@ -194,7 +194,7 @@
 							{sendingId === post.id ? 'Sending…' : 'Send'}
 						</button>
 						<a href="/posts/{post.id}" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center">Edit</a>
-						<form method="POST" action="?/deletePost" use:enhance={() => invalidateAll()} class="inline">
+						<form method="POST" action="?/deletePost" use:enhance={({ cancel }) => { if (!confirm('Permanently delete this post?')) cancel(); return () => invalidateAll(); }} class="inline">
 							<input type="hidden" name="id" value={post.id} />
 							<button type="submit" class="rounded-lg border border-red-400 px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-50 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/30 min-h-[44px]">Delete</button>
 						</form>

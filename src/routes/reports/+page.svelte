@@ -59,7 +59,7 @@
 							{#if report.response_status != null}
 								<span class="rounded bg-[var(--surface)] px-2 py-1 text-xs font-mono text-[var(--text-muted)]">{report.response_status}</span>
 							{/if}
-							<form method="POST" action="?/deleteReport" use:enhance={() => invalidateAll()} class="inline">
+							<form method="POST" action="?/deleteReport" use:enhance={({ cancel }) => { if (!confirm('Remove this report from the log?')) cancel(); return () => invalidateAll(); }} class="inline">
 								<input type="hidden" name="id" value={report.id} />
 								<button type="submit" class="rounded border border-red-400 px-2 py-1 text-xs font-medium text-red-800 hover:bg-red-50 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/30 min-h-[36px]">Remove</button>
 							</form>

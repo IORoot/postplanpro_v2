@@ -115,7 +115,7 @@
 					</div>
 					<div class="flex gap-2">
 						<button type="button" onclick={() => openEditWebhook(webhook)} class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] min-w-[44px]">Edit</button>
-						<form method="POST" action="?/deleteWebhook" use:enhance={() => invalidateAll()} class="inline">
+						<form method="POST" action="?/deleteWebhook" use:enhance={({ cancel }) => { if (!confirm('Delete this webhook? Posts using it will need another webhook.')) cancel(); return () => invalidateAll(); }} class="inline">
 							<input type="hidden" name="id" value={webhook.id} />
 							<button type="submit" class="rounded-lg border border-red-400 px-3 py-2 text-sm text-red-800 hover:bg-red-100 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/40 min-h-[44px] min-w-[44px]">Delete</button>
 						</form>
@@ -229,7 +229,7 @@
 						<div class="flex gap-2">
 							{#if !t.is_default}
 								<button type="button" onclick={() => openEditTemplate(t)} class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] min-w-[44px]">Edit</button>
-								<form method="POST" action="?/deleteTemplate" use:enhance={() => invalidateAll()} class="inline">
+								<form method="POST" action="?/deleteTemplate" use:enhance={({ cancel }) => { if (!confirm('Delete this template? This cannot be undone.')) cancel(); return () => invalidateAll(); }} class="inline">
 									<input type="hidden" name="id" value={t.id} />
 									<button type="submit" class="rounded-lg border border-red-400 px-3 py-2 text-sm text-red-800 hover:bg-red-100 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/40 min-h-[44px] min-w-[44px]">Delete</button>
 								</form>
@@ -339,7 +339,7 @@
 					</div>
 					<div class="flex gap-2">
 						<button type="button" onclick={() => (editingGlobalId = g.id)} class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] min-w-[44px]">Edit</button>
-						<form method="POST" action="?/deleteGlobal" use:enhance={() => invalidateAll()} class="inline">
+						<form method="POST" action="?/deleteGlobal" use:enhance={({ cancel }) => { if (!confirm('Delete this global variable?')) cancel(); return () => invalidateAll(); }} class="inline">
 							<input type="hidden" name="id" value={g.id} />
 							<button type="submit" class="rounded-lg border border-red-400 px-3 py-2 text-sm text-red-800 hover:bg-red-100 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/40 min-h-[44px] min-w-[44px]">Delete</button>
 						</form>

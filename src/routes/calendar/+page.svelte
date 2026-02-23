@@ -848,7 +848,7 @@
 		<div class="overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--surface)]">
 			<div
 				class="grid w-max min-w-full"
-				style="grid-template-columns: repeat(24, minmax(140px, 1fr));"
+				style="grid-template-columns: repeat(24, minmax(0, 250px));"
 			>
 				<!-- Hour header row -->
 				{#each weekHours as hour}
@@ -869,7 +869,7 @@
 						>
 							{#if hour === postHour}
 								<div
-									class="h-full rounded-lg p-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
+									class="h-full rounded-lg p-2 shadow-sm cursor-grab active:cursor-grabbing min-w-0 {dragPostId === post.id ? 'opacity-50' : ''}"
 									style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#e5e7eb'};`}
 									role="button"
 									tabindex="-1"
@@ -878,12 +878,12 @@
 									ondragstart={(e) => handleDragStart(e, post)}
 									ondragend={handleDragEnd}
 								>
-									<div class="flex flex-col gap-1">
+									<div class="flex min-w-0 flex-col gap-1">
 										{#if post.image_url}
-											<img src={post.image_url} alt="" class="h-8 w-8 rounded object-cover border border-[var(--border)]" loading="lazy" />
+											<img src={post.image_url} alt="" class="h-8 w-8 shrink-0 rounded object-cover border border-[var(--border)]" loading="lazy" />
 										{/if}
-										<a href={"/posts/" + post.id} class="truncate text-sm font-medium text-[var(--text)] hover:underline" title={post.title}>{post.title}</a>
-										<p class="text-[10px] text-[var(--text-muted)]">{formatTime(post.scheduled_at)} · {post.webhook_name}</p>
+										<a href={"/posts/" + post.id} class="break-words text-sm font-medium text-[var(--text)] hover:underline" title={post.title}>{post.title}</a>
+										<p class="break-words text-[10px] text-[var(--text-muted)]">{formatTime(post.scheduled_at)} · {post.webhook_name}</p>
 										<div class="mt-1 flex flex-wrap items-center gap-1">
 											<span class={"rounded px-1.5 py-0.5 text-[10px] font-medium " + statusClass(post.status)}>{post.status}</span>
 											<button
