@@ -1,4 +1,5 @@
 import { getDatabase } from '$lib/db/index.js';
+import { getNextFreeSlot } from '$lib/scheduler/generateSlots.js';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -87,11 +88,23 @@ export const actions: Actions = {
 		if (ids.length === 0) return fail(400, { error: 'No posts selected' });
 		const db = getDatabase();
 		if (scheduleId) {
-			const schedule = db.prepare('SELECT id FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { id: string } | undefined;
+			const schedule = db.prepare('SELECT id, color FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { id: string; color: string | null } | undefined;
 			if (!schedule) return fail(400, { error: 'Invalid schedule' });
+			const scheduleColor = schedule.color ?? null;
+			const updateWithSlot = db.prepare("UPDATE post SET schedule_id = ?, scheduled_at = ?, status = ?, color = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+			const updateNoSlot = db.prepare("UPDATE post SET schedule_id = ?, status = ?, color = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+			for (const id of ids) {
+				const slot = getNextFreeSlot(scheduleId, id, accountId);
+				if (slot) {
+					updateWithSlot.run(scheduleId, slot, 'scheduled', scheduleColor, id, accountId);
+				} else {
+					updateNoSlot.run(scheduleId, 'scheduled', scheduleColor, id, accountId);
+				}
+			}
+		} else {
+			const stmt = db.prepare("UPDATE post SET schedule_id = NULL, scheduled_at = NULL, status = 'draft', updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+			for (const id of ids) stmt.run(id, accountId);
 		}
-		const stmt = db.prepare("UPDATE post SET schedule_id = ?, scheduled_at = NULL, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
-		for (const id of ids) stmt.run(scheduleId, id, accountId);
 		return { success: true, bulkUpdated: ids.length };
 	},
 	bulkUpdateWebhook: async ({ request, locals }) => {

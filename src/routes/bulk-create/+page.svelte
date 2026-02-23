@@ -10,13 +10,14 @@
 	let perPage = $state(10);
 	let titlePath = $state('title.rendered');
 	let contentPath = $state('content.rendered');
-	let titleUnescapeNewlines = $state(false);
-	let contentUnescapeNewlines = $state(false);
+	let titleUnescapeNewlines = $state(true);
+	let contentUnescapeNewlines = $state(true);
 	let customMappings = $state<{ path: string; key: string; type: string; unescapeNewlines?: boolean }[]>([]);
 	let filterCombine = $state<'and' | 'or'>('and');
 	let filterRules = $state<{ path: string; operator: string; value: string }[]>([]);
 	let webhookId = $state('');
 	let scheduleId = $state('');
+	let importStatus = $state<'draft' | 'scheduled'>('draft');
 	let skipDuplicates = $state(false);
 	let selectedPostTypeRoute = $state('');
 	let selectedSource = $state<'wordpress' | null>(null);
@@ -514,6 +515,14 @@
 									<option value={s.id}>{s.name}</option>
 								{/each}
 							</select>
+						</div>
+						<div>
+							<label for="import_status" class="block text-sm font-medium text-[var(--text)]">Status after import</label>
+							<select id="import_status" name="import_status" bind:value={importStatus} class="mt-1 w-full min-h-[44px] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]">
+								<option value="draft">Draft</option>
+								<option value="scheduled">Scheduled</option>
+							</select>
+							<p class="mt-1 text-xs text-[var(--text-muted)]">Choose “Scheduled” to have imported posts assigned to the next available slots and marked scheduled when you apply a schedule above.</p>
 						</div>
 						<label class="flex cursor-pointer items-center gap-2 text-sm text-[var(--text)]">
 							<input type="checkbox" name="skip_duplicates" bind:checked={skipDuplicates} value="on" class="rounded border-[var(--border)]" />

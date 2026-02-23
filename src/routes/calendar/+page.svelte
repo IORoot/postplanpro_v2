@@ -311,6 +311,16 @@
 		return [...postsForDay(date)].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
 	}
 
+	/** Posts for the selected day, sorted by time (for day view hour grid). */
+	function dayViewPosts(): CalendarPost[] {
+		return [...postsForDay(anchor)].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+	}
+
+	/** Posts at a given hour for the selected day (for day overview markers). */
+	function postsAtHour(hour: number): CalendarPost[] {
+		return dayViewPosts().filter((p) => new Date(p.scheduled_at).getHours() === hour);
+	}
+
 	function statusClass(status: string): string {
 		if (status === 'draft') return 'status-draft';
 		if (status === 'scheduled') return 'status-scheduled';
@@ -384,7 +394,7 @@
 					</div>
 					<div class="mt-2 space-y-1">
 						{#each postsForDay(cell.date) as post (post.id)}
-							<div class="rounded-lg px-2 py-2" style={`background-color: ${post.color ?? 'var(--surface)'}; border-left: 3px solid ${post.color ?? 'var(--surface)'};`}>
+							<div class="rounded-lg px-2 py-2" style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}>
 								<div class="flex items-center gap-1">
 									{#if post.image_url}
 										<img src={post.image_url} alt={"Preview for " + post.title} class="h-5 w-5 rounded object-cover border border-[var(--border)]" loading="lazy" />
@@ -502,7 +512,7 @@
 							{#each weekPostsForDay(d) as post (post.id)}
 								<div
 									class="absolute left-1 right-1 rounded-lg px-2 py-2 shadow-sm"
-									style={`top: ${weekPostTopPx(post.scheduled_at)}px; height: ${WEEK_POST_HEIGHT_PX}px; background-color: ${post.color ?? 'var(--surface)'}; border-left: 3px solid ${post.color ?? 'var(--surface)'};`}
+									style={`top: ${weekPostTopPx(post.scheduled_at)}px; height: ${WEEK_POST_HEIGHT_PX}px; background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}
 								>
 									<div class="flex items-center gap-2">
 										{#if post.image_url}
@@ -576,27 +586,79 @@
 				{/each}
 			</div>
 		</div>
-		<div class="space-y-3">
-			{#if postsForDay(anchor).length === 0}
-				<p class="text-sm text-[var(--text-muted)]">No posts scheduled for this day.</p>
-			{:else}
-				{#each postsForDay(anchor) as post (post.id)}
-					<div class="rounded-xl p-3" style={`background-color: ${post.color ?? 'var(--surface)'}; border-left: 3px solid ${post.color ?? 'var(--surface)'};`}>
-						<div class="flex items-center gap-3">
-							{#if post.image_url}
-								<img src={post.image_url} alt={"Preview for " + post.title} class="h-12 w-12 rounded-lg object-cover border border-[var(--border)]" loading="lazy" />
-							{/if}
-							<div class="min-w-0 flex-1">
-								<a href={"/posts/" + post.id} class="block truncate font-semibold text-[var(--text)] hover:underline">{post.title}</a>
-								<p class="text-sm text-[var(--text-muted)]">{formatTime(post.scheduled_at)} · {post.webhook_name}</p>
-							</div>
-							<span class={"rounded px-2 py-1 text-xs font-medium " + statusClass(post.status)}>{post.status}</span>
-							<button type="button" class="rounded-lg bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)]" disabled={sendingId === post.id} onclick={(e) => sendNow(post.id, e)}>
-								{sendingId === post.id ? 'Sending…' : 'Send'}
-							</button>
-						</div>
+		<!-- Day overview: full width, markers only -->
+		<div class="mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2">
+			<p class="mb-2 text-xs font-medium text-[var(--text-muted)]">Day overview</p>
+			<div
+				class="grid w-full"
+				style="grid-template-columns: repeat(24, minmax(0, 1fr));"
+			>
+				{#each weekHours as hour}
+					<div class="border-r border-[var(--border)] px-0.5 py-1 text-center text-[10px] text-[var(--text-muted)] last:border-r-0">
+						{formatHourLabel(hour)}
 					</div>
 				{/each}
+				{#each weekHours as hour}
+					<div class="flex min-h-[28px] flex-wrap items-center justify-center gap-0.5 border-r border-t border-[var(--border)] px-0.5 py-1 last:border-r-0">
+						{#each postsAtHour(hour) as post (post.id)}
+							<a
+								href={"/posts/" + post.id}
+								class="block h-2 w-2 rounded-full border border-[var(--border)] hover:scale-125"
+								style={`background-color: ${post.color ?? '#e5e7eb'};`}
+								title={post.title + ' — ' + formatTime(post.scheduled_at)}
+							></a>
+						{/each}
+					</div>
+				{/each}
+			</div>
+		</div>
+		<div class="overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+			<div
+				class="grid w-max min-w-full"
+				style="grid-template-columns: repeat(24, minmax(140px, 1fr));"
+			>
+				<!-- Hour header row -->
+				{#each weekHours as hour}
+					<div class="border-b border-r border-[var(--border)] bg-[var(--bg)] px-1 py-2 text-center text-xs font-medium text-[var(--text-muted)] last:border-r-0">
+						{formatHourLabel(hour)}
+					</div>
+				{/each}
+				<!-- One row per post: 24 cells, post placed in the column matching its scheduled hour -->
+				{#each dayViewPosts() as post (post.id)}
+					{@const postHour = new Date(post.scheduled_at).getHours()}
+					{#each weekHours as hour}
+						<div class="min-h-[72px] border-b border-r border-[var(--border)] p-1 last:border-r-0">
+							{#if hour === postHour}
+								<div
+									class="h-full rounded-lg p-2 shadow-sm"
+									style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#e5e7eb'};`}
+								>
+									<div class="flex flex-col gap-1">
+										{#if post.image_url}
+											<img src={post.image_url} alt="" class="h-8 w-8 rounded object-cover border border-[var(--border)]" loading="lazy" />
+										{/if}
+										<a href={"/posts/" + post.id} class="truncate text-sm font-medium text-[var(--text)] hover:underline" title={post.title}>{post.title}</a>
+										<p class="text-[10px] text-[var(--text-muted)]">{formatTime(post.scheduled_at)} · {post.webhook_name}</p>
+										<div class="mt-1 flex flex-wrap items-center gap-1">
+											<span class={"rounded px-1.5 py-0.5 text-[10px] font-medium " + statusClass(post.status)}>{post.status}</span>
+											<button
+												type="button"
+												class="rounded bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)]"
+												disabled={sendingId === post.id}
+												onclick={(e) => sendNow(post.id, e)}
+											>
+												{sendingId === post.id ? '…' : 'Send'}
+											</button>
+										</div>
+									</div>
+								</div>
+							{/if}
+						</div>
+					{/each}
+				{/each}
+			</div>
+			{#if dayViewPosts().length === 0}
+				<p class="p-4 text-sm text-[var(--text-muted)]">No posts scheduled for this day.</p>
 			{/if}
 		</div>
 	</div>
@@ -613,7 +675,7 @@
 							<a
 								href={"/posts/" + post.id}
 								class="block truncate rounded-md px-2 py-1 text-xs text-[var(--text)] hover:underline"
-								style={`background-color: ${post.color ?? 'var(--bg)'}; border-left: 3px solid ${post.color ?? 'var(--bg)'};`}
+								style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}
 							>
 								{new Date(post.scheduled_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })} · {post.title}
 							</a>
@@ -633,7 +695,7 @@
 		{:else}
 			<div class="space-y-2">
 				{#each posts as post (post.id)}
-					<div class="rounded-lg p-2" style={`background-color: ${post.color ?? 'var(--surface)'}; border-left: 3px solid ${post.color ?? 'var(--surface)'};`}>
+					<div class="rounded-lg p-2" style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}>
 						<div class="flex items-center gap-2">
 							{#if post.image_url}
 								<img src={post.image_url} alt={"Preview for " + post.title} class="h-8 w-8 rounded object-cover border border-[var(--border)]" loading="lazy" />

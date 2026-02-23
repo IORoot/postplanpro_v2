@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const schedules = db
 		.prepare(
 			`
-		SELECT s.id, s.name, s.description, s.created_at,
+		SELECT s.id, s.name, s.description, s.color, s.created_at,
 			(SELECT COUNT(*) FROM schedule_slot WHERE schedule_id = s.id) as slot_count,
 			(SELECT COUNT(*) FROM schedule_rule WHERE schedule_id = s.id) as rule_count
 		FROM schedule s
@@ -21,6 +21,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		id: string;
 		name: string;
 		description: string | null;
+		color: string | null;
 		created_at: string;
 		slot_count: number;
 		rule_count: number;

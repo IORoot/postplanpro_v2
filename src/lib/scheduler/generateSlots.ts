@@ -75,7 +75,8 @@ function addInterval(date: Date, amount: number, unit: string): Date {
 			d.setTime(d.getTime() + amount * 60 * 60 * 1000);
 			break;
 		case 'days':
-			d.setDate(d.getDate() + amount);
+			// Use calendar arithmetic so month/year rollover is correct (e.g. Mar 31 + 1 → Apr 1)
+			d.setFullYear(d.getFullYear(), d.getMonth(), d.getDate() + amount);
 			break;
 		default:
 			d.setTime(d.getTime() + amount * 60 * 1000);
@@ -126,11 +127,14 @@ function generateFromRule(
 		case 'daily': {
 			const time = config.time || '09:00';
 			let d = timeToDate(start, time);
-			if (d < start) d.setDate(d.getDate() + 1);
+			if (d < start) {
+				d = timeToDate(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1), time);
+			}
 			for (let i = 0; i < cap; i++) {
 				if (end && d > end) break;
 				slots.push(d.toISOString().slice(0, 19));
-				d.setDate(d.getDate() + 1);
+				// Advance by one calendar day (handles month/year rollover: e.g. Mar 31 + 1 → Apr 1)
+				d = timeToDate(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1), time);
 			}
 			break;
 		}
@@ -143,11 +147,12 @@ function generateFromRule(
 				d.setUTCDate(d.getUTCDate() + 1);
 				d = timeToDateUTC(d, time);
 			}
-			const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
 			for (let i = 0; i < cap; i++) {
 				if (end && d > end) break;
 				slots.push(d.toISOString().slice(0, 19));
-				d = new Date(d.getTime() + sevenDaysMs);
+				// Advance by 7 calendar days in UTC (avoids DST issues from adding 7*24h in ms)
+				d.setUTCDate(d.getUTCDate() + 7);
+				d = timeToDateUTC(d, time);
 			}
 			break;
 		}

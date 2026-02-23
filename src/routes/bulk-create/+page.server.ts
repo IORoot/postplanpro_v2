@@ -1,5 +1,5 @@
 import { getDatabase } from '$lib/db/index.js';
-import { randomTailwindPostColor } from '$lib/postColors.js';
+import { generateSlots } from '$lib/scheduler/generateSlots.js';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -322,6 +322,7 @@ export const actions: Actions = {
 		const postTypeRoute = (data.get('post_type_route') as string)?.trim() || '/wp/v2/posts';
 		const webhookId = data.get('webhook_id') as string;
 		const scheduleId = (data.get('schedule_id') as string)?.trim() || null;
+		const importStatus = ((data.get('import_status') as string) || 'draft').trim() === 'scheduled' ? 'scheduled' : 'draft';
 		const titlePath = (data.get('title_path') as string)?.trim() || 'title.rendered';
 		const contentPath = (data.get('content_path') as string)?.trim() || 'content.rendered';
 		const titleUnescapeNewlines = (data.get('title_unescape_newlines') as string) === 'on';
@@ -433,7 +434,7 @@ export const actions: Actions = {
 					webhookId,
 					title || '(no title)',
 					content,
-					randomTailwindPostColor(),
+					null,
 					'draft',
 					sourceId
 				);
@@ -455,22 +456,31 @@ export const actions: Actions = {
 
 		// Optionally apply schedule to all created posts
 		if (scheduleId && createdIds.length > 0) {
-			const slots = db
-				.prepare(
-					'SELECT id, scheduled_at, order_index FROM schedule_slot WHERE schedule_id = ? ORDER BY order_index'
-				)
-				.all(scheduleId) as { id: string; scheduled_at: string; order_index: number }[];
+			const scheduleRow = db.prepare('SELECT color FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { color: string | null } | undefined;
+			const scheduleColor = scheduleRow?.color ?? null;
+			const ruleCount = db.prepare('SELECT COUNT(*) as n FROM schedule_rule WHERE schedule_id = ?').get(scheduleId) as { n: number };
+			let slotDatetimes: string[];
+			if (ruleCount.n > 0) {
+				slotDatetimes = generateSlots(scheduleId, createdIds.length, undefined, accountId);
+			} else {
+				const fixedSlots = db
+					.prepare('SELECT scheduled_at FROM schedule_slot WHERE schedule_id = ? ORDER BY order_index')
+					.all(scheduleId) as { scheduled_at: string }[];
+				slotDatetimes = fixedSlots.map((s) => s.scheduled_at);
+			}
 			const scheduleFields = db
 				.prepare('SELECT key, type, value FROM schedule_field WHERE schedule_id = ?')
 				.all(scheduleId) as { key: string; type: string; value: string | null }[];
-			const setScheduleOnly = db.prepare("UPDATE post SET schedule_id = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
-			const setScheduleAndSlot = db.prepare("UPDATE post SET scheduled_at = ?, schedule_id = ?, status = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+			const setScheduleOnly = db.prepare("UPDATE post SET schedule_id = ?, color = ?, status = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+			const setScheduleAndSlot = db.prepare("UPDATE post SET scheduled_at = ?, schedule_id = ?, status = ?, color = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
 			for (let i = 0; i < createdIds.length; i++) {
 				const postId = createdIds[i];
-				if (i < slots.length) {
-					setScheduleAndSlot.run(slots[i].scheduled_at, scheduleId, 'scheduled', postId, accountId);
+				const slot = slotDatetimes[i];
+				const status = importStatus === 'scheduled' && slot ? 'scheduled' : 'draft';
+				if (slot) {
+					setScheduleAndSlot.run(slot, scheduleId, status, scheduleColor, postId, accountId);
 				} else {
-					setScheduleOnly.run(scheduleId, postId, accountId);
+					setScheduleOnly.run(scheduleId, scheduleColor, status, postId, accountId);
 				}
 				for (const sf of scheduleFields) {
 					const fieldId = crypto.randomUUID();

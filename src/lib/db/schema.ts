@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS schedule (
   account_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
+  color TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 

@@ -1,5 +1,5 @@
 import { getDatabase } from '$lib/db/index.js';
-import { normalizePostColor, randomTailwindPostColor } from '$lib/postColors.js';
+import { normalizePostColor } from '$lib/postColors.js';
 import { getNextFreeSlot } from '$lib/scheduler/generateSlots.js';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -42,7 +42,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			});
 		}
 	}
-	return { webhooks, schedules, templates: [...byTemplate.values()], defaultColor: randomTailwindPostColor() };
+	return { webhooks, schedules, templates: [...byTemplate.values()] };
 };
 
 export const actions: Actions = {
@@ -53,7 +53,7 @@ export const actions: Actions = {
 		const title = (data.get('title') as string)?.trim();
 		const content = (data.get('content') as string)?.trim() ?? '';
 		const image_url = (data.get('image_url') as string)?.trim() || null;
-		const color = normalizePostColor(data.get('color') as string) ?? randomTailwindPostColor();
+		let color = normalizePostColor(data.get('color') as string) ?? null;
 		const webhook_id = data.get('webhook_id') as string;
 		const scheduleBy = (data.get('schedule_by') as string) || 'none';
 		const schedule_id = (data.get('schedule_id') as string)?.trim() || null;
@@ -78,10 +78,11 @@ export const actions: Actions = {
 			.get(webhook_id, accountId) as { id: string } | undefined;
 		if (!webhookExists) return fail(400, { error: 'Invalid webhook' });
 		if (schedule_id) {
-			const scheduleExists = db
-				.prepare('SELECT id FROM schedule WHERE id = ? AND account_id = ?')
-				.get(schedule_id, accountId) as { id: string } | undefined;
-			if (!scheduleExists) return fail(400, { error: 'Invalid schedule' });
+			const scheduleRow = db
+				.prepare('SELECT id, color FROM schedule WHERE id = ? AND account_id = ?')
+				.get(schedule_id, accountId) as { id: string; color: string | null } | undefined;
+			if (!scheduleRow) return fail(400, { error: 'Invalid schedule' });
+			if (scheduleRow.color) color = scheduleRow.color;
 		}
 		const id = crypto.randomUUID();
 		db.prepare(

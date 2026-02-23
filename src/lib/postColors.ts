@@ -1,3 +1,6 @@
+/** Default post colour when none is set (e.g. new posts). */
+export const DEFAULT_POST_COLOR = '#ffffff';
+
 export const TAILWIND_POST_COLORS = [
 	'#fee2e2', // red-100
 	'#ffedd5', // orange-100

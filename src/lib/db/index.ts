@@ -2,7 +2,6 @@ import Database from 'better-sqlite3';
 import { mkdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomTailwindPostColor } from '$lib/postColors.js';
 import { schema } from './schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -70,6 +69,11 @@ function getDb(): Database.Database {
 		} catch {
 			// Index already exists
 		}
+		try {
+			db.exec('ALTER TABLE schedule ADD COLUMN color TEXT');
+		} catch {
+			// Column already exists
+		}
 		// Safety check after schema init.
 		const postCols = db
 			.prepare('PRAGMA table_info(post)')
@@ -85,7 +89,7 @@ function getDb(): Database.Database {
 			}[];
 			const setColor = db.prepare('UPDATE post SET color = ? WHERE id = ?');
 			for (const row of postsMissingColor) {
-				setColor.run(randomTailwindPostColor(), row.id);
+				setColor.run('#ffffff', row.id);
 			}
 			const legacyColorMap: Record<string, string> = {
 				'#fecaca': '#fee2e2',

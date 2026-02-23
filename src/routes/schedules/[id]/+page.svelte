@@ -3,6 +3,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { ruleColor } from '$lib/calendarColors.js';
 	import RulePreviewCalendar from '$lib/components/RulePreviewCalendar.svelte';
+	import { TAILWIND_POST_COLORS, normalizePostColor } from '$lib/postColors.js';
 	import { previewSlotsForRule } from '$lib/scheduler/previewSlots.js';
 
 	type Rule = {
@@ -19,6 +20,13 @@
 	let fieldIndices = $state<number[]>([]);
 	let selectedPostIds = $state<Set<string>>(new Set());
 	let useLegacySlots = $state(false);
+	const scheduleColor = $derived(normalizePostColor(data.schedule?.color) ?? TAILWIND_POST_COLORS[0]);
+	let selectedColor = $state<string>(TAILWIND_POST_COLORS[0]);
+	let hexColorInput = $state<string>(TAILWIND_POST_COLORS[0]);
+	$effect(() => {
+		selectedColor = scheduleColor;
+		hexColorInput = scheduleColor;
+	});
 
 	const DAYS = [
 		{ value: 0, label: 'Sunday' },
@@ -130,6 +138,40 @@
 						<div class="mt-4">
 							<label for="description" class="block text-sm font-medium text-[var(--text)]">Description</label>
 							<textarea id="description" name="description" rows="2" class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]">{data.schedule.description ?? ''}</textarea>
+						</div>
+						<div class="mt-4">
+							<p class="block text-sm font-medium text-[var(--text)]">Schedule colour</p>
+							<p class="mt-0.5 text-xs text-[var(--text-muted)]">Posts assigned to this schedule will use this colour.</p>
+							<div class="mt-2 flex flex-wrap gap-2">
+								{#each TAILWIND_POST_COLORS as color}
+									<button
+										type="button"
+										onclick={() => { selectedColor = color; hexColorInput = color; }}
+										class="h-8 w-8 rounded border-2 transition {selectedColor === color ? 'border-[var(--text)]' : 'border-[var(--border)]'}"
+										style={`background-color: ${color};`}
+										title={color}
+										aria-label={`Pick ${color}`}
+									></button>
+								{/each}
+							</div>
+							<div class="mt-2 flex items-center gap-2">
+								<input
+									type="color"
+									value={hexColorInput}
+									oninput={(e) => { const v = (e.currentTarget as HTMLInputElement).value; hexColorInput = v; selectedColor = normalizePostColor(v) ?? selectedColor; }}
+									class="h-10 w-14 rounded border border-[var(--border)] bg-[var(--surface)]"
+									aria-label="Pick custom colour"
+								/>
+								<input
+									type="text"
+									value={hexColorInput}
+									oninput={(e) => { const v = (e.currentTarget as HTMLInputElement).value; hexColorInput = v; selectedColor = normalizePostColor(v) ?? selectedColor; }}
+									placeholder="#aabbcc"
+									class="w-32 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
+								/>
+								<span class="inline-block h-4 w-4 rounded border border-[var(--border)]" style={`background-color: ${selectedColor};`}></span>
+							</div>
+							<input type="hidden" name="color" value={selectedColor} />
 						</div>
 					</div>
 					<div class="min-w-0">

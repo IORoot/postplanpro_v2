@@ -13,11 +13,12 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const name = (data.get('name') as string)?.trim();
 		const description = (data.get('description') as string)?.trim() || null;
+		const color = (data.get('color') as string)?.trim() || null;
 		if (!name) return fail(400, { error: 'Name is required' });
 
 		const db = getDatabase();
 		const id = crypto.randomUUID();
-		db.prepare('INSERT INTO schedule (id, account_id, name, description) VALUES (?, ?, ?, ?)').run(id, accountId, name, description);
+		db.prepare('INSERT INTO schedule (id, account_id, name, description, color) VALUES (?, ?, ?, ?, ?)').run(id, accountId, name, description, color);
 
 		// Rules (recurring) or legacy slots
 		const rulesJson = (data.get('rules_json') as string)?.trim();

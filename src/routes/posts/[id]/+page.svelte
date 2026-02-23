@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { TAILWIND_POST_COLORS, normalizePostColor } from '$lib/postColors';
+	import { DEFAULT_POST_COLOR, TAILWIND_POST_COLORS, normalizePostColor } from '$lib/postColors';
 	import { buildPostPayload } from '$lib/payload';
 
 	let { data, form } = $props();
 	let fieldRows = $state<{ key: string; type: string; value: string }[]>([]);
 	let sending = $state(false);
 	let sendError = $state<string | null>(null);
-	let selectedColor = $state<string>(TAILWIND_POST_COLORS[0]);
-	let hexColorInput = $state<string>(TAILWIND_POST_COLORS[0]);
+	let selectedColor = $state<string>(DEFAULT_POST_COLOR);
+	let hexColorInput = $state<string>(DEFAULT_POST_COLOR);
 	let titleInput = $state('');
 	let contentInput = $state('');
 	let imageUrlInput = $state('');
@@ -22,7 +22,7 @@
 			(data.fields?.length ?? 0) > 0
 				? data.fields.map((f) => ({ key: f.key, type: f.type, value: f.value ?? '' }))
 				: [{ key: '', type: 'string', value: '' }];
-		const resolvedColor = normalizePostColor(data.post.color) ?? TAILWIND_POST_COLORS[0];
+		const resolvedColor = normalizePostColor(data.post.color) ?? DEFAULT_POST_COLOR;
 		selectedColor = resolvedColor;
 		hexColorInput = resolvedColor;
 		titleInput = data.post.title;

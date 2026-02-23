@@ -11,6 +11,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		id: string;
 		name: string;
 		description: string | null;
+		color: string | null;
 		created_at: string;
 	} | undefined;
 	if (!schedule) throw redirect(303, '/schedules');
@@ -66,6 +67,7 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const name = (data.get('name') as string)?.trim();
 		const description = (data.get('description') as string)?.trim() || null;
+		const color = (data.get('color') as string)?.trim() || null;
 		if (!name) return fail(400, { error: 'Name is required' });
 
 		const db = getDatabase();
@@ -73,7 +75,7 @@ export const actions: Actions = {
 			.prepare('SELECT id FROM schedule WHERE id = ? AND account_id = ?')
 			.get(params.id, accountId) as { id: string } | undefined;
 		if (!schedule) return fail(404, { error: 'Schedule not found' });
-		db.prepare('UPDATE schedule SET name = ?, description = ? WHERE id = ? AND account_id = ?').run(name, description, params.id, accountId);
+		db.prepare('UPDATE schedule SET name = ?, description = ?, color = ? WHERE id = ? AND account_id = ?').run(name, description, color, params.id, accountId);
 
 		// Replace rules from JSON (when using recurring rules)
 		const rulesJson = (data.get('rules_json') as string)?.trim();
@@ -136,9 +138,10 @@ export const actions: Actions = {
 
 		const db = getDatabase();
 		const schedule = db
-			.prepare('SELECT id FROM schedule WHERE id = ? AND account_id = ?')
-			.get(params.id, accountId) as { id: string } | undefined;
+			.prepare('SELECT id, color FROM schedule WHERE id = ? AND account_id = ?')
+			.get(params.id, accountId) as { id: string; color: string | null } | undefined;
 		if (!schedule) return fail(404, { error: 'Schedule not found', action: 'apply' });
+		const scheduleColor = schedule.color ?? null;
 		const ownedPostCount = db
 			.prepare(`SELECT COUNT(*) as n FROM post WHERE account_id = ? AND id IN (${postIds.map(() => '?').join(',')})`)
 			.get(accountId, ...postIds) as { n: number };
@@ -155,10 +158,10 @@ export const actions: Actions = {
 
 		const scheduleFields = db.prepare('SELECT key, type, value FROM schedule_field WHERE schedule_id = ?').all(params.id) as { key: string; type: string; value: string | null }[];
 
-		const updatePost = db.prepare("UPDATE post SET scheduled_at = ?, schedule_id = ?, status = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+		const updatePost = db.prepare("UPDATE post SET scheduled_at = ?, schedule_id = ?, status = ?, color = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
 		for (let i = 0; i < postIds.length; i++) {
 			const postId = postIds[i];
-			updatePost.run(slotDatetimes[i], params.id, 'scheduled', postId, accountId);
+			updatePost.run(slotDatetimes[i], params.id, 'scheduled', scheduleColor, postId, accountId);
 			// Merge schedule fields into post: insert or replace post_field for each schedule field
 			for (const sf of scheduleFields) {
 				const existing = db.prepare('SELECT id FROM post_field WHERE post_id = ? AND key = ?').get(postId, sf.key) as { id: string } | undefined;
