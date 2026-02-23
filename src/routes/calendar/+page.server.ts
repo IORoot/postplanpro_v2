@@ -1,5 +1,6 @@
 import { getDatabase } from '$lib/db/index.js';
-import type { PageServerLoad } from './$types';
+import { fail } from '@sveltejs/kit';
+import type { Actions, PageServerLoad } from './$types';
 
 type CalendarView = 'day' | 'week' | 'month' | 'year' | 'agenda' | 'schedule';
 type CalendarPostRow = {
@@ -119,4 +120,26 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		rangeStart: start.toISOString().slice(0, 10),
 		rangeEnd: end.toISOString().slice(0, 10)
 	};
+};
+
+export const actions: Actions = {
+	reschedulePost: async ({ request, locals }) => {
+		const accountId = locals.userId;
+		if (!accountId) return fail(401, { error: 'Unauthorized' });
+		const data = await request.formData();
+		const postId = (data.get('post_id') as string)?.trim();
+		const scheduledAt = (data.get('scheduled_at') as string)?.trim();
+		if (!postId || !scheduledAt) return fail(400, { error: 'Missing post_id or scheduled_at' });
+		const db = getDatabase();
+		const row = db
+			.prepare('SELECT id FROM post WHERE id = ? AND account_id = ?')
+			.get(postId, accountId) as { id: string } | undefined;
+		if (!row) return fail(404, { error: 'Post not found' });
+		db.prepare("UPDATE post SET scheduled_at = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?").run(
+			scheduledAt.slice(0, 19),
+			postId,
+			accountId
+		);
+		return { success: true };
+	}
 };

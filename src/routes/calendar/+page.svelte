@@ -5,6 +5,10 @@
 	let sendingId = $state<string | null>(null);
 	let sendError = $state<string | null>(null);
 	let sendSuccess = $state<string | null>(null);
+	let dragPostId = $state<string | null>(null);
+	let reschedulePending = $state(false);
+	let dragPreviewText = $state<string | null>(null);
+	let dragPreviewPos = $state<{ x: number; y: number } | null>(null);
 
 	type CalendarView = 'day' | 'week' | 'month' | 'year' | 'agenda' | 'schedule';
 	type SendNowResult = {
@@ -328,6 +332,191 @@
 		return 'status-failed';
 	}
 
+	const DRAG_TYPE = 'application/x-postplan-reschedule';
+
+	function toIsoLocal(d: Date): string {
+		const y = d.getFullYear();
+		const m = String(d.getMonth() + 1).padStart(2, '0');
+		const day = String(d.getDate()).padStart(2, '0');
+		const h = String(d.getHours()).padStart(2, '0');
+		const min = String(d.getMinutes()).padStart(2, '0');
+		const s = String(d.getSeconds()).padStart(2, '0');
+		return `${y}-${m}-${day}T${h}:${min}:${s}`;
+	}
+
+	async function reschedulePost(postId: string, newScheduledAt: string) {
+		reschedulePending = true;
+		try {
+			const fd = new FormData();
+			fd.set('post_id', postId);
+			fd.set('scheduled_at', newScheduledAt);
+			const r = await fetch('?/reschedulePost', { method: 'POST', body: fd, redirect: 'manual' });
+			if (r.type === 'opaqueredirect' || r.status === 303) {
+				await invalidateAll();
+			} else if (r.status === 200) {
+				const result = await r.json().catch(() => ({}));
+				if (result?.type === 'failure') throw new Error((result.data as { error?: string })?.error ?? 'Failed');
+				await invalidateAll();
+			} else {
+				throw new Error('Reschedule failed');
+			}
+		} finally {
+			reschedulePending = false;
+			dragPostId = null;
+		}
+	}
+
+	function handleDragStart(e: DragEvent, post: CalendarPost) {
+		if (!e.dataTransfer) return;
+		dragPostId = post.id;
+		e.dataTransfer.setData(DRAG_TYPE, JSON.stringify({ postId: post.id, scheduled_at: post.scheduled_at }));
+		e.dataTransfer.effectAllowed = 'move';
+		dragPreviewText = formatTime(post.scheduled_at);
+		dragPreviewPos = { x: e.clientX, y: e.clientY };
+	}
+
+	function handleDragEnd() {
+		dragPostId = null;
+		dragPreviewText = null;
+		dragPreviewPos = null;
+	}
+
+	function setDragPreview(text: string, e: DragEvent) {
+		dragPreviewText = text;
+		dragPreviewPos = { x: e.clientX, y: e.clientY };
+	}
+
+	function allowDrop(e: DragEvent) {
+		if (e.dataTransfer?.types.includes(DRAG_TYPE)) e.preventDefault();
+	}
+
+	// Day view: drop on hour cell; minute from x position (1-min granularity)
+	function dayDrop(e: DragEvent, hour: number) {
+		e.preventDefault();
+		const raw = e.dataTransfer?.getData(DRAG_TYPE);
+		if (!raw) return;
+		const { postId } = JSON.parse(raw) as { postId: string; scheduled_at: string };
+		const target = e.currentTarget as HTMLElement;
+		const rect = target.getBoundingClientRect();
+		const fraction = rect.width > 0 ? (e.clientX - rect.left) / rect.width : 0;
+		const minute = Math.min(59, Math.max(0, Math.floor(fraction * 60)));
+		const d = new Date(anchor);
+		d.setHours(hour, minute, 0, 0);
+		reschedulePost(postId, toIsoLocal(d));
+	}
+
+	function dayDragOver(e: DragEvent, hour: number) {
+		if (e.dataTransfer?.types.includes(DRAG_TYPE)) e.preventDefault();
+		const target = e.currentTarget as HTMLElement;
+		const rect = target.getBoundingClientRect();
+		const fraction = rect.width > 0 ? (e.clientX - rect.left) / rect.width : 0;
+		const minute = Math.min(59, Math.max(0, Math.floor(fraction * 60)));
+		const d = new Date(anchor);
+		d.setHours(hour, minute, 0, 0);
+		setDragPreview(d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }), e);
+	}
+
+	// Week view: drop on day column; hour/minute from y position
+	function weekDrop(e: DragEvent, dayIndex: number) {
+		e.preventDefault();
+		const raw = e.dataTransfer?.getData(DRAG_TYPE);
+		if (!raw) return;
+		const { postId } = JSON.parse(raw) as { postId: string; scheduled_at: string };
+		const target = e.currentTarget as HTMLElement;
+		const rect = target.getBoundingClientRect();
+		const totalMinutes = 24 * 60;
+		const fraction = rect.height > 0 ? (e.clientY - rect.top) / rect.height : 0;
+		const minuteOfDay = Math.min(totalMinutes - 1, Math.max(0, Math.floor(fraction * totalMinutes)));
+		const hour = Math.floor(minuteOfDay / 60);
+		const minute = minuteOfDay % 60;
+		const dayDate = weekDays()[dayIndex];
+		const d = new Date(dayDate);
+		d.setHours(hour, minute, 0, 0);
+		reschedulePost(postId, toIsoLocal(d));
+	}
+
+	function weekDragOver(e: DragEvent, dayIndex: number) {
+		if (e.dataTransfer?.types.includes(DRAG_TYPE)) e.preventDefault();
+		const target = e.currentTarget as HTMLElement;
+		const rect = target.getBoundingClientRect();
+		const totalMinutes = 24 * 60;
+		const fraction = rect.height > 0 ? (e.clientY - rect.top) / rect.height : 0;
+		const minuteOfDay = Math.min(totalMinutes - 1, Math.max(0, Math.floor(fraction * totalMinutes)));
+		const hour = Math.floor(minuteOfDay / 60);
+		const minute = minuteOfDay % 60;
+		const dayDate = weekDays()[dayIndex];
+		const d = new Date(dayDate);
+		d.setHours(hour, minute, 0, 0);
+		setDragPreview(
+			d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) +
+				', ' +
+				d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+			e
+		);
+	}
+
+	// Month view: drop on date cell; keep time from post
+	function monthDrop(e: DragEvent, cellDate: Date) {
+		e.preventDefault();
+		const raw = e.dataTransfer?.getData(DRAG_TYPE);
+		if (!raw) return;
+		const { postId, scheduled_at } = JSON.parse(raw) as { postId: string; scheduled_at: string };
+		const postDate = new Date(scheduled_at);
+		const d = new Date(cellDate);
+		d.setHours(postDate.getHours(), postDate.getMinutes(), postDate.getSeconds(), 0);
+		reschedulePost(postId, toIsoLocal(d));
+	}
+
+	function monthDragOver(e: DragEvent, cellDate: Date) {
+		if (!e.dataTransfer?.types.includes(DRAG_TYPE)) return;
+		e.preventDefault();
+		const raw = e.dataTransfer.getData(DRAG_TYPE);
+		if (!raw) return;
+		const { scheduled_at } = JSON.parse(raw) as { postId: string; scheduled_at: string };
+		const postDate = new Date(scheduled_at);
+		const d = new Date(cellDate);
+		d.setHours(postDate.getHours(), postDate.getMinutes(), postDate.getSeconds(), 0);
+		setDragPreview(
+			d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
+				', ' +
+				d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+			e
+		);
+	}
+
+	// Year view: drop on month; keep day (clamp to month) and time
+	function yearDrop(e: DragEvent, monthIndex: number) {
+		e.preventDefault();
+		const raw = e.dataTransfer?.getData(DRAG_TYPE);
+		if (!raw) return;
+		const { postId, scheduled_at } = JSON.parse(raw) as { postId: string; scheduled_at: string };
+		const postDate = new Date(scheduled_at);
+		const y = anchor.getFullYear();
+		const lastDay = new Date(y, monthIndex + 1, 0).getDate();
+		const day = Math.min(postDate.getDate(), lastDay);
+		const d = new Date(y, monthIndex, day, postDate.getHours(), postDate.getMinutes(), postDate.getSeconds(), 0);
+		reschedulePost(postId, toIsoLocal(d));
+	}
+
+	function yearDragOver(e: DragEvent, monthIndex: number) {
+		if (!e.dataTransfer?.types.includes(DRAG_TYPE)) return;
+		e.preventDefault();
+		const raw = e.dataTransfer.getData(DRAG_TYPE);
+		if (!raw) return;
+		const { scheduled_at } = JSON.parse(raw) as { postId: string; scheduled_at: string };
+		const postDate = new Date(scheduled_at);
+		const y = anchor.getFullYear();
+		const lastDay = new Date(y, monthIndex + 1, 0).getDate();
+		const day = Math.min(postDate.getDate(), lastDay);
+		const d = new Date(y, monthIndex, day, postDate.getHours(), postDate.getMinutes(), postDate.getSeconds(), 0);
+		setDragPreview(
+			d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
+				', ' +
+				d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+			e
+		);
+	}
+
 	const viewButtons: Array<{ id: CalendarView; label: string }> = [
 		{ id: 'day', label: 'Day' },
 		{ id: 'week', label: 'Week' },
@@ -350,6 +539,16 @@
 {/if}
 {#if sendSuccess}
 	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-success">{sendSuccess}</p>
+{/if}
+
+{#if dragPostId && dragPreviewText != null && dragPreviewPos}
+	<div
+		class="pointer-events-none fixed z-[9999] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text)] shadow-lg"
+		style="left: {dragPreviewPos.x + 12}px; top: {dragPreviewPos.y + 12}px;"
+		aria-hidden="true"
+	>
+		Drop at {dragPreviewText}
+	</div>
 {/if}
 
 <div class="content-card mt-6 rounded-xl p-4 md:p-5" data-sveltekit-preload-data="tap">
@@ -388,13 +587,28 @@
 		</div>
 		<div class="grid grid-cols-7">
 			{#each monthGridDays() as cell}
-				<div class="min-h-[130px] border-r border-b border-[var(--border)] p-2 last:border-r-0">
+				<div
+					class="min-h-[130px] border-r border-b border-[var(--border)] p-2 last:border-r-0"
+					role="group"
+					aria-label="Drop to reschedule"
+					ondragover={(e) => monthDragOver(e, cell.date)}
+					ondrop={(e) => monthDrop(e, cell.date)}
+				>
 					<div class="text-right text-xs {cell.inMonth ? 'text-[var(--text)]' : 'text-[var(--text-muted)] opacity-50'}">
 						{cell.date.getDate()}
 					</div>
 					<div class="mt-2 space-y-1">
 						{#each postsForDay(cell.date) as post (post.id)}
-							<div class="rounded-lg px-2 py-2" style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}>
+							<div
+								class="rounded-lg px-2 py-2 cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
+								style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}
+								role="button"
+								tabindex="-1"
+								aria-label="Drag to reschedule"
+								draggable={true}
+								ondragstart={(e) => handleDragStart(e, post)}
+								ondragend={handleDragEnd}
+							>
 								<div class="flex items-center gap-1">
 									{#if post.image_url}
 										<img src={post.image_url} alt={"Preview for " + post.title} class="h-5 w-5 rounded object-cover border border-[var(--border)]" loading="lazy" />
@@ -500,8 +714,15 @@
 						{/each}
 					</div>
 
-					{#each weekDays() as d}
-						<div class="relative border-l border-[var(--border)] bg-[var(--bg)]" style={`height: ${24 * WEEK_HOUR_SLOT_PX}px;`}>
+					{#each weekDays() as d, dayIndex}
+						<div
+							class="relative border-l border-[var(--border)] bg-[var(--bg)]"
+							style={`height: ${24 * WEEK_HOUR_SLOT_PX}px;`}
+							role="group"
+							aria-label="Drop to reschedule"
+							ondragover={(e) => weekDragOver(e, dayIndex)}
+							ondrop={(e) => weekDrop(e, dayIndex)}
+						>
 							{#each weekHours as hour}
 								<div
 									class="absolute left-0 right-0 border-t border-dashed border-[var(--border)]/70"
@@ -511,8 +732,14 @@
 
 							{#each weekPostsForDay(d) as post (post.id)}
 								<div
-									class="absolute left-1 right-1 rounded-lg px-2 py-2 shadow-sm"
+									class="absolute left-1 right-1 rounded-lg px-2 py-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
 									style={`top: ${weekPostTopPx(post.scheduled_at)}px; height: ${WEEK_POST_HEIGHT_PX}px; background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}
+									role="button"
+									tabindex="-1"
+									aria-label="Drag to reschedule"
+									draggable={true}
+									ondragstart={(e) => handleDragStart(e, post)}
+									ondragend={handleDragEnd}
 								>
 									<div class="flex items-center gap-2">
 										{#if post.image_url}
@@ -627,11 +854,23 @@
 				{#each dayViewPosts() as post (post.id)}
 					{@const postHour = new Date(post.scheduled_at).getHours()}
 					{#each weekHours as hour}
-						<div class="min-h-[72px] border-b border-r border-[var(--border)] p-1 last:border-r-0">
+						<div
+							class="min-h-[72px] border-b border-r border-[var(--border)] p-1 last:border-r-0"
+							role="group"
+							aria-label="Drop to reschedule"
+							ondragover={(e) => dayDragOver(e, hour)}
+							ondrop={(e) => dayDrop(e, hour)}
+						>
 							{#if hour === postHour}
 								<div
-									class="h-full rounded-lg p-2 shadow-sm"
+									class="h-full rounded-lg p-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
 									style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#e5e7eb'};`}
+									role="button"
+									tabindex="-1"
+									aria-label="Drag to reschedule"
+									draggable={true}
+									ondragstart={(e) => handleDragStart(e, post)}
+									ondragend={handleDragEnd}
 								>
 									<div class="flex flex-col gap-1">
 										{#if post.image_url}
@@ -666,16 +905,26 @@
 	<div class="content-card mt-4 rounded-xl p-4">
 		<div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
 			{#each yearMonths() as monthDate}
-				{@const monthPosts = postsForMonth(monthDate.getMonth())}
-				<div class="rounded-xl bg-[var(--surface)] p-3">
-					<p class="text-sm font-semibold text-[var(--text)]">{monthNames[monthDate.getMonth()]}</p>
+				{@const monthIndex = monthDate.getMonth()}
+				{@const monthPosts = postsForMonth(monthIndex)}
+				<div
+					class="rounded-xl bg-[var(--surface)] p-3"
+					role="group"
+					aria-label="Drop to reschedule"
+					ondragover={(e) => yearDragOver(e, monthIndex)}
+					ondrop={(e) => yearDrop(e, monthIndex)}
+				>
+					<p class="text-sm font-semibold text-[var(--text)]">{monthNames[monthIndex]}</p>
 					<p class="mt-1 text-xs text-[var(--text-muted)]">{monthPosts.length} post(s)</p>
 					<div class="mt-2 space-y-1">
 						{#each monthPosts.slice(0, 4) as post (post.id)}
 							<a
 								href={"/posts/" + post.id}
-								class="block truncate rounded-md px-2 py-1 text-xs text-[var(--text)] hover:underline"
+								class="block truncate rounded-md px-2 py-1 text-xs text-[var(--text)] hover:underline cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
 								style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}
+								draggable={true}
+								ondragstart={(e) => handleDragStart(e, post)}
+								ondragend={handleDragEnd}
 							>
 								{new Date(post.scheduled_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })} · {post.title}
 							</a>
