@@ -74,8 +74,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	}
 
 	const stages = db
-		.prepare('SELECT stage, completed_at FROM post_stage WHERE post_id = ? ORDER BY completed_at')
-		.all(params.id) as { stage: string; completed_at: string }[];
+		.prepare('SELECT stage, status, completed_at FROM post_stage WHERE post_id = ? ORDER BY completed_at')
+		.all(params.id) as { stage: string; status: string; completed_at: string }[];
 
 	return { post, fields, globals, webhooks, schedules, templates: [...byTemplate.values()], stages };
 };

@@ -2,10 +2,16 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 
-	let { data } = $props();
+	let { data, form } = $props();
 
 	// Make.com callback: show full token once after generation
 	let generatedCallbackToken = $state<string | null>(null);
+
+	// When form action returns a token (e.g. after redirect), show it
+	$effect(() => {
+		const token = (form as { token?: string } | null)?.token;
+		if (typeof token === 'string') generatedCallbackToken = token;
+	});
 
 	// Webhook edit state
 	let editingWebhookId = $state<string | null>(null);
@@ -181,7 +187,7 @@
 <!-- Make.com callbacks -->
 <section class="mt-10">
 	<h2 class="text-lg font-medium text-[var(--text)]">Make.com callbacks</h2>
-	<p class="mt-1 text-sm text-[var(--text-muted)]">When a post is sent to Make.com, you can have your scenario notify PostPlan when the post passes through a route. Use the callback URL and token below in an HTTP module.</p>
+	<p class="mt-1 text-sm text-[var(--text-muted)]">When a post is sent to Make.com, your scenario can notify PostPlan that the post reached a certain step (e.g. “published to Instagram”). PostPlan records these stages and shows them on the post’s edit page.</p>
 
 	<div class="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 space-y-4">
 		{#if data.callbackUrl}
@@ -226,11 +232,11 @@
 					<form
 						method="POST"
 						action="?/generateCallbackToken"
-						use:enhance={({ result }) => {
+						use:enhance={() => async ({ result }) => {
 							if (result.type === 'success' && result.data && typeof (result.data as { token?: string }).token === 'string') {
 								generatedCallbackToken = (result.data as { token: string }).token;
 							}
-							return () => invalidateAll();
+							await invalidateAll();
 						}}
 						class="inline"
 					>
@@ -242,11 +248,11 @@
 				<form
 					method="POST"
 					action="?/generateCallbackToken"
-					use:enhance={({ result }) => {
+					use:enhance={() => async ({ result }) => {
 						if (result.type === 'success' && result.data && typeof (result.data as { token?: string }).token === 'string') {
 							generatedCallbackToken = (result.data as { token: string }).token;
 						}
-						return () => invalidateAll();
+						await invalidateAll();
 					}}
 					class="mt-2"
 				>
@@ -254,6 +260,23 @@
 				</form>
 				<p class="mt-1 text-xs text-[var(--text-muted)]">Generate a token so Make.com can authenticate when calling the callback URL. The payload sent to Make.com will include <code>callback_url</code> and <code>callback_token</code> when set.</p>
 			{/if}
+		</div>
+
+		<!-- How to use the callback -->
+		<div class="mt-6 pt-4 border-t border-[var(--border)]">
+			<h3 class="text-sm font-semibold text-[var(--text)]">How to use the callback in Make.com</h3>
+			<ol class="mt-2 list-decimal list-inside space-y-2 text-sm text-[var(--text-muted)]">
+				<li>When PostPlan sends a post to your webhook, the payload includes <code class="rounded bg-[var(--bg)] px-1 text-xs">callback_url</code>, <code class="rounded bg-[var(--bg)] px-1 text-xs">callback_token</code>, and <code class="rounded bg-[var(--bg)] px-1 text-xs">id</code> (the post ID).</li>
+				<li>After your scenario does something with the post (e.g. publishes it), add an <strong>HTTP – Make a request</strong> module.</li>
+				<li>Set <strong>URL</strong> to the <code class="rounded bg-[var(--bg)] px-1 text-xs">callback_url</code> from the webhook (or copy it from above).</li>
+				<li>Set <strong>Method</strong> to <code class="rounded bg-[var(--bg)] px-1 text-xs">POST</code>.</li>
+				<li>Add a header: <code class="rounded bg-[var(--bg)] px-1 text-xs">Authorization</code> = <code class="rounded bg-[var(--bg)] px-1 text-xs">Bearer {'{{callback_token}}'}</code> (use the token from the webhook payload).</li>
+				<li>Set <strong>Body type</strong> to raw JSON and use:
+					<pre class="mt-2 overflow-x-auto rounded border border-[var(--border)] bg-[var(--bg)] p-3 text-xs text-[var(--text)]"><code>{'{"post_id": "{{id}}",\n  "stage": "instagram_published"}'}</code></pre>
+					Use the webhook’s <code class="rounded bg-[var(--bg)] px-1 text-xs">id</code> as <code class="rounded bg-[var(--bg)] px-1 text-xs">post_id</code>, and any label you like for <code class="rounded bg-[var(--bg)] px-1 text-xs">stage</code> (e.g. <code class="rounded bg-[var(--bg)] px-1 text-xs">facebook_published</code>, <code class="rounded bg-[var(--bg)] px-1 text-xs">reviewed</code>).
+				</li>
+				<li>Run the scenario. Completed stages appear on the post’s edit page under “Make.com stages”.</li>
+			</ol>
 		</div>
 	</div>
 </section>

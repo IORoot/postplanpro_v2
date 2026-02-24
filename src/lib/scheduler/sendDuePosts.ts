@@ -71,9 +71,21 @@ function resolveRequestBody(
 	}
 }
 
+/** Current time in local timezone, format YYYY-MM-DDTHH:mm:ss (matches stored scheduled_at from datetime-local / toIsoLocal). */
+function nowLocalIso(): string {
+	const d = new Date();
+	const y = d.getFullYear();
+	const m = String(d.getMonth() + 1).padStart(2, '0');
+	const day = String(d.getDate()).padStart(2, '0');
+	const h = String(d.getHours()).padStart(2, '0');
+	const min = String(d.getMinutes()).padStart(2, '0');
+	const s = String(d.getSeconds()).padStart(2, '0');
+	return `${y}-${m}-${day}T${h}:${min}:${s}`;
+}
+
 export async function sendDuePosts(): Promise<{ sent: number; failed: number; errors: string[] }> {
 	const db = getDatabase();
-	const now = new Date().toISOString().slice(0, 19);
+	const now = nowLocalIso();
 	const due = db
 		.prepare(
 			`SELECT id, account_id, webhook_id, title, content, image_url, payload_override, scheduled_at, status

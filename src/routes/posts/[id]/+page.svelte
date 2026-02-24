@@ -5,6 +5,24 @@
 	import { buildPostPayload } from '$lib/payload';
 
 	let { data, form } = $props();
+	let stages = $state<{ stage: string; status: string; completed_at: string }[]>([]);
+
+	// Sync stages from server data (initial + after form submit); poll keeps them updated when callback is received
+	$effect(() => {
+		stages = data.stages ?? [];
+	});
+	$effect(() => {
+		const postId = data.post?.id;
+		if (!postId) return;
+		const interval = setInterval(async () => {
+			const res = await fetch(`/api/posts/${postId}/stages`);
+			if (res.ok) {
+				const { stages: next } = await res.json();
+				stages = next ?? [];
+			}
+		}, 4000);
+		return () => clearInterval(interval);
+	});
 	let fieldRows = $state<{ key: string; type: string; value: string }[]>([]);
 	let sending = $state(false);
 	let sendError = $state<string | null>(null);
@@ -125,7 +143,31 @@
 	<title>Edit: {data.post.title} – PostPlan</title>
 </svelte:head>
 
-<h1 class="text-2xl font-bold text-[var(--text)]">Edit post</h1>
+<div class="flex flex-wrap items-start justify-between gap-2">
+	<h1 class="text-2xl font-bold text-[var(--text)]">Edit post</h1>
+	<code class="rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-xs font-mono text-[var(--text-muted)]" title="Post ID">{data.post.id}</code>
+</div>
+<p class="mt-1 flex items-center gap-2">
+	<span
+		class="rounded px-2 py-1 text-xs font-medium capitalize {data.post.status === 'draft'
+			? 'status-draft'
+			: data.post.status === 'scheduled'
+				? 'status-scheduled'
+				: data.post.status === 'sent'
+					? 'status-sent'
+					: 'status-failed'}"
+	>
+		{data.post.status}
+	</span>
+	{#if data.post.scheduled_at}
+		<span class="text-sm text-[var(--text-muted)]">
+			{data.post.status === 'scheduled' ? 'Scheduled for ' : ''}{new Date(data.post.scheduled_at).toLocaleString()}
+		</span>
+	{/if}
+	{#if data.post.status === 'sent' && data.post.sent_at}
+		<span class="text-sm text-[var(--text-muted)]">Sent {new Date(data.post.sent_at).toLocaleString()}</span>
+	{/if}
+</p>
 
 <form method="POST" action="?/update" use:enhance class="mt-6">
 	{#if form?.error}
@@ -316,21 +358,6 @@
 				</div>
 			{/if}
 
-			{#if data.stages?.length > 0}
-				<div>
-					<h2 class="text-sm font-semibold text-[var(--text)] mb-2">Make.com stages</h2>
-					<p class="text-xs text-[var(--text-muted)] mb-2">Stages completed by your Make.com scenario for this post.</p>
-					<ul class="flex flex-wrap gap-2">
-						{#each data.stages as s}
-							<li class="rounded-lg border border-[var(--border)] bg-[var(--surface-hover)] px-2.5 py-1.5 text-xs">
-								<span class="font-medium text-[var(--text)]">{s.stage}</span>
-								<span class="text-[var(--text-muted)] ml-1">{new Date(s.completed_at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}</span>
-							</li>
-						{/each}
-					</ul>
-				</div>
-			{/if}
-
 			<div>
 				<div class="mb-2 flex items-center justify-between gap-2">
 					<h2 class="text-sm font-semibold text-[var(--text)]">Live JSON output</h2>
@@ -340,18 +367,16 @@
 			</div>
 
 			<!-- JSON Override (under Live JSON Output) -->
-			<div class="pt-3 border-t border-[var(--border)]">
+			<div class="py-3 mb-3 border-[var(--border)]">
 				<div class="flex items-center justify-between gap-2 mb-1">
-					<h3 class="text-sm font-semibold text-[var(--text)]">JSON override</h3>
 					<button
 						type="button"
 						onclick={() => (overrideEnabled = !overrideEnabled)}
 						class="rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--text)] hover:bg-[var(--surface-hover)]"
 					>
-						{overrideEnabled ? 'Disable override' : 'Enable override'}
+						{overrideEnabled ? 'Disable override' : 'Enable JSON override'}
 					</button>
 				</div>
-				<p class="text-xs text-[var(--text-muted)] mb-2">When enabled and saved, this JSON is sent instead of generated output.</p>
 				<input type="hidden" name="payload_override_enabled" value={overrideEnabled ? '1' : '0'} />
 				<input type="hidden" name="payload_override" value={overrideText} />
 				{#if overrideEnabled}
@@ -364,6 +389,47 @@
 					{#if overrideError}
 						<p class="mt-2 rounded px-2 py-1 text-xs alert-error">{overrideError}</p>
 					{/if}
+				{/if}
+			</div>
+
+			<!-- Make.com stages (under JSON Override) -->
+			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+				<h3 class="text-sm font-semibold text-[var(--text)] mb-1">Make.com stages</h3>
+				<p class="text-xs text-[var(--text-muted)] mb-3">Sequence of stages completed by your Make.com scenario for this post.</p>
+				{#if stages.length > 0}
+					<div class="overflow-x-auto rounded border border-[var(--border)]">
+						<table class="w-full min-w-[240px] text-left text-sm">
+							<thead>
+								<tr class="border-b border-[var(--border)] bg-[var(--bg)]">
+									<th class="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">#</th>
+									<th class="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">Stage</th>
+									<th class="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">Status</th>
+									<th class="px-3 py-2 text-xs font-semibold text-[var(--text-muted)]">Date / time</th>
+									<th class="w-4 px-2 py-2" aria-hidden="true"></th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each stages as s, i}
+									{@const isPass = (s.status ?? 'pass') === 'pass'}
+									<tr class="border-b border-[var(--border)] last:border-b-0">
+										<td class="px-3 py-2 text-[var(--text-muted)]">{i + 1}</td>
+										<td class="px-3 py-2 font-medium text-[var(--text)]">{s.stage}</td>
+										<td class="px-3 py-2 text-[var(--text-muted)]">{isPass ? 'pass' : 'fail'}</td>
+										<td class="px-3 py-2 text-[var(--text-muted)]">{new Date(s.completed_at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}</td>
+										<td class="px-2 py-2 text-right">
+											<span
+												class="inline-block h-2 w-2 rounded-full {isPass ? 'bg-green-500' : 'bg-red-500'}"
+												title={isPass ? 'Stage passed' : 'Stage failed'}
+												aria-hidden="true"
+											></span>
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{:else}
+					<p class="text-xs text-[var(--text-muted)]">No stages recorded yet. Call the callback URL from Make.com to add stages.</p>
 				{/if}
 			</div>
 		</aside>

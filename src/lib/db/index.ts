@@ -79,6 +79,11 @@ function getDb(): Database.Database {
 		} catch {
 			// Column already exists
 		}
+		try {
+			db.exec("ALTER TABLE post_stage ADD COLUMN status TEXT NOT NULL DEFAULT 'pass'");
+		} catch {
+			// Column already exists
+		}
 		// Safety check after schema init.
 		const postCols = db
 			.prepare('PRAGMA table_info(post)')

@@ -185,11 +185,12 @@ CREATE INDEX IF NOT EXISTS idx_post_account ON post(account_id);
 CREATE INDEX IF NOT EXISTS idx_post_account_scheduled_at ON post(account_id, scheduled_at);
 CREATE INDEX IF NOT EXISTS idx_send_log_account ON send_log(account_id);
 
--- Make.com callbacks: stage completions per post
+-- Make.com callbacks: stage completions per post (status: pass | fail from stage_passed / stage_failed)
 CREATE TABLE IF NOT EXISTS post_stage (
   id TEXT PRIMARY KEY,
   post_id TEXT NOT NULL REFERENCES post(id) ON DELETE CASCADE,
   stage TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pass',
   completed_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(post_id, stage)
 );

@@ -17,16 +17,39 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 	const accountId = user.id;
 
-	let body: { post_id?: string; stage?: string };
+	let body: { post_id?: string; stage?: string; stage_passed?: string; stage_failed?: string };
 	try {
 		body = await request.json();
 	} catch {
 		return json({ error: 'Invalid JSON body.' }, { status: 400 });
 	}
 	const postId = typeof body.post_id === 'string' ? body.post_id.trim() : '';
-	const stage = typeof body.stage === 'string' ? body.stage.trim() : '';
+	const stageFromPass = typeof body.stage_passed === 'string' ? body.stage_passed.trim() : '';
+	const stageFromFail = typeof body.stage_failed === 'string' ? body.stage_failed.trim() : '';
+	const stageLegacy = typeof body.stage === 'string' ? body.stage.trim() : '';
+
+	let stage: string;
+	let status: 'pass' | 'fail';
+	if (stageFromFail) {
+		stage = stageFromFail;
+		status = 'fail';
+	} else if (stageFromPass) {
+		stage = stageFromPass;
+		status = 'pass';
+	} else if (stageLegacy) {
+		stage = stageLegacy;
+		status = 'pass';
+	} else {
+		return json(
+			{ error: 'Body must include post_id and one of: stage, stage_passed, or stage_failed (non-empty strings).' },
+			{ status: 400 }
+		);
+	}
 	if (!postId || !stage) {
-		return json({ error: 'Body must include post_id and stage (non-empty strings).' }, { status: 400 });
+		return json(
+			{ error: 'Body must include post_id and one of: stage, stage_passed, or stage_failed (non-empty strings).' },
+			{ status: 400 }
+		);
 	}
 
 	const post = db.prepare('SELECT id, account_id FROM post WHERE id = ? AND account_id = ?').get(postId, accountId) as
@@ -38,8 +61,8 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const id = crypto.randomUUID();
 	db.prepare(
-		"INSERT OR IGNORE INTO post_stage (id, post_id, stage, completed_at) VALUES (?, ?, ?, datetime('now'))"
-	).run(id, postId, stage);
+		"INSERT OR REPLACE INTO post_stage (id, post_id, stage, status, completed_at) VALUES (?, ?, ?, ?, datetime('now'))"
+	).run(id, postId, stage, status);
 
 	return json({ ok: true });
 };
