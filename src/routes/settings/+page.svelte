@@ -4,6 +4,9 @@
 
 	let { data } = $props();
 
+	// Make.com callback: show full token once after generation
+	let generatedCallbackToken = $state<string | null>(null);
+
 	// Webhook edit state
 	let editingWebhookId = $state<string | null>(null);
 	let newWebhook = $state(false);
@@ -173,6 +176,86 @@
 	{#if !newWebhook}
 		<button type="button" onclick={openNewWebhook} class="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add webhook</button>
 	{/if}
+</section>
+
+<!-- Make.com callbacks -->
+<section class="mt-10">
+	<h2 class="text-lg font-medium text-[var(--text)]">Make.com callbacks</h2>
+	<p class="mt-1 text-sm text-[var(--text-muted)]">When a post is sent to Make.com, you can have your scenario notify PostPlan when the post passes through a route. Use the callback URL and token below in an HTTP module.</p>
+
+	<div class="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 space-y-4">
+		{#if data.callbackUrl}
+			<div>
+				<p class="block text-sm font-medium text-[var(--text)]">Callback URL</p>
+				<div class="mt-1 flex flex-wrap items-center gap-2">
+					<code class="flex-1 min-w-0 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] break-all">{data.callbackUrl}</code>
+					<button
+						type="button"
+						onclick={() => navigator.clipboard.writeText(data.callbackUrl ?? '').then(() => alert('Copied to clipboard'))}
+						class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]"
+					>
+						Copy
+					</button>
+				</div>
+			</div>
+		{:else}
+			<p class="text-sm text-[var(--text-muted)]">Set <code>APP_BASE_URL</code> in your environment to see the callback URL.</p>
+		{/if}
+
+		<div>
+			<p class="block text-sm font-medium text-[var(--text)]">Callback token</p>
+			{#if generatedCallbackToken}
+				<p class="mt-1 text-xs text-[var(--text-muted)]">Save this token; it won’t be shown again. Use it in Make.com as <code>Authorization: Bearer &lt;token&gt;</code>.</p>
+				<div class="mt-2 flex flex-wrap items-center gap-2">
+					<code class="flex-1 min-w-0 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] break-all font-mono">{generatedCallbackToken}</code>
+					<button
+						type="button"
+						onclick={() => navigator.clipboard.writeText(generatedCallbackToken ?? '').then(() => alert('Copied to clipboard'))}
+						class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]"
+					>
+						Copy
+					</button>
+					<button type="button" onclick={() => (generatedCallbackToken = null)} class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">Dismiss</button>
+				</div>
+			{:else if data.callbackTokenMasked}
+				<div class="mt-2 flex flex-wrap items-center gap-2">
+					<code class="rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] font-mono">{data.callbackTokenMasked}</code>
+					<form method="POST" action="?/revokeCallbackToken" use:enhance={({ cancel }) => { if (!confirm('Revoke the callback token? Make.com scenarios using it will stop working until you generate a new one.')) cancel(); return async () => { generatedCallbackToken = null; await invalidateAll(); }; }} class="inline">
+						<button type="submit" class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">Revoke</button>
+					</form>
+					<form
+						method="POST"
+						action="?/generateCallbackToken"
+						use:enhance={({ result }) => {
+							if (result.type === 'success' && result.data && typeof (result.data as { token?: string }).token === 'string') {
+								generatedCallbackToken = (result.data as { token: string }).token;
+							}
+							return () => invalidateAll();
+						}}
+						class="inline"
+					>
+						<button type="submit" class="rounded-lg border border-amber-500 px-3 py-2 text-sm font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 min-h-[44px]">Regenerate</button>
+					</form>
+				</div>
+				<p class="mt-1 text-xs text-[var(--text-muted)]">Use this token in Make.com: <code>Authorization: Bearer &lt;token&gt;</code>. Regenerating invalidates the previous token.</p>
+			{:else}
+				<form
+					method="POST"
+					action="?/generateCallbackToken"
+					use:enhance={({ result }) => {
+						if (result.type === 'success' && result.data && typeof (result.data as { token?: string }).token === 'string') {
+							generatedCallbackToken = (result.data as { token: string }).token;
+						}
+						return () => invalidateAll();
+					}}
+					class="mt-2"
+				>
+					<button type="submit" class="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 min-h-[44px]">Generate callback token</button>
+				</form>
+				<p class="mt-1 text-xs text-[var(--text-muted)]">Generate a token so Make.com can authenticate when calling the callback URL. The payload sent to Make.com will include <code>callback_url</code> and <code>callback_token</code> when set.</p>
+			{/if}
+		</div>
+	</div>
 </section>
 
 <!-- Custom field templates -->

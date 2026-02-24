@@ -1,7 +1,39 @@
 import { getDatabase } from '$lib/db/index.js';
 import { buildPostPayload } from '$lib/payload.js';
+import { env } from '$env/dynamic/private';
 
 const MAX_RESPONSE_BODY = 50000;
+
+function isLocalhostBaseUrl(url: string): boolean {
+	try {
+		const u = new URL(url);
+		const host = u.hostname.toLowerCase();
+		return host === 'localhost' || host === '127.0.0.1';
+	} catch {
+		return true;
+	}
+}
+
+/** Merge id and optional callback_url/callback_token into the body sent to Make.com. */
+function injectCallbackPayload(
+	db: ReturnType<typeof getDatabase>,
+	body: Record<string, unknown>,
+	postId: string,
+	accountId: string
+): Record<string, unknown> {
+	const out = { ...body, id: postId };
+	const baseUrl = env.APP_BASE_URL?.trim();
+	if (!baseUrl) return out;
+	if (isLocalhostBaseUrl(baseUrl)) return out;
+	const user = db.prepare('SELECT callback_token FROM user WHERE id = ?').get(accountId) as {
+		callback_token: string | null;
+	} | undefined;
+	const token = user?.callback_token?.trim();
+	if (!token) return out;
+	out.callback_url = baseUrl.replace(/\/$/, '') + '/api/callbacks/stage';
+	out.callback_token = token;
+	return out;
+}
 
 function insertSendLog(
 	db: ReturnType<typeof getDatabase>,
@@ -113,7 +145,13 @@ export async function sendDuePosts(): Promise<{ sent: number; failed: number; er
 			insertSendLog(db, post.account_id, post.id, post.payload_override ?? '', null, resolved.error, false);
 			continue;
 		}
-		const requestJson = JSON.stringify(resolved.body);
+		const bodyWithCallback = injectCallbackPayload(
+			db,
+			resolved.body as Record<string, unknown>,
+			post.id,
+			post.account_id
+		);
+		const requestJson = JSON.stringify(bodyWithCallback);
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json'
 		};
@@ -233,7 +271,13 @@ export async function sendPost(postId: string, accountId: string): Promise<SendP
 		insertSendLog(db, accountId, post.id, post.payload_override ?? '', null, resolved.error, false);
 		return { success: false, error: resolved.error, responseStatus: null, responseBody: resolved.error };
 	}
-	const requestJson = JSON.stringify(resolved.body);
+	const bodyWithCallback = injectCallbackPayload(
+		db,
+		resolved.body as Record<string, unknown>,
+		post.id,
+		accountId
+	);
+	const requestJson = JSON.stringify(bodyWithCallback);
 	const updateSent = db.prepare(
 		"UPDATE post SET status = 'sent', sent_at = datetime('now'), error_message = NULL, updated_at = datetime('now') WHERE id = ?"
 	);

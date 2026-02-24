@@ -1,6 +1,7 @@
 import { getDatabase } from '$lib/db/index.js';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { env } from '$env/dynamic/private';
 
 function parseHeadersJson(json: string | null | undefined): { key: string; value: string }[] {
 	if (!json?.trim()) return [];
@@ -102,7 +103,20 @@ export const load: PageServerLoad = async ({ locals }) => {
 			...t,
 			is_default: t.is_default === 1,
 			fields: fieldsByTemplate.get(t.id) ?? []
-		}))
+		})),
+		callbackTokenMasked: (() => {
+			const row = db.prepare('SELECT callback_token FROM user WHERE id = ?').get(accountId) as {
+				callback_token: string | null;
+			} | undefined;
+			const t = row?.callback_token?.trim();
+			if (!t) return null;
+			return '••••••••••••' + t.slice(-4);
+		})(),
+		callbackUrl: (() => {
+			const base = env.APP_BASE_URL?.trim();
+			if (!base) return null;
+			return base.replace(/\/$/, '') + '/api/callbacks/stage';
+		})()
 	};
 };
 
@@ -273,6 +287,19 @@ export const actions: Actions = {
 		if (!row) return fail(404, { error: 'Template not found' });
 		if (row.is_default === 1) return fail(403, { error: 'Default templates cannot be deleted.' });
 		db.prepare('DELETE FROM field_template WHERE id = ? AND account_id = ?').run(id, accountId);
+		return { success: true };
+	},
+	generateCallbackToken: async ({ locals }) => {
+		const accountId = locals.userId;
+		if (!accountId) return fail(401, { error: 'Unauthorized' });
+		const token = crypto.randomUUID();
+		getDatabase().prepare('UPDATE user SET callback_token = ? WHERE id = ?').run(token, accountId);
+		return { token };
+	},
+	revokeCallbackToken: async ({ locals }) => {
+		const accountId = locals.userId;
+		if (!accountId) return fail(401, { error: 'Unauthorized' });
+		getDatabase().prepare('UPDATE user SET callback_token = NULL WHERE id = ?').run(accountId);
 		return { success: true };
 	}
 };

@@ -184,4 +184,14 @@ CREATE INDEX IF NOT EXISTS idx_schedule_account ON schedule(account_id);
 CREATE INDEX IF NOT EXISTS idx_post_account ON post(account_id);
 CREATE INDEX IF NOT EXISTS idx_post_account_scheduled_at ON post(account_id, scheduled_at);
 CREATE INDEX IF NOT EXISTS idx_send_log_account ON send_log(account_id);
+
+-- Make.com callbacks: stage completions per post
+CREATE TABLE IF NOT EXISTS post_stage (
+  id TEXT PRIMARY KEY,
+  post_id TEXT NOT NULL REFERENCES post(id) ON DELETE CASCADE,
+  stage TEXT NOT NULL,
+  completed_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(post_id, stage)
+);
+CREATE INDEX IF NOT EXISTS idx_post_stage_post ON post_stage(post_id);
 `;

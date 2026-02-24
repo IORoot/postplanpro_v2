@@ -45,6 +45,11 @@ function getDb(): Database.Database {
 			// Column already exists
 		}
 		try {
+			db.exec('ALTER TABLE user ADD COLUMN callback_token TEXT');
+		} catch {
+			// Column already exists
+		}
+		try {
 			db.exec('ALTER TABLE post ADD COLUMN image_url TEXT');
 		} catch {
 			// Column already exists

@@ -12,11 +12,12 @@ const appAuthGuard: Handle = async ({ event, resolve }) => {
 	const isAuthRoute = pathname.startsWith('/auth');
 	const isPublicRoute = PUBLIC_PATHS.includes(pathname);
 	const isCronRoute = pathname.startsWith('/api/cron/send-due-posts');
+	const isCallbackRoute = pathname.startsWith('/api/callbacks/');
 
 	const session = await event.locals.auth();
 	event.locals.userId = session?.user?.id ?? null;
 
-	if (!session && !isAuthRoute && !isPublicRoute && !isCronRoute) {
+	if (!session && !isAuthRoute && !isPublicRoute && !isCronRoute && !isCallbackRoute) {
 		throw redirect(303, '/auth/login');
 	}
 	// Allow POST actions on /auth/login (e.g. signout), but keep GET redirected.

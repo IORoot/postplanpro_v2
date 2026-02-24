@@ -316,6 +316,21 @@
 				</div>
 			{/if}
 
+			{#if data.stages?.length > 0}
+				<div>
+					<h2 class="text-sm font-semibold text-[var(--text)] mb-2">Make.com stages</h2>
+					<p class="text-xs text-[var(--text-muted)] mb-2">Stages completed by your Make.com scenario for this post.</p>
+					<ul class="flex flex-wrap gap-2">
+						{#each data.stages as s}
+							<li class="rounded-lg border border-[var(--border)] bg-[var(--surface-hover)] px-2.5 py-1.5 text-xs">
+								<span class="font-medium text-[var(--text)]">{s.stage}</span>
+								<span class="text-[var(--text-muted)] ml-1">{new Date(s.completed_at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}</span>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/if}
+
 			<div>
 				<div class="mb-2 flex items-center justify-between gap-2">
 					<h2 class="text-sm font-semibold text-[var(--text)]">Live JSON output</h2>
