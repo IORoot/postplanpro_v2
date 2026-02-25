@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import SampleJsonViewer from '$lib/components/SampleJsonViewer.svelte';
 
 	let { data, form } = $props();
 
@@ -11,6 +12,7 @@
 	let importStart = $state(1);
 	let titlePath = $state('title.rendered');
 	let contentPath = $state('content.rendered');
+	let imageUrlPath = $state('');
 	let titleUnescapeNewlines = $state(true);
 	let contentUnescapeNewlines = $state(true);
 	let customMappings = $state<{ path: string; key: string; type: string; unescapeNewlines?: boolean }[]>([]);
@@ -21,10 +23,24 @@
 	let importStatus = $state<'draft' | 'scheduled'>('draft');
 	let skipDuplicates = $state(false);
 	let selectedPostTypeRoute = $state('');
-	let selectedSource = $state<'wordpress' | null>(null);
+	let selectedSource = $state<'wordpress' | 'rss' | null>(null);
+	let feedUrl = $state('');
 	let submittingDiscover = $state(false);
 	let submittingFetch = $state(false);
 	let submittingImport = $state(false);
+	let submittingDiscoverRss = $state(false);
+	let submittingImportRss = $state(false);
+	let includeFeaturedImage = $state(false);
+	let showCopiedToast = $state(false);
+	let copyToastTimeout: ReturnType<typeof setTimeout> | null = null;
+	function handleCopiedToClipboard() {
+		if (copyToastTimeout) clearTimeout(copyToastTimeout);
+		showCopiedToast = true;
+		copyToastTimeout = setTimeout(() => {
+			showCopiedToast = false;
+			copyToastTimeout = null;
+		}, 2000);
+	}
 
 	// Post types from discover action (reactive to form)
 	const discovered = $derived(Boolean((form as { discovered?: boolean })?.discovered));
@@ -34,11 +50,18 @@
 
 	// Sync URL/auth/post type from discover or fetch result; default selected post type when discovered
 	$effect(() => {
-		const f = form as { site_url?: string; auth?: string; post_type_route?: string } | undefined;
+		const f = form as { site_url?: string; auth?: string; post_type_route?: string; feed_url?: string } | undefined;
 		if (f?.site_url != null) siteUrl = f.site_url;
 		if (f?.auth != null) auth = f.auth;
 		if (f?.post_type_route != null) selectedPostTypeRoute = f.post_type_route;
+		if (f?.feed_url != null) feedUrl = f.feed_url;
 		if (discovered && postTypes.length > 0 && !selectedPostTypeRoute) selectedPostTypeRoute = postTypes[0].route;
+		if ((f as { include_featured_image?: boolean })?.include_featured_image != null) includeFeaturedImage = Boolean((f as { include_featured_image?: boolean }).include_featured_image);
+		// Default RSS field paths when we have a sample (so mapping works out of the box)
+		if (selectedSource === 'rss' && (form as { rss_sample?: unknown })?.rss_sample != null) {
+			if (titlePath === 'title.rendered' || !titlePath) titlePath = 'title';
+			if (contentPath === 'content.rendered' || !contentPath) contentPath = 'content';
+		}
 	});
 
 	function addCustomMapping() {
@@ -128,16 +151,27 @@
 	}
 
 	const fetched = $derived(Boolean((form as { fetched?: boolean })?.fetched));
-	const sample = $derived((form as { sample?: unknown })?.sample ?? null);
+	const sample = $derived(
+		selectedSource === 'rss'
+			? ((form as { rss_sample?: unknown })?.rss_sample ?? null)
+			: ((form as { sample?: unknown })?.sample ?? null)
+	);
 	const keys = $derived(sample ? sampleKeys(sample) : []);
 	const samplePreviewJson = $derived(
 		sample != null ? JSON.stringify(sampleForPreview(sample), null, 2) : ''
 	);
+	const samplePreviewData = $derived(sample != null ? sampleForPreview(sample) : null);
 	const postTypeRouteForImport = $derived(
 		fetched
 			? ((form as { post_type_route?: string }).post_type_route || selectedPostTypeRoute || '/wp/v2/posts')
 			: '/wp/v2/posts'
 	);
+	const rssDiscovered = $derived(Boolean((form as { rss_discovered?: boolean })?.rss_discovered));
+	const rssSample = $derived((form as { rss_sample?: unknown })?.rss_sample ?? null);
+	const rssFetched = $derived(rssDiscovered && rssSample != null);
+	const rssFeedUrl = $derived((form as { feed_url?: string })?.feed_url ?? feedUrl);
+	const rssItemCount = $derived((form as { item_count?: number })?.item_count ?? 0);
+	const rssFeedTitle = $derived((form as { feed_title?: string | null })?.feed_title ?? null);
 </script>
 
 <style>
@@ -192,10 +226,10 @@
 </style>
 
 <svelte:head>
-	<title>Bulk create – PostPlan</title>
+	<title>Import – PostPlan</title>
 </svelte:head>
 
-<h1 class="text-2xl font-bold text-[var(--text)]">Bulk create</h1>
+<h1 class="text-2xl font-bold text-[var(--text)]">Import</h1>
 <p class="mt-1 text-sm text-[var(--text-muted)]">
 	{#if selectedSource === 'wordpress'}
 		Import posts from a WordPress site’s REST API. Discover post types, map fields, then import.
@@ -204,7 +238,7 @@
 	{/if}
 </p>
 
-{#if form?.error && !form?.discovered && !form?.fetched}
+{#if form?.error && !form?.discovered && !form?.fetched && !form?.rss_discovered}
 	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-error">{form?.error}</p>
 {/if}
 
@@ -224,7 +258,292 @@
 				<span class="font-semibold text-[var(--text)]">WordPress</span>
 				<span class="text-center text-xs text-[var(--text-muted)]">Import from a WordPress site REST API</span>
 			</button>
+			<button
+				type="button"
+				onclick={() => (selectedSource = 'rss')}
+				class="flex min-h-[140px] min-w-[200px] flex-col items-center justify-center gap-3 rounded-xl border-2 border-[var(--border)] bg-[var(--surface)] px-8 py-6 text-[var(--text)] transition hover:border-[var(--primary)] hover:bg-[var(--surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-[var(--text-muted)]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.14 20C5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+				<span class="font-semibold text-[var(--text)]">RSS Feed</span>
+				<span class="text-center text-xs text-[var(--text-muted)]">Import from an RSS or Atom feed</span>
+			</button>
 		</div>
+	</section>
+{/if}
+
+<!-- RSS Stage 1: Pick URL and discover -->
+{#if selectedSource === 'rss'}
+	<section class="mt-8">
+		<div class="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+			<span class="bulk-create-step-pill active">1</span>
+			<span>Pick URL and discover</span>
+		</div>
+		<h2 class="mt-4 text-lg font-medium text-[var(--text)]">1. Pick URL and discover</h2>
+		<p class="mt-1 text-sm text-[var(--text-muted)]">Enter the RSS or Atom feed URL. The app will fetch and parse the feed and show the first item so you can see the structure for mapping.</p>
+		<form
+			method="POST"
+			action="?/discoverRss"
+			use:enhance={() => {
+				submittingDiscoverRss = true;
+				return async ({ update }) => {
+					await update();
+					submittingDiscoverRss = false;
+				};
+			}}
+			class="mt-4 max-w-2xl space-y-4"
+		>
+			<div>
+				<label for="feed_url" class="block text-sm font-medium text-[var(--text)]">Feed URL *</label>
+				<input
+					id="feed_url"
+					type="url"
+					name="feed_url"
+					bind:value={feedUrl}
+					required
+					placeholder="https://example.com/feed.xml"
+					class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]"
+				/>
+			</div>
+			<button type="submit" disabled={submittingDiscoverRss} class="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-70 disabled:cursor-wait min-h-[44px] inline-flex items-center justify-center gap-2">
+				{#if submittingDiscoverRss}
+					<span class="bulk-create-spinner" aria-hidden="true"></span>
+					<span>Discovering…</span>
+				{:else}
+					Discover feed
+				{/if}
+			</button>
+		</form>
+		{#if rssDiscovered}
+			<div class="mt-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+				<p class="text-sm font-medium text-[var(--text)]">{rssFeedTitle ?? 'Feed'}</p>
+				<p class="mt-1 text-xs text-[var(--text-muted)]">{rssItemCount} item(s) · <code class="rounded bg-[var(--bg)] px-1 py-0.5 text-xs">{rssFeedUrl}</code></p>
+			</div>
+		{/if}
+	</section>
+{/if}
+
+<!-- RSS Stage 2: Map, filter, destination, import -->
+{#if selectedSource === 'rss' && rssFetched && rssSample}
+	<section class="mt-10 border-t border-[var(--border)] pt-8">
+		<div class="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+			<span class="bulk-create-step-pill done">1</span>
+			<span class="bulk-create-step-pill active">2</span>
+			<span>Map fields and import</span>
+		</div>
+		<h2 class="mt-4 text-lg font-medium text-[var(--text)]">2. Map fields and import</h2>
+		<p class="mt-1 text-sm text-[var(--text-muted)]">Set how each RSS item field maps into your posts, choose how many items to import, then run the import.</p>
+
+		<form
+			method="POST"
+			action="?/importFromRss"
+			use:enhance={() => {
+				submittingImportRss = true;
+				return async ({ update }) => {
+					await update();
+					submittingImportRss = false;
+				};
+			}}
+			class="bulk-create-step3-grid mt-6 gap-8"
+		>
+			<input type="hidden" name="feed_url" value={rssFeedUrl} />
+			<input type="hidden" name="custom_mapping" value={customMappingJson()} />
+			<input type="hidden" name="filter_rules" value={filterRulesJson()} />
+
+			<div class="min-w-0 space-y-6">
+				<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
+					<h3 class="text-sm font-semibold text-[var(--text)]">Field mapping</h3>
+					<p class="mt-1 text-xs text-[var(--text-muted)]">Map RSS item fields to your post. Use the reference panel on the right for path syntax.</p>
+					<div class="mt-4">
+						<label for="rss_title_path" class="block text-sm font-medium text-[var(--text)]">Title</label>
+						<input id="rss_title_path" type="text" name="title_path" bind:value={titlePath} list="rss_title_paths" class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" placeholder="e.g. title or removeHtml(content)" />
+						<datalist id="rss_title_paths">
+							{#each keys as k}
+								<option value={k}></option>
+							{/each}
+						</datalist>
+						<label class="mt-3 flex cursor-pointer items-center gap-2 text-sm text-[var(--text-muted)]">
+							<input type="checkbox" name="title_unescape_newlines" bind:checked={titleUnescapeNewlines} value="on" class="rounded border-[var(--border)]" />
+							Convert <code class="rounded bg-[var(--surface)] px-1">\n</code> to newlines
+						</label>
+					</div>
+					<div class="mt-6">
+						<label for="rss_content_path" class="block text-sm font-medium text-[var(--text)]">Content path or expression</label>
+						<input id="rss_content_path" type="text" name="content_path" bind:value={contentPath} list="rss_content_paths" class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" placeholder="e.g. content or contentSnippet" />
+						<datalist id="rss_content_paths">
+							{#each keys as k}
+								<option value={k}></option>
+							{/each}
+						</datalist>
+						<label class="mt-3 flex cursor-pointer items-center gap-2 text-sm text-[var(--text-muted)]">
+							<input type="checkbox" name="content_unescape_newlines" bind:checked={contentUnescapeNewlines} value="on" class="rounded border-[var(--border)]" />
+							Convert <code class="rounded bg-[var(--surface)] px-1">\n</code> to newlines
+						</label>
+					</div>
+					<div class="mt-6">
+						<label for="rss_image_url_path" class="block text-sm font-medium text-[var(--text)]">Image URL (optional)</label>
+						<input id="rss_image_url_path" type="text" name="image_url_path" bind:value={imageUrlPath} list="rss_image_url_paths" class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" placeholder="e.g. enclosure.url or leave empty" />
+						<datalist id="rss_image_url_paths">
+							{#each keys as k}
+								<option value={k}></option>
+							{/each}
+						</datalist>
+						<p class="mt-1 text-xs text-[var(--text-muted)]">Maps into the post’s Image URL field. Some feeds use <code class="rounded bg-[var(--surface)] px-1">enclosure.url</code> for images.</p>
+					</div>
+
+					<div class="mt-8 pt-6 border-t border-[var(--border)]">
+						<p class="text-sm font-medium text-[var(--text)]">Custom fields (response path → key)</p>
+						<p class="mt-1 text-xs text-[var(--text-muted)]">Add extra fields from the RSS item (e.g. <code class="rounded bg-[var(--surface)] px-1">link</code>, <code class="rounded bg-[var(--surface)] px-1">isoDate</code>, <code class="rounded bg-[var(--surface)] px-1">guid</code>).</p>
+						<div class="mt-2 space-y-3">
+							{#each customMappings as m, i}
+								<div class="flex flex-wrap items-end gap-2 rounded border border-[var(--border)] bg-[var(--surface)] p-2">
+									<input type="text" bind:value={m.path} placeholder="path or expression" list="rss_custom_paths" class="min-w-[180px] min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" />
+									<input type="text" bind:value={m.key} placeholder="Key" class="min-w-[100px] min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" />
+									<select bind:value={m.type} class="min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]">
+										<option value="string">string</option>
+										<option value="number">number</option>
+										<option value="boolean">boolean</option>
+										<option value="json">json</option>
+									</select>
+									<label class="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm text-[var(--text-muted)]">
+										<input type="checkbox" bind:checked={m.unescapeNewlines} class="rounded border-[var(--border)]" />
+										<code class="text-xs">\n</code>→newline
+									</label>
+									<button type="button" onclick={() => removeCustomMapping(i)} class="min-h-[44px] rounded border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]">Remove</button>
+								</div>
+							{/each}
+						</div>
+						<div class="mt-2 flex flex-wrap gap-2">
+							<button type="button" onclick={addCustomMapping} class="min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]">+ Add custom field</button>
+						</div>
+					</div>
+				</div>
+
+				<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
+					<h3 class="text-sm font-semibold text-[var(--text)]">Import range</h3>
+					<p class="mt-1 text-xs text-[var(--text-muted)]">Choose which items to import by start position and count (e.g. start 1, count 10 → items 1–10). Max 500 per import.</p>
+					<div class="mt-4 grid gap-4 sm:grid-cols-2">
+						<div>
+							<label for="rss_import_start" class="block text-sm font-medium text-[var(--text)]">Start at item</label>
+							<input id="rss_import_start" type="number" name="import_start" bind:value={importStart} min="1" max="500" class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" />
+							<p class="mt-0.5 text-xs text-[var(--text-muted)]">1-based index of first item</p>
+						</div>
+						<div>
+							<label for="rss_import_count" class="block text-sm font-medium text-[var(--text)]">Number of items</label>
+							<input id="rss_import_count" type="number" name="per_page" bind:value={perPage} min="1" max="500" class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" />
+							<p class="mt-0.5 text-xs text-[var(--text-muted)]">Imports items {importStart}–{Math.min(500, importStart + perPage - 1)}</p>
+						</div>
+					</div>
+				</div>
+
+				<div class="rounded-xl border-2 border-[var(--border)] bg-[var(--surface)] p-5 ring-1 ring-[var(--border)]/50">
+					<div class="flex items-center gap-2">
+						<span class="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--surface)] text-sm font-semibold text-[var(--text-muted)]" aria-hidden="true">◇</span>
+						<h3 class="text-sm font-semibold text-[var(--text)]">Import filters</h3>
+					</div>
+					<p class="mt-2 text-xs text-[var(--text-muted)]">Only items that pass these checks are imported. Use paths like <code class="rounded bg-[var(--surface)] px-1">title</code>, <code class="rounded bg-[var(--surface)] px-1">link</code>, <code class="rounded bg-[var(--surface)] px-1">isoDate</code>.</p>
+					<div class="mt-3 flex flex-wrap items-center gap-2">
+						<label for="rss_filter_combine" class="text-sm text-[var(--text-muted)]">Match</label>
+						<select id="rss_filter_combine" bind:value={filterCombine} class="min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]">
+							<option value="and">all rules (AND)</option>
+							<option value="or">any rule (OR)</option>
+						</select>
+					</div>
+					<div class="mt-3 space-y-2">
+						{#each filterRules as rule, i}
+							<div class="flex flex-wrap items-end gap-2 rounded border border-[var(--border)] bg-[var(--surface)] p-2">
+								<input type="text" bind:value={rule.path} placeholder="Field path" list="rss_filter_paths" class="min-w-[160px] min-h-[40px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]" />
+								<select bind:value={rule.operator} class="min-h-[40px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]">
+									{#each FILTER_OPERATORS as op}
+										<option value={op.value}>{op.label}</option>
+									{/each}
+								</select>
+								{#if FILTER_OPERATORS.find((o) => o.value === rule.operator)?.needsValue}
+									<input type="text" bind:value={rule.value} placeholder="Value" class="min-w-[120px] min-h-[40px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]" />
+								{/if}
+								<button type="button" onclick={() => removeFilterRule(i)} class="min-h-[40px] rounded border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]">Remove</button>
+							</div>
+						{/each}
+					</div>
+					<datalist id="rss_filter_paths">
+						{#each keys as k}
+							<option value={k}></option>
+						{/each}
+					</datalist>
+					<button type="button" onclick={addFilterRule} class="mt-2 min-h-[40px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]">+ Add filter rule</button>
+				</div>
+
+				<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
+					<h3 class="text-sm font-semibold text-[var(--text)]">Destination</h3>
+					<div class="mt-4 space-y-4">
+						<div>
+							<label for="rss_webhook_id" class="block text-sm font-medium text-[var(--text)]">Target webhook *</label>
+							<select id="rss_webhook_id" name="webhook_id" bind:value={webhookId} required class="mt-1 w-full min-h-[44px] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]">
+								<option value="">Select webhook</option>
+								{#each data.webhooks as w}
+									<option value={w.id}>{w.name}</option>
+								{/each}
+							</select>
+						</div>
+						<div>
+							<label for="rss_schedule_id" class="block text-sm font-medium text-[var(--text)]">Apply schedule after import (optional)</label>
+							<select id="rss_schedule_id" name="schedule_id" bind:value={scheduleId} class="mt-1 w-full min-h-[44px] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]">
+								<option value="">None</option>
+								{#each data.schedules as s}
+									<option value={s.id}>{s.name}</option>
+								{/each}
+							</select>
+						</div>
+						<div>
+							<label for="rss_import_status" class="block text-sm font-medium text-[var(--text)]">Status after import</label>
+							<select id="rss_import_status" name="import_status" bind:value={importStatus} class="mt-1 w-full min-h-[44px] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]">
+								<option value="draft">Draft</option>
+								<option value="scheduled">Scheduled</option>
+							</select>
+						</div>
+						<label class="flex cursor-pointer items-center gap-2 text-sm text-[var(--text)]">
+							<input type="checkbox" name="skip_duplicates" bind:checked={skipDuplicates} value="on" class="rounded border-[var(--border)]" />
+							Skip duplicates (don't import if already imported from this feed)
+						</label>
+					</div>
+					<button type="submit" disabled={submittingImportRss} class="mt-6 w-full rounded-lg bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-70 disabled:cursor-wait min-h-[48px] inline-flex items-center justify-center gap-2 sm:w-auto">
+						{#if submittingImportRss}
+							<span class="bulk-create-spinner" aria-hidden="true"></span>
+							<span>Importing…</span>
+						{:else}
+							Import posts
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<aside class="bulk-create-step3-sidebar space-y-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
+				<h3 class="text-sm font-semibold text-[var(--text)]">Reference</h3>
+				{#if samplePreviewData != null}
+					<div class="space-y-2">
+						<p class="font-medium text-[var(--text)]">Example item (JSON)</p>
+						<p class="text-xs text-[var(--text-muted)]">Click any key to copy its path to the clipboard.</p>
+						<div class="relative">
+							<div class="max-h-[600px] overflow-auto rounded-lg bg-black p-3 text-xs font-mono text-white">
+								<SampleJsonViewer data={samplePreviewData} onCopied={handleCopiedToClipboard} />
+							</div>
+							{#if showCopiedToast}
+								<p class="mt-2 rounded-lg bg-[var(--primary)] px-3 py-2 text-center text-xs font-medium text-white shadow-sm" role="status">Copied to clipboard</p>
+							{/if}
+						</div>
+					</div>
+				{/if}
+				<div class="pt-2 border-t border-[var(--border)]">
+					<p class="font-medium text-[var(--text)]">Path expressions</p>
+					<p class="mt-1 text-xs text-[var(--text-muted)]">Use a path (e.g. <code class="rounded bg-[var(--surface)] px-1">title</code>, <code class="rounded bg-[var(--surface)] px-1">content</code>) or a function:</p>
+					<ul class="mt-2 list-inside list-disc space-y-1 text-xs text-[var(--text-muted)]">
+						<li><code class="rounded bg-[var(--surface)] px-1">removeHtml(path)</code></li>
+						<li><code class="rounded bg-[var(--surface)] px-1">regex(path, "pattern")</code> or <code class="rounded bg-[var(--surface)] px-1">regex(path, "p", "repl")</code></li>
+						<li><code class="rounded bg-[var(--surface)] px-1">substring(path, start, length)</code></li>
+						<li><code class="rounded bg-[var(--surface)] px-1">replace(path, "find", "repl")</code></li>
+					</ul>
+				</div>
+			</aside>
+		</form>
 	</section>
 {/if}
 
@@ -323,6 +642,17 @@
 					{/each}
 				</select>
 			</div>
+			<div class="flex items-center gap-2">
+				<input
+					type="checkbox"
+					id="include_featured_image"
+					name="include_featured_image"
+					value="on"
+					bind:checked={includeFeaturedImage}
+					class="h-4 w-4 rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)]"
+				/>
+				<label for="include_featured_image" class="text-sm text-[var(--text)]">Include featured image in sample (adds <code class="rounded bg-[var(--surface)] px-1 py-0.5 text-xs">featured_image_url</code> to the JSON for mapping)</label>
+			</div>
 			<div class="flex flex-wrap gap-2">
 				<button type="submit" disabled={submittingFetch} class="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-70 disabled:cursor-wait min-h-[44px] inline-flex items-center justify-center gap-2">
 					{#if submittingFetch}
@@ -375,6 +705,7 @@
 			<input type="hidden" name="site_url" value={siteUrl} />
 			<input type="hidden" name="auth" value={auth} />
 			<input type="hidden" name="post_type_route" value={postTypeRouteForImport} />
+			<input type="hidden" name="include_featured_image" value={includeFeaturedImage ? 'on' : ''} />
 			<input type="hidden" name="custom_mapping" value={customMappingJson()} />
 			<input type="hidden" name="filter_rules" value={filterRulesJson()} />
 
@@ -408,10 +739,20 @@
 					Convert <code class="rounded bg-[var(--surface)] px-1">\n</code> to newlines
 				</label>
 			</div>
+			<div class="mt-6">
+				<label for="image_url_path" class="block text-sm font-medium text-[var(--text)]">Image URL (optional)</label>
+				<input id="image_url_path" type="text" name="image_url_path" bind:value={imageUrlPath} list="image_url_paths" class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" placeholder="e.g. featured_image_url or leave empty" />
+				<datalist id="image_url_paths">
+					{#each keys as k}
+						<option value={k}></option>
+					{/each}
+				</datalist>
+				<p class="mt-1 text-xs text-[var(--text-muted)]">Maps into the post’s Image URL field. Use <code class="rounded bg-[var(--surface)] px-1">featured_image_url</code> if you enabled “Include featured image” in step 2.</p>
+			</div>
 
 			<div class="mt-8 pt-6 border-t border-[var(--border)]">
 				<p class="text-sm font-medium text-[var(--text)]">Custom fields (response path → key)</p>
-				<p class="mt-1 text-xs text-[var(--text-muted)]">To import all WordPress post metadata, add a field with path <code class="rounded bg-[var(--surface)] px-1">meta</code>, type <code class="rounded bg-[var(--surface)] px-1">json</code>, and key e.g. <code class="rounded bg-[var(--surface)] px-1">meta</code>. Metadata is usually complete when “Fetch full content per item” is enabled.</p>
+				<p class="mt-1 text-xs text-[var(--text-muted)]">To import all WordPress post metadata, add a field with path <code class="rounded bg-[var(--surface)] px-1">meta</code>, type <code class="rounded bg-[var(--surface)] px-1">json</code>, and key e.g. <code class="rounded bg-[var(--surface)] px-1">meta</code>. Metadata is usually complete when “Fetch full content per item” is enabled. If you enabled “Include featured image” in step 2, add a field with path <code class="rounded bg-[var(--surface)] px-1">featured_image_url</code> and key e.g. <code class="rounded bg-[var(--surface)] px-1">featured_image</code> to store the image URL.</p>
 				<div class="mt-2 space-y-3">
 					{#each customMappings as m, i}
 						<div class="flex flex-wrap items-end gap-2 rounded border border-[var(--border)] bg-[var(--surface)] p-2">
@@ -559,10 +900,18 @@
 
 			<aside class="bulk-create-step3-sidebar space-y-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
 				<h3 class="text-sm font-semibold text-[var(--text)]">Reference</h3>
-				{#if samplePreviewJson}
+				{#if samplePreviewData != null}
 					<div class="space-y-2">
 						<p class="font-medium text-[var(--text)]">Example item (JSON)</p>
-						<pre class="max-h-[600px] overflow-auto rounded-lg bg-black p-3 text-xs text-white whitespace-pre font-mono">{samplePreviewJson}</pre>
+						<p class="text-xs text-[var(--text-muted)]">Click any key to copy its path to the clipboard.</p>
+						<div class="relative">
+							<div class="max-h-[600px] overflow-auto rounded-lg bg-black p-3 text-xs font-mono text-white">
+								<SampleJsonViewer data={samplePreviewData} onCopied={handleCopiedToClipboard} />
+							</div>
+							{#if showCopiedToast}
+								<p class="mt-2 rounded-lg bg-[var(--primary)] px-3 py-2 text-center text-xs font-medium text-white shadow-sm" role="status">Copied to clipboard</p>
+							{/if}
+						</div>
 					</div>
 				{/if}
 				<div class="pt-2 border-t border-[var(--border)]">

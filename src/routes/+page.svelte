@@ -81,6 +81,18 @@
 				<p class="text-sm font-medium text-[var(--text-muted)]">Sent this week</p>
 				<p class="mt-1 text-2xl font-bold text-[var(--text)]">{data.sentThisWeek}</p>
 			</div>
+			<a
+				href="/reports?report=callback-stages"
+				class="content-card rounded-xl border border-[var(--border)] p-4 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+			>
+				<p class="text-sm font-medium text-[var(--text-muted)]">Make.com stages</p>
+				<p class="mt-1 text-2xl font-bold text-[var(--text)]">
+					<span class="text-green-600 dark:text-green-400">{data.stagePasses ?? 0}</span>
+					<span class="mx-1.5 text-[var(--text-muted)]">/</span>
+					<span class="text-red-600 dark:text-red-400">{data.stageFails ?? 0}</span>
+				</p>
+				<p class="mt-0.5 text-xs text-[var(--text-muted)]">passes / fails</p>
+			</a>
 		</div>
 
 		<!-- Upcoming posts + Quick actions -->
@@ -166,8 +178,108 @@
 								<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
 							</svg>
 						</span>
-						Bulk create
+						Import
 					</a>
+				</div>
+			</div>
+		</div>
+
+		<!-- Last 10 published, Failed posts, Posts with failed stages -->
+		<div class="grid gap-6 lg:grid-cols-3">
+			<div>
+				<div class="mb-3 flex items-center justify-between">
+					<h2 class="text-lg font-semibold text-[var(--text)]">Last 10 published</h2>
+					<a href="/posts?status=sent" class="text-sm font-medium text-[var(--primary)] hover:underline">View all →</a>
+				</div>
+				<div class="content-card rounded-xl border border-[var(--border)] overflow-hidden">
+					{#if (data.lastPublishedPosts?.length ?? 0) === 0}
+						<div class="p-6 text-center text-[var(--text-muted)]">
+							<p>No published posts yet.</p>
+						</div>
+					{:else}
+						<ul class="divide-y divide-[var(--border)]">
+							{#each data.lastPublishedPosts ?? [] as post}
+								<li>
+									<a
+										href="/posts/{post.id}"
+										class="flex items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-hover)]"
+									>
+										<div class="min-w-0 flex-1">
+											<p class="font-medium text-[var(--text)] truncate">{post.title || 'Untitled'}</p>
+											<p class="text-xs text-[var(--text-muted)]">{post.webhook_name} · {post.sent_at ? formatDateTime(post.sent_at) : '—'}</p>
+										</div>
+										<span class="status-sent shrink-0 rounded px-2 py-1 text-xs font-medium">Sent</span>
+									</a>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				</div>
+			</div>
+
+			<div>
+				<div class="mb-3 flex items-center justify-between">
+					<h2 class="text-lg font-semibold text-[var(--text)]">Failed posts</h2>
+					{#if (data.failedPosts?.length ?? 0) > 0}
+						<a href="/posts?status=failed" class="text-sm font-medium text-[var(--primary)] hover:underline">View all →</a>
+					{/if}
+				</div>
+				<div class="content-card rounded-xl border border-[var(--border)] overflow-hidden">
+					{#if (data.failedPosts?.length ?? 0) === 0}
+						<div class="p-6 text-center text-[var(--text-muted)]">
+							<p>No failed posts.</p>
+						</div>
+					{:else}
+						<ul class="divide-y divide-[var(--border)]">
+							{#each data.failedPosts ?? [] as post}
+								<li>
+									<a
+										href="/posts/{post.id}"
+										class="block px-4 py-3 transition-colors hover:bg-[var(--surface-hover)]"
+									>
+										<p class="font-medium text-[var(--text)] truncate">{post.title || 'Untitled'}</p>
+										{#if post.error_message}
+											<p class="mt-0.5 truncate text-xs text-[var(--text-muted)]" title={post.error_message}>{post.error_message}</p>
+										{/if}
+										<p class="mt-0.5 text-xs text-[var(--text-muted)]">{formatDateTime(post.updated_at)}</p>
+									</a>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				</div>
+			</div>
+
+			<div>
+				<div class="mb-3 flex items-center justify-between">
+					<h2 class="text-lg font-semibold text-[var(--text)]">Posts with failed stages</h2>
+					{#if (data.postsWithFailedStages?.length ?? 0) > 0}
+						<a href="/reports?report=callback-stages&filterStatus=fail" class="text-sm font-medium text-[var(--primary)] hover:underline">View report →</a>
+					{/if}
+				</div>
+				<div class="content-card rounded-xl border border-[var(--border)] overflow-hidden">
+					{#if (data.postsWithFailedStages?.length ?? 0) === 0}
+						<div class="p-6 text-center text-[var(--text-muted)]">
+							<p>No posts with failed Make.com stages.</p>
+						</div>
+					{:else}
+						<ul class="divide-y divide-[var(--border)]">
+							{#each data.postsWithFailedStages ?? [] as post}
+								<li>
+									<a
+										href="/posts/{post.id}"
+										class="flex items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-hover)]"
+									>
+										<div class="min-w-0 flex-1">
+											<p class="font-medium text-[var(--text)] truncate">{post.title || 'Untitled'}</p>
+											<p class="text-xs text-[var(--text-muted)]">{post.sent_at ? formatDateTime(post.sent_at) : '—'}</p>
+										</div>
+										<span class="status-failed shrink-0 rounded px-2 py-1 text-xs font-medium">Stage failed</span>
+									</a>
+								</li>
+							{/each}
+						</ul>
+					{/if}
 				</div>
 			</div>
 		</div>

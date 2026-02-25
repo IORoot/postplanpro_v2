@@ -9,7 +9,7 @@
 		{ href: '/posts', label: 'Posts', icon: 'doc' },
 		{ href: '/schedules', label: 'Schedules', icon: 'clock' },
 		{ href: '/reports', label: 'Reports', icon: 'chart' },
-		{ href: '/bulk-create', label: 'Bulk create', icon: 'stack' },
+		{ href: '/bulk-create', label: 'Import', icon: 'stack' },
 		{ href: '/settings', label: 'Settings', icon: 'gear' }
 	];
 
@@ -118,10 +118,9 @@
 >
 	<div class="flex h-full flex-col">
 		<!-- Header: logo + collapse -->
-		<div class="flex h-14 items-center justify-between border-b border-[var(--sidebar-border)] px-4">
-			<a href="/" class="flex items-center gap-2 font-semibold text-[var(--sidebar-text)]">
-				<span class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 text-white text-sm font-bold">P</span>
-				PostPlan
+		<div class="flex h-48 items-center justify-between border-b border-[var(--sidebar-border)] px-4 ">
+			<a href="/" class="flex items-center gap-2 font-semibold text-[var(--sidebar-text)] w-full">
+				<img src="/logo_text.svg" alt="PostPlan" class="h-32 w-auto mx-auto" />
 			</a>
 			<button
 				type="button"

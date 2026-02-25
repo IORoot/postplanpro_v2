@@ -39,25 +39,19 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	}[];
 
 	const posts = db.prepare(`
-		SELECT p.id, p.title, p.scheduled_at, p.status, w.name as webhook_name
+		SELECT p.id, p.title, p.scheduled_at, p.status, p.created_at, w.name as webhook_name
 		FROM post p
 		JOIN webhook_config w ON p.webhook_id = w.id
 		WHERE p.account_id = ?
 		ORDER BY p.created_at DESC
-	`).all(accountId) as { id: string; title: string; scheduled_at: string | null; status: string; webhook_name: string }[];
-
-	// Preview next 10 slots from rules (for display)
-	let previewSlots: string[] = [];
-	if (rules.length > 0) {
-		previewSlots = generateSlots(params.id, 10, undefined, accountId);
-	}
+	`).all(accountId) as { id: string; title: string; scheduled_at: string | null; status: string; created_at: string; webhook_name: string }[];
 
 	// Posts already attached to this schedule (for reschedule section)
 	const schedulePosts = db.prepare(`
 		SELECT id, title, scheduled_at FROM post WHERE schedule_id = ? AND account_id = ? ORDER BY scheduled_at IS NULL, scheduled_at ASC, created_at ASC
 	`).all(params.id, accountId) as { id: string; title: string; scheduled_at: string | null }[];
 
-	return { schedule, slots, rules, fields, posts, previewSlots, schedulePosts };
+	return { schedule, slots, rules, fields, posts, schedulePosts };
 };
 
 export const actions: Actions = {

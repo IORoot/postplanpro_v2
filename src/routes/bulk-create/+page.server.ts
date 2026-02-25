@@ -1,7 +1,10 @@
 import { getDatabase } from '$lib/db/index.js';
 import { generateSlots } from '$lib/scheduler/generateSlots.js';
+import Parser from 'rss-parser';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+
+const rssParser = new Parser({ timeout: 10000 });
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const accountId = locals.userId;
@@ -233,6 +236,30 @@ function normalizeSiteUrl(input: string): string {
 	return input.trim().replace(/\/wp-json\/?$/i, '').replace(/\/$/, '') || input.trim();
 }
 
+/** Normalize feed URL for consistent import_source_id (strip fragment, default https) */
+function normalizeFeedUrl(input: string): string {
+	let url = input.trim();
+	if (!url) return url;
+	try {
+		const u = new URL(url);
+		u.hash = '';
+		if (u.protocol !== 'http:' && u.protocol !== 'https:') u.protocol = 'https:';
+		return u.toString().replace(/\/$/, '') || u.toString();
+	} catch {
+		return url;
+	}
+}
+
+/** Convert rss-parser item to plain object for mapping/filtering */
+function rssItemToPlain(item: Parser.Item & Record<string, unknown>): Record<string, unknown> {
+	const out: Record<string, unknown> = {};
+	for (const key of Object.keys(item)) {
+		const v = item[key];
+		if (v !== undefined && v !== null) out[key] = v;
+	}
+	return out;
+}
+
 type PostTypeOption = { slug: string; name: string; route: string };
 
 /** Fetch wp-json index and return list of post type collection routes. Used so step 2 stays visible after fetch. */
@@ -287,17 +314,27 @@ export const actions: Actions = {
 		const siteUrl = normalizeSiteUrl((data.get('site_url') as string) ?? '');
 		const auth = (data.get('auth') as string)?.trim() || '';
 		const postTypeRoute = (data.get('post_type_route') as string)?.trim() || '/wp/v2/posts';
+		const includeFeaturedImage = (data.get('include_featured_image') as string) === 'on';
 		if (!siteUrl) return fail(400, { error: 'Site URL is required' });
 		if (!postTypeRoute.startsWith('/wp/v2/')) return fail(400, { error: 'Invalid post type route' });
 		const baseUrl = `${siteUrl}/wp-json${postTypeRoute}`;
 		const headers: Record<string, string> = { Accept: 'application/json' };
 		if (auth) headers['Authorization'] = auth.startsWith('Bearer ') ? auth : `Bearer ${auth}`;
 		try {
-			const listUrl = `${baseUrl}?per_page=1&page=1`;
+			const listUrl = includeFeaturedImage ? `${baseUrl}?per_page=1&page=1&_embed` : `${baseUrl}?per_page=1&page=1`;
 			const res = await fetch(listUrl, { headers });
 			if (!res.ok) return fail(400, { error: `WordPress API error: ${res.status} ${res.statusText}` });
 			const json = (await res.json()) as unknown[];
-			const sample = json[0] ?? null;
+			let sample = json[0] ?? null;
+			if (includeFeaturedImage && sample != null && typeof sample === 'object') {
+				const embedded = (sample as Record<string, unknown>)._embedded as Record<string, unknown[]> | undefined;
+				const featuredMedia = embedded?.['wp:featuredmedia'];
+				const sourceUrl =
+					Array.isArray(featuredMedia) && featuredMedia[0] != null && typeof featuredMedia[0] === 'object'
+						? (featuredMedia[0] as Record<string, unknown>).source_url as string | undefined
+						: undefined;
+				sample = { ...(sample as Record<string, unknown>), featured_image_url: sourceUrl ?? '' };
+			}
 			const postTypes = await discoverPostTypes(siteUrl, auth);
 			return {
 				fetched: true,
@@ -306,7 +343,8 @@ export const actions: Actions = {
 				auth,
 				post_type_route: postTypeRoute,
 				discovered: true,
-				post_types: postTypes
+				post_types: postTypes,
+				include_featured_image: includeFeaturedImage
 			};
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : 'Failed to fetch';
@@ -325,6 +363,7 @@ export const actions: Actions = {
 		const importStatus = ((data.get('import_status') as string) || 'draft').trim() === 'scheduled' ? 'scheduled' : 'draft';
 		const titlePath = (data.get('title_path') as string)?.trim() || 'title.rendered';
 		const contentPath = (data.get('content_path') as string)?.trim() || 'content.rendered';
+		const imageUrlPath = (data.get('image_url_path') as string)?.trim() || '';
 		const titleUnescapeNewlines = (data.get('title_unescape_newlines') as string) === 'on';
 		const contentUnescapeNewlines = (data.get('content_unescape_newlines') as string) === 'on';
 		const customMappingJson = (data.get('custom_mapping') as string)?.trim() || '[]';
@@ -335,6 +374,7 @@ export const actions: Actions = {
 		}
 		const fetchFullPerItem = (data.get('fetch_full_per_item') as string) !== 'off';
 		const skipDuplicates = (data.get('skip_duplicates') as string) === 'on';
+		const includeFeaturedImage = (data.get('include_featured_image') as string) === 'on';
 		if (!siteUrl || !webhookId) return fail(400, { error: 'Site URL and webhook are required' });
 		if (!postTypeRoute.startsWith('/wp/v2/')) return fail(400, { error: 'Invalid post type route' });
 
@@ -365,10 +405,11 @@ export const actions: Actions = {
 		const headers: Record<string, string> = { Accept: 'application/json' };
 		if (auth) headers['Authorization'] = auth.startsWith('Bearer ') ? auth : `Bearer ${auth}`;
 
+		const embedSuffix = includeFeaturedImage ? '&_embed' : '';
 		let items: unknown[];
 		try {
 			const fetchCount = Math.min(100, importStart + importCount - 1);
-			const listUrl = `${baseUrl}?per_page=${fetchCount}&page=1`;
+			const listUrl = `${baseUrl}?per_page=${fetchCount}&page=1${embedSuffix}`;
 			const res = await fetch(listUrl, { headers });
 			if (!res.ok) return fail(400, { error: `WordPress API error: ${res.status}` });
 			const raw = (await res.json()) as unknown[];
@@ -386,7 +427,8 @@ export const actions: Actions = {
 					continue;
 				}
 				try {
-					const singleRes = await fetch(`${baseUrl}/${id}`, { headers });
+					const singleUrl = includeFeaturedImage ? `${baseUrl}/${id}?_embed` : `${baseUrl}/${id}`;
+					const singleRes = await fetch(singleUrl, { headers });
 					if (singleRes.ok) {
 						fullItems.push((await singleRes.json()) as unknown);
 					} else {
@@ -397,6 +439,19 @@ export const actions: Actions = {
 				}
 			}
 			items = fullItems;
+		}
+
+		// Inject featured_image_url into each item when requested so mapping path "featured_image_url" works
+		if (includeFeaturedImage && items.length > 0) {
+			items = (items as Record<string, unknown>[]).map((item) => {
+				const embedded = item._embedded as Record<string, unknown[]> | undefined;
+				const featuredMedia = embedded?.['wp:featuredmedia'];
+				const sourceUrl =
+					Array.isArray(featuredMedia) && featuredMedia[0] != null && typeof featuredMedia[0] === 'object'
+						? (featuredMedia[0] as Record<string, unknown>).source_url as string | undefined
+						: undefined;
+				return { ...item, featured_image_url: sourceUrl ?? '' };
+			});
 		}
 
 		const db = getDatabase();
@@ -411,7 +466,7 @@ export const actions: Actions = {
 			if (!schedule) return fail(400, { error: 'Invalid schedule' });
 		}
 		const insertPost = db.prepare(
-			'INSERT INTO post (id, account_id, webhook_id, title, content, color, status, import_source_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+			'INSERT INTO post (id, account_id, webhook_id, title, content, image_url, color, status, import_source_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
 		);
 		const insertField = db.prepare('INSERT INTO post_field (id, post_id, key, type, value) VALUES (?, ?, ?, ?, ?)');
 		const existingBySource =
@@ -433,6 +488,7 @@ export const actions: Actions = {
 				if (skipDuplicates && sourceId && existingBySource?.get(accountId, sourceId)) continue;
 				const title = resolveValue(item, titlePath, titleUnescapeNewlines, 'string');
 				const content = resolveValue(item, contentPath, contentUnescapeNewlines, 'string');
+				const imageUrl = imageUrlPath ? (resolveValue(item, imageUrlPath, false, 'string') as string)?.trim() || null : null;
 				const id = crypto.randomUUID();
 				insertPost.run(
 					id,
@@ -440,6 +496,7 @@ export const actions: Actions = {
 					webhookId,
 					title || '(no title)',
 					content,
+					imageUrl,
 					null,
 					'draft',
 					sourceId
@@ -461,6 +518,173 @@ export const actions: Actions = {
 		transaction();
 
 		// Optionally apply schedule to all created posts
+		if (scheduleId && createdIds.length > 0) {
+			const scheduleRow = db.prepare('SELECT color FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { color: string | null } | undefined;
+			const scheduleColor = scheduleRow?.color ?? null;
+			const ruleCount = db.prepare('SELECT COUNT(*) as n FROM schedule_rule WHERE schedule_id = ?').get(scheduleId) as { n: number };
+			let slotDatetimes: string[];
+			if (ruleCount.n > 0) {
+				slotDatetimes = generateSlots(scheduleId, createdIds.length, undefined, accountId);
+			} else {
+				const fixedSlots = db
+					.prepare('SELECT scheduled_at FROM schedule_slot WHERE schedule_id = ? ORDER BY order_index')
+					.all(scheduleId) as { scheduled_at: string }[];
+				slotDatetimes = fixedSlots.map((s) => s.scheduled_at);
+			}
+			const scheduleFields = db
+				.prepare('SELECT key, type, value FROM schedule_field WHERE schedule_id = ?')
+				.all(scheduleId) as { key: string; type: string; value: string | null }[];
+			const setScheduleOnly = db.prepare("UPDATE post SET schedule_id = ?, color = ?, status = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+			const setScheduleAndSlot = db.prepare("UPDATE post SET scheduled_at = ?, schedule_id = ?, status = ?, color = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+			for (let i = 0; i < createdIds.length; i++) {
+				const postId = createdIds[i];
+				const slot = slotDatetimes[i];
+				const status = importStatus === 'scheduled' && slot ? 'scheduled' : 'draft';
+				if (slot) {
+					setScheduleAndSlot.run(slot, scheduleId, status, scheduleColor, postId, accountId);
+				} else {
+					setScheduleOnly.run(scheduleId, scheduleColor, status, postId, accountId);
+				}
+				for (const sf of scheduleFields) {
+					const fieldId = crypto.randomUUID();
+					db.prepare('INSERT INTO post_field (id, post_id, key, type, value) VALUES (?, ?, ?, ?, ?)').run(fieldId, postId, sf.key, sf.type, sf.value ?? '');
+				}
+			}
+		}
+
+		throw redirect(303, `/posts?imported=${createdIds.length}`);
+	},
+	discoverRss: async ({ request, locals }) => {
+		if (!locals.userId) return fail(401, { error: 'Unauthorized' });
+		const data = await request.formData();
+		const feedUrl = (data.get('feed_url') as string)?.trim() ?? '';
+		if (!feedUrl) return fail(400, { error: 'Feed URL is required' });
+		const normalized = normalizeFeedUrl(feedUrl);
+		try {
+			const feed = await rssParser.parseURL(normalized);
+			const itemCount = feed.items?.length ?? 0;
+			const firstItem = feed.items?.[0];
+			const rss_sample = firstItem ? rssItemToPlain(firstItem) : null;
+			return {
+				rss_discovered: true,
+				feed_url: normalized,
+				feed_title: feed.title?.trim() || null,
+				item_count: itemCount,
+				rss_sample
+			};
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : 'Failed to fetch or parse feed';
+			return fail(400, { error: msg });
+		}
+	},
+	importFromRss: async ({ request, locals }) => {
+		const accountId = locals.userId;
+		if (!accountId) return fail(401, { error: 'Unauthorized' });
+		const data = await request.formData();
+		const feedUrl = (data.get('feed_url') as string)?.trim() ?? '';
+		const webhookId = data.get('webhook_id') as string;
+		const scheduleId = (data.get('schedule_id') as string)?.trim() || null;
+		const importStatus = ((data.get('import_status') as string) || 'draft').trim() === 'scheduled' ? 'scheduled' : 'draft';
+		const titlePath = (data.get('title_path') as string)?.trim() || 'title';
+		const contentPath = (data.get('content_path') as string)?.trim() || 'content';
+		const imageUrlPath = (data.get('image_url_path') as string)?.trim() || '';
+		const titleUnescapeNewlines = (data.get('title_unescape_newlines') as string) === 'on';
+		const contentUnescapeNewlines = (data.get('content_unescape_newlines') as string) === 'on';
+		const customMappingJson = (data.get('custom_mapping') as string)?.trim() || '[]';
+		const importStart = Math.max(1, parseInt((data.get('import_start') as string) || '1', 10));
+		const importCount = Math.min(500, Math.max(1, parseInt((data.get('per_page') as string) || '20', 10)));
+		const skipDuplicates = (data.get('skip_duplicates') as string) === 'on';
+		if (!feedUrl || !webhookId) return fail(400, { error: 'Feed URL and webhook are required' });
+
+		let customMapping: { path: string; key: string; type: string; unescapeNewlines?: boolean }[];
+		try {
+			customMapping = JSON.parse(customMappingJson) as { path: string; key: string; type: string; unescapeNewlines?: boolean }[];
+		} catch {
+			customMapping = [];
+		}
+
+		const filterJson = (data.get('filter_rules') as string)?.trim() || '';
+		let filterConfig: FilterConfig | null = null;
+		if (filterJson) {
+			try {
+				const parsed = JSON.parse(filterJson) as FilterConfig;
+				if (parsed?.rules?.length) {
+					filterConfig = {
+						combine: parsed.combine === 'or' ? 'or' : 'and',
+						rules: parsed.rules.filter((r: FilterRule) => (r.path ?? '').trim() !== '')
+					};
+				}
+			} catch {
+				// ignore invalid filter JSON
+			}
+		}
+
+		const normalized = normalizeFeedUrl(feedUrl);
+		let items: Record<string, unknown>[];
+		try {
+			const feed = await rssParser.parseURL(normalized);
+			const raw = (feed.items ?? []).map((item) => rssItemToPlain(item));
+			const start = importStart - 1;
+			items = raw.slice(start, start + importCount);
+		} catch (e) {
+			return fail(400, { error: e instanceof Error ? e.message : 'Failed to fetch feed' });
+		}
+
+		const db = getDatabase();
+		const webhook = db
+			.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
+			.get(webhookId, accountId) as { id: string } | undefined;
+		if (!webhook) return fail(400, { error: 'Invalid webhook' });
+		if (scheduleId) {
+			const schedule = db
+				.prepare('SELECT id FROM schedule WHERE id = ? AND account_id = ?')
+				.get(scheduleId, accountId) as { id: string } | undefined;
+			if (!schedule) return fail(400, { error: 'Invalid schedule' });
+		}
+		const insertPost = db.prepare(
+			'INSERT INTO post (id, account_id, webhook_id, title, content, image_url, color, status, import_source_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+		);
+		const insertField = db.prepare('INSERT INTO post_field (id, post_id, key, type, value) VALUES (?, ?, ?, ?, ?)');
+		const existingBySource = skipDuplicates
+			? db.prepare('SELECT 1 FROM post WHERE account_id = ? AND import_source_id = ? LIMIT 1')
+			: null;
+
+		function rssImportSourceId(item: Record<string, unknown>, index: number): string {
+			const guid = item?.guid;
+			const link = item?.link;
+			if (typeof guid === 'string' && guid.trim()) return `rss:${normalized}:${guid.trim()}`;
+			if (typeof link === 'string' && link.trim()) return `rss:${normalized}:${link.trim()}`;
+			return `rss:${normalized}:${importStart + index}`;
+		}
+
+		const createdIds: string[] = [];
+		const transaction = db.transaction(() => {
+			for (let i = 0; i < items.length; i++) {
+				const item = items[i];
+				if (!evaluateFilter(item, filterConfig)) continue;
+				const sourceId = rssImportSourceId(item, i);
+				if (skipDuplicates && existingBySource?.get(accountId, sourceId)) continue;
+				const title = resolveValue(item, titlePath, titleUnescapeNewlines, 'string');
+				const content = resolveValue(item, contentPath, contentUnescapeNewlines, 'string');
+				const imageUrl = imageUrlPath ? (resolveValue(item, imageUrlPath, false, 'string') as string)?.trim() || null : null;
+				const id = crypto.randomUUID();
+				insertPost.run(id, accountId, webhookId, title || '(no title)', content, imageUrl, null, 'draft', sourceId);
+				createdIds.push(id);
+				for (const m of customMapping) {
+					if (!m.path.trim() || !m.key.trim()) continue;
+					const value = resolveValue(
+						item,
+						m.path,
+						Boolean(m.unescapeNewlines),
+						m.type === 'json' ? 'json' : 'string'
+					);
+					const fieldId = crypto.randomUUID();
+					insertField.run(fieldId, id, m.key, m.type, value);
+				}
+			}
+		});
+		transaction();
+
 		if (scheduleId && createdIds.length > 0) {
 			const scheduleRow = db.prepare('SELECT color FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { color: string | null } | undefined;
 			const scheduleColor = scheduleRow?.color ?? null;

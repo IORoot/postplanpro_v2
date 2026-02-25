@@ -20,8 +20,10 @@
 		fullWidth?: boolean;
 		/** Show prev/next month navigation (default false for small per-rule calendar) */
 		showMonthNav?: boolean;
+		/** Smaller padding and cells for sidebar preview (default false) */
+		compact?: boolean;
 	}
-	let { slots = [], slotSeries, accentColor, weeks = 6, showTimes = true, fullWidth = false, showMonthNav = false }: Props = $props();
+	let { slots = [], slotSeries, accentColor, weeks = 6, showTimes = true, fullWidth = false, showMonthNav = false, compact = false }: Props = $props();
 
 	let viewYear = $state(new Date().getFullYear());
 	let viewMonth = $state(new Date().getMonth()); // 0-indexed
@@ -138,7 +140,7 @@
 </script>
 
 <div
-	class="rule-preview-calendar rounded border border-[var(--border)] bg-[var(--bg)] p-2 text-[var(--text)] {fullWidth
+	class="rule-preview-calendar rounded border border-[var(--border)] bg-[var(--bg)] text-[var(--text)] {compact ? 'p-1' : 'p-2'} {fullWidth
 		? 'w-full'
 		: ''}"
 >
@@ -177,15 +179,15 @@
 			</button>
 		</div>
 	{/if}
-	<div class="grid grid-cols-7 gap-0.5 text-center text-[10px] font-medium text-[var(--text-muted)]">
+	<div class="grid grid-cols-7 gap-0.5 text-center font-medium text-[var(--text-muted)] {compact ? 'text-[8px] py-0' : 'text-[10px] py-0.5'}">
 		{#each dayNames as day}
-			<div class="min-w-0 py-0.5">{day}</div>
+			<div class="min-w-0">{day}</div>
 		{/each}
 	</div>
-	<div class="grid grid-cols-7 gap-0.5 text-[11px]">
+	<div class="grid grid-cols-7 gap-0.5 {compact ? 'text-[9px] min-h-4' : 'text-[11px]'}">
 		{#each cells as cell}
 			<div
-				class="relative flex min-h-5 min-w-0 flex-col items-center justify-center rounded leading-none transition-colors {fullWidth
+				class="relative flex min-w-0 flex-col items-center justify-center rounded leading-none transition-colors {compact ? 'min-h-4' : 'min-h-5'} {fullWidth
 					? 'aspect-square'
 					: ''} {cell.inRange
 					? 'text-[var(--text)]'
@@ -201,7 +203,7 @@
 					: ''}
 				title={showTimes && cell.times.length ? cell.times.map(formatTime).join(', ') : cell.key}
 			>
-				<span class="text-[10px]">{cell.date.getDate()}</span>
+				<span class="{compact ? 'text-[8px]' : 'text-[10px]'}">{cell.date.getDate()}</span>
 				{#if cell.seriesDots.length > 0}
 					<div class="mt-0.5 flex flex-wrap justify-center gap-0.5">
 						{#each cell.seriesDots as dot}
@@ -230,13 +232,13 @@
 				{:else if cell.count > 0 && !slotSeries}
 					{#if cell.count < 10}
 						<span
-							class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full"
+							class="absolute -right-0.5 -top-0.5 rounded-full {compact ? 'h-1.5 w-1.5' : 'h-2 w-2'}"
 							style="background-color: {accentColor ?? 'var(--primary)'}"
 							aria-hidden="true"
 						></span>
 					{:else}
 						<span
-							class="absolute -right-0.5 -top-0.5 rounded px-0.5 text-[8px] text-white"
+							class="absolute -right-0.5 -top-0.5 rounded px-0.5 text-white {compact ? 'text-[7px]' : 'text-[8px]'}"
 							style="background-color: {accentColor ?? 'var(--primary)'}"
 							aria-hidden="true"
 						>{cell.count}</span>
@@ -259,8 +261,8 @@
 		</div>
 	{/if}
 	{#if !hasSlots && !showMonthNav}
-		<p class="mt-1 text-[10px] text-[var(--text-muted)]">No slots in next {weeks} weeks</p>
+		<p class="mt-1 text-[var(--text-muted)] {compact ? 'text-[8px]' : 'text-[10px]'}">No slots in next {weeks} weeks</p>
 	{:else if !hasSlots && showMonthNav}
-		<p class="mt-1 text-[10px] text-[var(--text-muted)]">No slots this month</p>
+		<p class="mt-1 text-[var(--text-muted)] {compact ? 'text-[8px]' : 'text-[10px]'}">No slots this month</p>
 	{/if}
 </div>

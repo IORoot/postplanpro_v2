@@ -20,6 +20,43 @@
 	let fieldIndices = $state<number[]>([]);
 	let selectedPostIds = $state<Set<string>>(new Set());
 	let useLegacySlots = $state(false);
+	let postsFilterStatus = $state('');
+	let postsFilterWebhook = $state('');
+	let postsSearchTitle = $state('');
+	let postsSortBy = $state<'created_at' | 'title' | 'webhook_name' | 'status'>('created_at');
+
+	const postsList = $derived.by(() => {
+		let list = [...(data.posts ?? [])];
+		if (postsFilterStatus) list = list.filter((p) => p.status === postsFilterStatus);
+		if (postsFilterWebhook) list = list.filter((p) => p.webhook_name === postsFilterWebhook);
+		if (postsSearchTitle.trim()) {
+			const q = postsSearchTitle.trim().toLowerCase();
+			list = list.filter((p) => (p.title ?? '').toLowerCase().includes(q));
+		}
+		list.sort((a, b) => {
+			switch (postsSortBy) {
+				case 'title':
+					return (a.title ?? '').localeCompare(b.title ?? '');
+				case 'webhook_name':
+					return (a.webhook_name ?? '').localeCompare(b.webhook_name ?? '');
+				case 'status':
+					return (a.status ?? '').localeCompare(b.status ?? '');
+				case 'created_at':
+				default:
+					return (b.created_at ?? '').localeCompare(a.created_at ?? '');
+			}
+		});
+		return list;
+	});
+
+	const uniqueWebhooks = $derived([...new Set((data.posts ?? []).map((p) => p.webhook_name).filter(Boolean))].sort());
+
+	function selectAllPosts() {
+		selectedPostIds = new Set(postsList.map((p) => p.id));
+	}
+	function selectNonePosts() {
+		selectedPostIds = new Set();
+	}
 	const scheduleColor = $derived(normalizePostColor(data.schedule?.color) ?? TAILWIND_POST_COLORS[0]);
 	let selectedColor = $state<string>(TAILWIND_POST_COLORS[0]);
 	let hexColorInput = $state<string>(TAILWIND_POST_COLORS[0]);
@@ -188,95 +225,97 @@
 				</div>
 
 	<!-- Recurring rules -->
-	<div>
-		<p class="text-sm font-medium text-[var(--text)]">Recurring rules</p>
-		<p class="text-xs text-[var(--text-muted)]">Add multiple rules; slots are merged and sorted. Start = immediately if empty; End = forever if empty.</p>
-		<div class="mt-3 space-y-4">
+	<div class="mt-8">
+		<h2 class="text-lg font-semibold text-[var(--text)]">Recurring rules</h2>
+		<p class="mt-1 text-sm text-[var(--text-muted)]">Add multiple rules; slots are merged and sorted. Start = immediately if empty; End = forever if empty.</p>
+		<div class="mt-4 space-y-6">
 			{#each rules as rule, i}
 				<div
-					class="rounded-lg border border-[var(--border)] border-l-4 bg-[var(--surface)] p-4"
+					class="rounded-xl border border-[var(--border)] border-l-4 bg-[var(--surface)] shadow-sm overflow-hidden"
 					style="border-left-color: {ruleColor(i)}"
 				>
-					<div class="mb-3 flex items-start justify-between gap-3">
-						<div class="min-w-0 flex-1 flex flex-wrap items-center gap-2">
+					<div class="border-b border-[var(--border)] bg-[var(--surface-hover)]/50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+						<span class="text-sm font-semibold text-[var(--text)]">Rule {i + 1}</span>
+						<div class="flex flex-wrap items-center gap-2">
+							<label for="rule-type-{i}" class="sr-only">Rule type</label>
 							<select
-							class="rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] min-h-[44px]"
-							onchange={(e) => {
-								const t = (e.currentTarget.value as Rule['type']);
-								rules = rules.map((r, idx) =>
-									idx === i
-										? {
-												type: t,
-												config:
-													t === 'cron'
-														? { expression: '0 9 * * 1-5' }
-														: t === 'weekly'
-															? { dayOfWeek: 1, time: '09:00' }
-															: t === 'daily'
-																? { time: '09:00' }
-																: t === 'monthly'
-																	? { dayOfMonth: 1, time: '09:00' }
-																	: t === 'yearly'
-																		? { month: 1, dayOfMonth: 1, time: '09:00' }
-																		: t === 'interval'
-																			? { amount: 6, unit: 'hours' }
-																			: { at: new Date().toISOString().slice(0, 16) },
-												start_at: r.start_at,
-												end_at: r.end_at
-											}
-										: r
-								);
-							}}
-						>
-							<option value="cron" selected={rule.type === 'cron'}>CRON notation</option>
-							<option value="daily" selected={rule.type === 'daily'}>Daily</option>
-							<option value="weekly" selected={rule.type === 'weekly'}>Weekly</option>
-							<option value="monthly" selected={rule.type === 'monthly'}>Monthly</option>
-							<option value="yearly" selected={rule.type === 'yearly'}>Yearly</option>
-							<option value="interval" selected={rule.type === 'interval'}>Interval</option>
-							<option value="once" selected={rule.type === 'once'}>Once</option>
-						</select>
-							<button type="button" onclick={() => removeRule(i)} class="rounded border border-red-400 px-2 py-1 text-sm text-red-800 dark:border-red-500 dark:text-red-200 min-h-[44px]">Remove</button>
-						</div>
-						<div class="shrink-0">
-							<RulePreviewCalendar
-								slots={previewSlotsForRule(rule)}
-								weeks={6}
-								accentColor={ruleColor(i)}
-							/>
+								id="rule-type-{i}"
+								class="rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm font-medium text-[var(--text)] min-h-[40px]"
+								onchange={(e) => {
+									const t = (e.currentTarget.value as Rule['type']);
+									rules = rules.map((r, idx) =>
+										idx === i
+											? {
+													type: t,
+													config:
+														t === 'cron'
+															? { expression: '0 9 * * 1-5' }
+															: t === 'weekly'
+																? { dayOfWeek: 1, time: '09:00' }
+																: t === 'daily'
+																	? { time: '09:00' }
+																	: t === 'monthly'
+																		? { dayOfMonth: 1, time: '09:00' }
+																		: t === 'yearly'
+																			? { month: 1, dayOfMonth: 1, time: '09:00' }
+																			: t === 'interval'
+																				? { amount: 6, unit: 'hours' }
+																				: { at: new Date().toISOString().slice(0, 16) },
+													start_at: r.start_at,
+													end_at: r.end_at
+												}
+											: r
+									);
+								}}
+							>
+								<option value="cron" selected={rule.type === 'cron'}>CRON notation</option>
+								<option value="daily" selected={rule.type === 'daily'}>Daily</option>
+								<option value="weekly" selected={rule.type === 'weekly'}>Weekly</option>
+								<option value="monthly" selected={rule.type === 'monthly'}>Monthly</option>
+								<option value="yearly" selected={rule.type === 'yearly'}>Yearly</option>
+								<option value="interval" selected={rule.type === 'interval'}>Interval</option>
+								<option value="once" selected={rule.type === 'once'}>Once</option>
+							</select>
+							<button type="button" onclick={() => removeRule(i)} class="rounded-lg border border-red-400/60 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:border-red-500/60 dark:bg-red-950/30 dark:text-red-300 min-h-[40px] hover:bg-red-100 dark:hover:bg-red-950/50" aria-label="Remove rule">Remove</button>
 						</div>
 					</div>
 
+					<div class="p-4 grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
+						<div class="md:col-span-3 space-y-4 min-w-0">
+							<div>
+								<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Configuration</p>
+								<div class="rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
 					{#if rule.type === 'cron'}
 						<div>
-							<label for="rule-{i}-cron" class="block text-xs font-medium text-[var(--text-muted)]">CRON notation (e.g. 0 18 * * 6 = Sat 6pm)</label>
+							<label for="rule-{i}-cron" class="block text-sm font-medium text-[var(--text-muted)]">CRON expression</label>
+							<p class="mt-0.5 text-xs text-[var(--text-muted)]">e.g. 0 18 * * 6 = Saturday 6pm</p>
 							<input
 								id="rule-{i}-cron"
 								type="text"
 								value={(rule.config.expression as string) ?? ''}
 								oninput={(e) => updateRuleConfig(i, 'expression', e.currentTarget.value)}
 								placeholder="0 18 * * 6"
-								class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]"
+								class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
 							/>
 						</div>
 					{:else if rule.type === 'daily'}
 						<div>
-							<label for="rule-{i}-daily-time" class="block text-xs font-medium text-[var(--text-muted)]">Time</label>
+							<label for="rule-{i}-daily-time" class="block text-sm font-medium text-[var(--text-muted)]">Time</label>
 							<input
 								id="rule-{i}-daily-time"
 								type="time"
 								value={(rule.config.time as string) ?? '09:00'}
 								oninput={(e) => updateRuleConfig(i, 'time', e.currentTarget.value)}
-								class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]"
+								class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
 							/>
 						</div>
 					{:else if rule.type === 'weekly'}
-						<div class="flex flex-wrap gap-3">
+						<div class="grid gap-4 sm:grid-cols-2">
 							<div>
-								<label for="rule-{i}-weekly-day" class="block text-xs font-medium text-[var(--text-muted)]">Day</label>
+								<label for="rule-{i}-weekly-day" class="block text-sm font-medium text-[var(--text-muted)]">Day of week</label>
 								<select
 									id="rule-{i}-weekly-day"
-									class="mt-1 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]"
+									class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
 									value={String(rule.config.dayOfWeek ?? 0)}
 									onchange={(e) => updateRuleConfig(i, 'dayOfWeek', parseInt(e.currentTarget.value, 10))}
 								>
@@ -286,99 +325,99 @@
 								</select>
 							</div>
 							<div>
-								<label for="rule-{i}-weekly-time" class="block text-xs font-medium text-[var(--text-muted)]">Time</label>
+								<label for="rule-{i}-weekly-time" class="block text-sm font-medium text-[var(--text-muted)]">Time</label>
 								<input
 									id="rule-{i}-weekly-time"
 									type="time"
 									value={(rule.config.time as string) ?? '09:00'}
 									oninput={(e) => updateRuleConfig(i, 'time', e.currentTarget.value)}
-									class="mt-1 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]"
+									class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
 								/>
 							</div>
 						</div>
 					{:else if rule.type === 'monthly'}
-						<div class="flex flex-wrap gap-3">
+						<div class="grid gap-4 sm:grid-cols-2">
 							<div>
-								<label for="rule-{i}-monthly-day" class="block text-xs font-medium text-[var(--text-muted)]">Day of month</label>
+								<label for="rule-{i}-monthly-day" class="block text-sm font-medium text-[var(--text-muted)]">Day of month</label>
 								<select
 									id="rule-{i}-monthly-day"
-									class="mt-1 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]"
-									value={String(rule.config.dayOfMonth ?? 1)}
+									class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
+									value={String(Math.min(31, Math.max(1, Number(rule.config.dayOfMonth) || 1)))}
 									onchange={(e) => updateRuleConfig(i, 'dayOfMonth', parseInt(e.currentTarget.value, 10))}
 								>
 									{#each DAY_NUMBERS as d}
-										<option value={d.value}>{d.label}</option>
+										<option value={String(d.value)}>{d.label}</option>
 									{/each}
 								</select>
 							</div>
 							<div>
-								<label for="rule-{i}-monthly-time" class="block text-xs font-medium text-[var(--text-muted)]">Time</label>
+								<label for="rule-{i}-monthly-time" class="block text-sm font-medium text-[var(--text-muted)]">Time</label>
 								<input
 									id="rule-{i}-monthly-time"
 									type="time"
 									value={(rule.config.time as string) ?? '09:00'}
 									oninput={(e) => updateRuleConfig(i, 'time', e.currentTarget.value)}
-									class="mt-1 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]"
+									class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
 								/>
 							</div>
 						</div>
 					{:else if rule.type === 'yearly'}
-						<div class="flex flex-wrap gap-3">
+						<div class="grid gap-4 sm:grid-cols-3">
 							<div>
-								<label for="rule-{i}-yearly-month" class="block text-xs font-medium text-[var(--text-muted)]">Month</label>
+								<label for="rule-{i}-yearly-month" class="block text-sm font-medium text-[var(--text-muted)]">Month</label>
 								<select
 									id="rule-{i}-yearly-month"
-									class="mt-1 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]"
-									value={String(rule.config.month ?? 1)}
+									class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
+									value={String(Math.min(12, Math.max(1, Number(rule.config.month) || 1)))}
 									onchange={(e) => updateRuleConfig(i, 'month', parseInt(e.currentTarget.value, 10))}
 								>
 									{#each MONTHS as m}
-										<option value={m.value}>{m.label}</option>
+										<option value={String(m.value)}>{m.label}</option>
 									{/each}
 								</select>
 							</div>
 							<div>
-								<label for="rule-{i}-yearly-day" class="block text-xs font-medium text-[var(--text-muted)]">Day</label>
+								<label for="rule-{i}-yearly-day" class="block text-sm font-medium text-[var(--text-muted)]">Day</label>
 								<select
 									id="rule-{i}-yearly-day"
-									class="mt-1 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]"
-									value={String(rule.config.dayOfMonth ?? 1)}
+									class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
+									value={String(Math.min(31, Math.max(1, Number(rule.config.dayOfMonth) || 1)))}
 									onchange={(e) => updateRuleConfig(i, 'dayOfMonth', parseInt(e.currentTarget.value, 10))}
 								>
 									{#each DAY_NUMBERS as d}
-										<option value={d.value}>{d.label}</option>
+										<option value={String(d.value)}>{d.label}</option>
 									{/each}
 								</select>
 							</div>
 							<div>
-								<label for="rule-{i}-yearly-time" class="block text-xs font-medium text-[var(--text-muted)]">Time</label>
+								<label for="rule-{i}-yearly-time" class="block text-sm font-medium text-[var(--text-muted)]">Time</label>
 								<input
 									id="rule-{i}-yearly-time"
 									type="time"
 									value={(rule.config.time as string) ?? '09:00'}
 									oninput={(e) => updateRuleConfig(i, 'time', e.currentTarget.value)}
-									class="mt-1 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]"
+									class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
 								/>
 							</div>
 						</div>
 					{:else if rule.type === 'interval'}
-						<div class="flex flex-wrap gap-3">
+						<div class="grid gap-4 sm:grid-cols-2">
 							<div>
-								<label for="rule-{i}-interval-amount" class="block text-xs font-medium text-[var(--text-muted)]">Number</label>
+								<label for="rule-{i}-interval-amount" class="block text-sm font-medium text-[var(--text-muted)]">Every</label>
 								<input
 									id="rule-{i}-interval-amount"
 									type="number"
 									min="1"
 									value={Number(rule.config.amount ?? 1)}
 									oninput={(e) => updateRuleConfig(i, 'amount', parseInt(e.currentTarget.value, 10) || 1)}
-									class="mt-1 w-24 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]"
+									class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
 								/>
 							</div>
 							<div>
-								<label for="rule-{i}-interval-unit" class="block text-xs font-medium text-[var(--text-muted)]">Period</label>
+								<label for="rule-{i}-interval-unit" class="block text-sm font-medium text-[var(--text-muted)]">Period</label>
 								<select
 									id="rule-{i}-interval-unit"
-									class="mt-1 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]"
+									class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
 									value={String(rule.config.unit ?? 'hours')}
 									onchange={(e) => updateRuleConfig(i, 'unit', e.currentTarget.value)}
 								>
@@ -390,39 +429,62 @@
 						</div>
 					{:else if rule.type === 'once'}
 						<div>
-							<label for="rule-{i}-once" class="block text-xs font-medium text-[var(--text-muted)]">Date and time</label>
+							<label for="rule-{i}-once" class="block text-sm font-medium text-[var(--text-muted)]">Date and time</label>
 							<input
 								id="rule-{i}-once"
 								type="datetime-local"
 								value={rule.config.at ? String(rule.config.at).slice(0, 16) : ''}
 								oninput={(e) => updateRuleConfig(i, 'at', e.currentTarget.value ? new Date(e.currentTarget.value).toISOString().slice(0, 19) : '')}
-								class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]"
+								class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
 							/>
 						</div>
 					{/if}
+								</div>
+							</div>
 
-					<div class="mt-3 grid gap-2 sm:grid-cols-2">
-						<div>
-							<label class="block text-xs text-[var(--text-muted)]">Start (empty = immediately)</label>
-							<input
-								type="datetime-local"
-								value={rule.start_at ? String(rule.start_at).slice(0, 16) : ''}
-								oninput={(e) => {
-									rules = rules.map((r, idx) => (idx === i ? { ...r, start_at: e.currentTarget.value ? new Date(e.currentTarget.value).toISOString().slice(0, 19) : null } : r));
-								}}
-								class="w-full rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]"
-							/>
+							<div>
+								<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Active period</p>
+								<p class="mb-2 text-xs text-[var(--text-muted)]">Leave empty for “from now” and “forever”.</p>
+								<div class="grid gap-4 sm:grid-cols-2">
+									<div>
+										<label for="rule-{i}-start" class="block text-sm font-medium text-[var(--text-muted)]">Start (empty = immediately)</label>
+										<input
+											id="rule-{i}-start"
+											type="datetime-local"
+											value={rule.start_at ? String(rule.start_at).slice(0, 16) : ''}
+											oninput={(e) => {
+												rules = rules.map((r, idx) => (idx === i ? { ...r, start_at: e.currentTarget.value ? new Date(e.currentTarget.value).toISOString().slice(0, 19) : null } : r));
+											}}
+											class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
+										/>
+									</div>
+									<div>
+										<label for="rule-{i}-end" class="block text-sm font-medium text-[var(--text-muted)]">End (empty = forever)</label>
+										<input
+											id="rule-{i}-end"
+											type="datetime-local"
+											value={rule.end_at ? String(rule.end_at).slice(0, 16) : ''}
+											oninput={(e) => {
+												rules = rules.map((r, idx) => (idx === i ? { ...r, end_at: e.currentTarget.value ? new Date(e.currentTarget.value).toISOString().slice(0, 19) : null } : r));
+											}}
+											class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
+										/>
+									</div>
+								</div>
+							</div>
 						</div>
-						<div>
-							<label class="block text-xs text-[var(--text-muted)]">End (empty = forever)</label>
-							<input
-								type="datetime-local"
-								value={rule.end_at ? String(rule.end_at).slice(0, 16) : ''}
-								oninput={(e) => {
-									rules = rules.map((r, idx) => (idx === i ? { ...r, end_at: e.currentTarget.value ? new Date(e.currentTarget.value).toISOString().slice(0, 19) : null } : r));
-								}}
-								class="w-full rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]"
-							/>
+
+						<div class="md:col-span-1 flex flex-col items-start">
+							<p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Preview</p>
+							<div class="w-full">
+								<RulePreviewCalendar
+									slots={previewSlotsForRule(rule)}
+									accentColor={ruleColor(i)}
+									fullWidth={true}
+									compact={true}
+									showMonthNav={true}
+								/>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -430,18 +492,6 @@
 		</div>
 		<button type="button" onclick={addRule} class="mt-2 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add rule</button>
 	</div>
-
-	<!-- Preview next slots when rules exist -->
-	{#if data.previewSlots?.length > 0}
-		<div>
-			<p class="text-sm font-medium text-[var(--text)]">Next slots (preview)</p>
-			<ul class="mt-1 list-inside list-disc text-sm text-[var(--text-muted)]">
-				{#each data.previewSlots.slice(0, 10) as slot}
-					<li>{new Date(slot).toLocaleString()}</li>
-				{/each}
-			</ul>
-		</div>
-	{/if}
 
 	<!-- Legacy fixed slots (when no rules) -->
 	{#if rules.length === 0}
@@ -465,19 +515,21 @@
 		</div>
 	{/if}
 
-	<div>
-		<p class="text-sm font-medium text-[var(--text)]">Schedule custom fields</p>
-		<div class="mt-2 space-y-2">
+	<!-- Schedule custom fields -->
+	<section class="mt-10 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm" aria-labelledby="custom-fields-heading">
+		<h2 id="custom-fields-heading" class="text-lg font-semibold text-[var(--text)]">Schedule custom fields</h2>
+		<p class="mt-1 text-sm text-[var(--text-muted)]">Key/value pairs merged into each post when this schedule is applied. Optional.</p>
+		<div class="mt-4 space-y-3">
 			{#each fieldIndices as idx, k}
-				<div class="flex flex-wrap items-center gap-2">
+				<div class="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-3">
 					<input
 						type="text"
 						name="field_key_{idx}"
 						placeholder="Key"
 						value={data.fields[idx]?.key ?? ''}
-						class="rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-w-[100px] min-h-[44px]"
+						class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-w-[100px] min-h-[44px]"
 					/>
-					<select name="field_type_{idx}" class="rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]">
+					<select name="field_type_{idx}" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]">
 						<option value="string" selected={data.fields[idx]?.type === 'string'}>string</option>
 						<option value="number" selected={data.fields[idx]?.type === 'number'}>number</option>
 						<option value="boolean" selected={data.fields[idx]?.type === 'boolean'}>boolean</option>
@@ -488,22 +540,23 @@
 						name="field_value_{idx}"
 						placeholder="Value"
 						value={data.fields[idx]?.value ?? ''}
-						class="flex-1 min-w-[120px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]"
+						class="flex-1 min-w-[120px] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]"
 					/>
 					<button
 						type="button"
-						class="rounded border border-red-400 px-2 py-1 text-xs text-red-800 dark:border-red-500 dark:text-red-200 min-h-[32px]"
+						class="rounded-lg border border-red-400/60 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:border-red-500/60 dark:bg-red-950/30 dark:text-red-300 min-h-[40px] hover:bg-red-100 dark:hover:bg-red-950/50"
 						onclick={() => removeField(idx)}
+						aria-label="Remove field"
 					>
 						Remove
 					</button>
 				</div>
 			{/each}
 		</div>
-		<button type="button" onclick={addField} class="mt-2 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add field</button>
-	</div>
+		<button type="button" onclick={addField} class="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add field</button>
+	</section>
 
-				<div class="flex gap-2 pt-4">
+				<div class="flex gap-2 pt-6">
 					<button type="submit" class="rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)] shadow-sm min-h-[44px]">Save schedule</button>
 					<a href="/schedules" class="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center">Cancel</a>
 				</div>
@@ -516,17 +569,59 @@
 
 				<form method="POST" action="?/applySchedule" use:enhance={() => () => invalidateAll()} class="mt-4">
 					<input type="hidden" name="post_ids" value={[...selectedPostIds].join(',')} />
-					<div class="space-y-2 max-h-64 overflow-y-auto rounded border border-[var(--border)] bg-[var(--surface)] p-3">
-						{#each data.posts as post}
+					<div class="mt-4 flex flex-wrap items-center gap-3">
+						<button type="button" onclick={selectAllPosts} class="rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[40px]">Select all</button>
+						<button type="button" onclick={selectNonePosts} class="rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[40px]">Select none</button>
+					</div>
+					<div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+						<div>
+							<label for="posts_search" class="block text-xs font-medium text-[var(--text-muted)]">Search title</label>
+							<input id="posts_search" type="text" bind:value={postsSearchTitle} placeholder="Filter by title…" class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] min-h-[40px]" />
+						</div>
+						<div>
+							<label for="posts_filter_status" class="block text-xs font-medium text-[var(--text-muted)]">Status</label>
+							<select id="posts_filter_status" bind:value={postsFilterStatus} class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] min-h-[40px]">
+								<option value="">All</option>
+								<option value="draft">Draft</option>
+								<option value="scheduled">Scheduled</option>
+								<option value="sent">Sent</option>
+								<option value="failed">Failed</option>
+							</select>
+						</div>
+						<div>
+							<label for="posts_filter_webhook" class="block text-xs font-medium text-[var(--text-muted)]">Webhook</label>
+							<select id="posts_filter_webhook" bind:value={postsFilterWebhook} class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] min-h-[40px]">
+								<option value="">All</option>
+								{#each uniqueWebhooks as w}
+									<option value={w}>{w}</option>
+								{/each}
+							</select>
+						</div>
+						<div>
+							<label for="posts_sort" class="block text-xs font-medium text-[var(--text-muted)]">Sort by</label>
+							<select id="posts_sort" bind:value={postsSortBy} class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] min-h-[40px]">
+								<option value="created_at">Date imported</option>
+								<option value="title">Title</option>
+								<option value="webhook_name">Webhook</option>
+								<option value="status">Status</option>
+							</select>
+						</div>
+					</div>
+					<div class="mt-3 space-y-2 max-h-64 overflow-y-auto rounded border border-[var(--border)] bg-[var(--surface)] p-3">
+						{#each postsList as post}
 							<label class="flex min-h-[44px] cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-[var(--surface-hover)]">
-								<input type="checkbox" checked={selectedPostIds.has(post.id)} onchange={() => togglePost(post.id)} class="h-4 w-4 rounded border-[var(--border)]" />
-								<span class="font-medium text-[var(--text)]">{post.title}</span>
-								<span class="text-sm text-[var(--text-muted)]">({post.webhook_name})</span>
+								<input type="checkbox" checked={selectedPostIds.has(post.id)} onchange={() => togglePost(post.id)} class="h-4 w-4 shrink-0 rounded border-[var(--border)]" />
+								<span class="min-w-0 flex-1 font-medium text-[var(--text)] truncate" title={post.title}>{post.title || 'Untitled'}</span>
+								<span class="shrink-0 text-xs text-[var(--text-muted)]">{post.webhook_name}</span>
+								<span class="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium status-{post.status}">{post.status}</span>
+								<span class="shrink-0 text-xs text-[var(--text-muted)]">{post.created_at ? new Date(post.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</span>
 							</label>
 						{/each}
 					</div>
-					{#if data.posts.length === 0}
+					{#if (data.posts?.length ?? 0) === 0}
 						<p class="mt-2 text-sm text-[var(--text-muted)]">No posts yet. <a href="/posts/new" class="text-[var(--primary)] underline">Create posts</a> first.</p>
+					{:else if postsList.length === 0}
+						<p class="mt-2 text-sm text-[var(--text-muted)]">No posts match the current filters. Adjust search, status, or webhook.</p>
 					{:else}
 						<button type="submit" class="mt-3 rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 min-h-[44px]" disabled={selectedPostIds.size === 0}>
 							Apply to {selectedPostIds.size} post(s)
