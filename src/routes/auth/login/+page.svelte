@@ -29,7 +29,7 @@
 			<button
 				type="button"
 				class="rounded-lg border px-3 py-2 text-sm font-medium min-h-[44px] {authTab === 'signin'
-					? 'border-[var(--primary)] bg-[var(--primary)] text-white'
+					? 'border-[var(--primary)] btn-primary text-white'
 					: 'border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-hover)]'}"
 				onclick={() => (authTab = 'signin')}
 			>
@@ -38,7 +38,7 @@
 			<button
 				type="button"
 				class="rounded-lg border px-3 py-2 text-sm font-medium min-h-[44px] {authTab === 'register'
-					? 'border-[var(--primary)] bg-[var(--primary)] text-white'
+					? 'border-[var(--primary)] btn-primary text-white'
 					: 'border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-hover)]'}"
 				onclick={() => (authTab = 'register')}
 			>
@@ -47,7 +47,7 @@
 			<button
 				type="button"
 				class="rounded-lg border px-3 py-2 text-sm font-medium min-h-[44px] {authTab === 'forgot'
-					? 'border-[var(--primary)] bg-[var(--primary)] text-white'
+					? 'border-[var(--primary)] btn-primary text-white'
 					: 'border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-hover)]'}"
 				onclick={() => (authTab = 'forgot')}
 			>
@@ -81,7 +81,7 @@
 				</div>
 				<button
 					type="submit"
-					class="w-full rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-95 min-h-[44px]"
+					class="w-full rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white min-h-[44px]"
 				>
 					Sign in with email
 				</button>

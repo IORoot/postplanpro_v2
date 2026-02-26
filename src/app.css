@@ -18,11 +18,18 @@
   --sidebar-text-muted: #b0b0a5;
   --sidebar-active-bg: #005f78; /* Primary */
   --sidebar-active-text: #f4f4f0;
+  --sidebar-active-gradient: linear-gradient(135deg, #005f78 0%, #007a94 50%, #005f78 100%);
   --sidebar-hover: rgba(244, 244, 240, 0.06);
 }
 
 .sidebar {
   background-color: var(--sidebar-bg);
+}
+
+/* Active sidebar nav item: subtle gradient */
+.sidebar .sidebar-nav-item-active {
+  background: var(--sidebar-active-gradient);
+  color: var(--sidebar-active-text);
 }
 
 :root {
@@ -34,6 +41,7 @@
   --text-muted: #6b6b60;
   --primary: #005f78;
   --primary-hover: #007394;
+  --primary-gradient: linear-gradient(135deg, #005f78 0%, #007a94 50%, #005f78 100%);
 }
 
 .dark {
@@ -45,6 +53,20 @@
   --text-muted: #b0b0a5;
   --primary: #005f78;
   --primary-hover: #007394;
+  --primary-gradient: linear-gradient(135deg, #005f78 0%, #007a94 50%, #005f78 100%);
+}
+
+/* Primary buttons: subtle gradient */
+.btn-primary {
+  background: var(--primary-gradient);
+  color: white;
+}
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 body {

@@ -46,7 +46,7 @@
 				</div>
 				<button
 					type="submit"
-					class="w-full rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-95 min-h-[44px]"
+					class="w-full rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white min-h-[44px]"
 				>
 					Update password
 				</button>

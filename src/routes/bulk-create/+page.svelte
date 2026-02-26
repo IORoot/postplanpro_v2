@@ -304,7 +304,7 @@
 					class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]"
 				/>
 			</div>
-			<button type="submit" disabled={submittingDiscoverRss} class="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-70 disabled:cursor-wait min-h-[44px] inline-flex items-center justify-center gap-2">
+			<button type="submit" disabled={submittingDiscoverRss} class="rounded-lg btn-primary px-4 py-2 text-sm font-medium text-white disabled:cursor-wait min-h-[44px] inline-flex items-center justify-center gap-2">
 				{#if submittingDiscoverRss}
 					<span class="bulk-create-spinner" aria-hidden="true"></span>
 					<span>Discovering…</span>
@@ -505,7 +505,7 @@
 							Skip duplicates (don't import if already imported from this feed)
 						</label>
 					</div>
-					<button type="submit" disabled={submittingImportRss} class="mt-6 w-full rounded-lg bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-70 disabled:cursor-wait min-h-[48px] inline-flex items-center justify-center gap-2 sm:w-auto">
+					<button type="submit" disabled={submittingImportRss} class="mt-6 w-full rounded-lg btn-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-wait min-h-[48px] inline-flex items-center justify-center gap-2 sm:w-auto">
 						{#if submittingImportRss}
 							<span class="bulk-create-spinner" aria-hidden="true"></span>
 							<span>Importing…</span>
@@ -592,7 +592,7 @@
 				class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]"
 			/>
 		</div>
-		<button type="submit" disabled={submittingDiscover} class="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-70 disabled:cursor-wait min-h-[44px] inline-flex items-center justify-center gap-2">
+		<button type="submit" disabled={submittingDiscover} class="rounded-lg btn-primary px-4 py-2 text-sm font-medium text-white disabled:cursor-wait min-h-[44px] inline-flex items-center justify-center gap-2">
 			{#if submittingDiscover}
 				<span class="bulk-create-spinner" aria-hidden="true"></span>
 				<span>Discovering…</span>
@@ -654,7 +654,7 @@
 				<label for="include_featured_image" class="text-sm text-[var(--text)]">Include featured image in sample (adds <code class="rounded bg-[var(--surface)] px-1 py-0.5 text-xs">featured_image_url</code> to the JSON for mapping)</label>
 			</div>
 			<div class="flex flex-wrap gap-2">
-				<button type="submit" disabled={submittingFetch} class="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-70 disabled:cursor-wait min-h-[44px] inline-flex items-center justify-center gap-2">
+				<button type="submit" disabled={submittingFetch} class="rounded-lg btn-primary px-4 py-2 text-sm font-medium text-white disabled:cursor-wait min-h-[44px] inline-flex items-center justify-center gap-2">
 					{#if submittingFetch}
 						<span class="bulk-create-spinner" aria-hidden="true"></span>
 						<span>Retrieving first entry…</span>
@@ -887,7 +887,7 @@
 							Skip duplicates (don’t import if already imported from this source)
 						</label>
 					</div>
-					<button type="submit" disabled={submittingImport} class="mt-6 w-full rounded-lg bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-70 disabled:cursor-wait min-h-[48px] inline-flex items-center justify-center gap-2 sm:w-auto">
+					<button type="submit" disabled={submittingImport} class="mt-6 w-full rounded-lg btn-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-wait min-h-[48px] inline-flex items-center justify-center gap-2 sm:w-auto">
 						{#if submittingImport}
 							<span class="bulk-create-spinner" aria-hidden="true"></span>
 							<span>Importing…</span>

@@ -112,7 +112,7 @@
 						<button type="button" onclick={() => editingHeaders = [...editingHeaders, { key: '', value: '' }]} class="mt-2 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add header</button>
 					</div>
 					<div class="mt-3 flex gap-2">
-						<button type="submit" class="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 min-h-[44px]">Save</button>
+						<button type="submit" class="rounded-lg btn-primary px-4 py-2 text-sm font-medium text-white min-h-[44px]">Save</button>
 						<button type="button" onclick={() => (editingWebhookId = null)} class="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">Cancel</button>
 					</div>
 				</form>
@@ -173,7 +173,7 @@
 					<button type="button" onclick={() => newWebhookHeaders = [...newWebhookHeaders, { key: '', value: '' }]} class="mt-2 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add header</button>
 				</div>
 				<div class="mt-3 flex gap-2">
-					<button type="submit" class="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 min-h-[44px]">Add webhook</button>
+					<button type="submit" class="rounded-lg btn-primary px-4 py-2 text-sm font-medium text-white min-h-[44px]">Add webhook</button>
 					<button type="button" onclick={() => (newWebhook = false)} class="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">Cancel</button>
 				</div>
 			</form>
@@ -256,7 +256,7 @@
 					}}
 					class="mt-2"
 				>
-					<button type="submit" class="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 min-h-[44px]">Generate callback token</button>
+					<button type="submit" class="rounded-lg btn-primary px-4 py-2 text-sm font-medium text-white min-h-[44px]">Generate callback token</button>
 				</form>
 				<p class="mt-1 text-xs text-[var(--text-muted)]">Generate a token so Make.com can authenticate when calling the callback URL. The payload sent to Make.com will include <code>callback_url</code> and <code>callback_token</code> when set.</p>
 			{/if}
@@ -321,7 +321,7 @@
 					</div>
 					<button type="button" onclick={() => editingTemplateFields = [...editingTemplateFields, { key: '', type: 'string', value: '' }]} class="mt-2 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add field</button>
 					<div class="mt-3 flex gap-2">
-						<button type="submit" class="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 min-h-[44px]">Save</button>
+						<button type="submit" class="rounded-lg btn-primary px-4 py-2 text-sm font-medium text-white min-h-[44px]">Save</button>
 						<button type="button" onclick={() => (editingTemplateId = null)} class="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">Cancel</button>
 					</div>
 				</form>
@@ -383,7 +383,7 @@
 				</div>
 				<button type="button" onclick={() => newTemplateFields = [...newTemplateFields, { key: '', type: 'string', value: '' }]} class="mt-2 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add field</button>
 				<div class="mt-3 flex gap-2">
-					<button type="submit" class="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 min-h-[44px]">Add template</button>
+					<button type="submit" class="rounded-lg btn-primary px-4 py-2 text-sm font-medium text-white min-h-[44px]">Add template</button>
 					<button type="button" onclick={() => (newTemplate = false)} class="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">Cancel</button>
 				</div>
 			</form>
@@ -433,7 +433,7 @@
 						</div>
 					</div>
 					<div class="mt-3 flex gap-2">
-						<button type="submit" class="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 min-h-[44px]">Save</button>
+						<button type="submit" class="rounded-lg btn-primary px-4 py-2 text-sm font-medium text-white min-h-[44px]">Save</button>
 						<button type="button" onclick={() => (editingGlobalId = null)} class="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">Cancel</button>
 					</div>
 				</form>
@@ -484,7 +484,7 @@
 					</div>
 				</div>
 				<div class="mt-3 flex gap-2">
-					<button type="submit" class="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 min-h-[44px]">Add variable</button>
+					<button type="submit" class="rounded-lg btn-primary px-4 py-2 text-sm font-medium text-white min-h-[44px]">Add variable</button>
 					<button type="button" onclick={() => (newGlobal = false)} class="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">Cancel</button>
 				</div>
 			</form>

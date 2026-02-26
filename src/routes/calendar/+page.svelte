@@ -563,7 +563,7 @@
 				<a
 					href={hrefFor(v.id, anchor)}
 					class="rounded-lg px-3 py-2 text-xs font-medium min-h-[36px] inline-flex items-center {view === v.id
-						? 'bg-[var(--primary)] text-white'
+						? 'btn-primary text-white'
 						: 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
 				>
 					{v.label}
@@ -673,7 +673,7 @@
 					<a
 						href={hrefFor('week', ws)}
 						class="rounded-lg px-2 py-2 text-xs text-center transition {activeWeek
-							? 'bg-[var(--primary)] text-white'
+							? 'btn-primary text-white'
 							: 'bg-[var(--bg)] text-[var(--text)] hover:bg-[var(--surface-hover)]'}"
 						title={weekCount > 0 ? `${weekCount} post(s) this week` : undefined}
 					>
@@ -796,7 +796,7 @@
 					<a
 						href={hrefFor('day', d)}
 						class="relative rounded-lg px-2 py-2 text-center text-xs transition {isActiveDay
-							? 'bg-[var(--primary)] text-white'
+							? 'btn-primary text-white'
 							: 'bg-[var(--bg)] text-[var(--text)] hover:bg-[var(--surface-hover)]'} {isTodayDay && !isActiveDay ? 'calendar-today' : ''}"
 						title={dayPosts.length > 0 ? `${dayPosts.length} post(s)` : undefined}
 					>

@@ -11,7 +11,7 @@
 
 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 	<h1 class="text-2xl font-bold text-[var(--text)]">Schedules</h1>
-	<a href="/schedules/new" class="rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)] shadow-sm min-h-[44px] inline-flex items-center justify-center w-fit">+ New schedule</a>
+	<a href="/schedules/new" class="rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm min-h-[44px] inline-flex items-center justify-center w-fit">+ New schedule</a>
 </div>
 <p class="mt-1 text-sm text-[var(--text-muted)]">Create schedules with time slots, then apply them to posts to set when they send.</p>
 

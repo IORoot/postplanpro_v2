@@ -191,7 +191,7 @@
 						<a
 							href={item.href}
 							class="nav-item flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {isActive
-								? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]'
+								? 'sidebar-nav-item-active'
 								: 'text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)]'}"
 							onclick={closeSidebar}
 						>

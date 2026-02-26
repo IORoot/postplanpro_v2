@@ -557,7 +557,7 @@
 	</section>
 
 				<div class="flex gap-2 pt-6">
-					<button type="submit" class="rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)] shadow-sm min-h-[44px]">Save schedule</button>
+					<button type="submit" class="rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm min-h-[44px]">Save schedule</button>
 					<a href="/schedules" class="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center">Cancel</a>
 				</div>
 			</form>
@@ -623,7 +623,7 @@
 					{:else if postsList.length === 0}
 						<p class="mt-2 text-sm text-[var(--text-muted)]">No posts match the current filters. Adjust search, status, or webhook.</p>
 					{:else}
-						<button type="submit" class="mt-3 rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 min-h-[44px]" disabled={selectedPostIds.size === 0}>
+						<button type="submit" class="mt-3 rounded-lg btn-primary px-4 py-2 text-sm font-medium text-white min-h-[44px]" disabled={selectedPostIds.size === 0}>
 							Apply to {selectedPostIds.size} post(s)
 						</button>
 					{/if}

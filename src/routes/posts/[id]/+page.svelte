@@ -331,7 +331,7 @@
 
 			<!-- Actions -->
 			<div class="flex flex-wrap gap-2">
-				<button type="submit" class="rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)] shadow-sm min-h-[44px]">Save</button>
+				<button type="submit" class="rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm min-h-[44px]">Save</button>
 				<button
 					type="button"
 					disabled={sending}

@@ -161,7 +161,7 @@
 						</select>
 					</div>
 					<div class="flex items-end gap-2">
-						<button type="submit" class="rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 min-h-[44px]">Apply filters</button>
+						<button type="submit" class="rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white min-h-[44px]">Apply filters</button>
 						<a href="/reports?report=callback-stages" class="rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center">Reset</a>
 					</div>
 				</div>
