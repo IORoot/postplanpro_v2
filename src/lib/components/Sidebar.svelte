@@ -118,7 +118,7 @@
 >
 	<div class="flex h-full flex-col">
 		<!-- Header: logo + collapse -->
-		<div class="flex h-48 items-center justify-between border-b border-[var(--sidebar-border)] px-4 ">
+		<div class="flex h-24 items-center justify-between border-b border-[var(--sidebar-border)] px-8 ">
 			<a href="/" class="flex items-center gap-2 font-semibold text-[var(--sidebar-text)] w-full">
 				<img src="/logo_text.svg" alt="PostPlan" class="h-32 w-auto mx-auto" />
 			</a>
@@ -190,7 +190,7 @@
 					<li>
 						<a
 							href={item.href}
-							class="nav-item flex min-h-[44px] items-center gap-3 rounded-r-lg px-3 py-2.5 text-sm font-medium transition-colors {isActive
+							class="nav-item flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {isActive
 								? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)]'
 								: 'text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)]'}"
 							onclick={closeSidebar}

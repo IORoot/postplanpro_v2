@@ -394,7 +394,7 @@
 
 			<!-- Make.com stages (under JSON Override) -->
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-				<h3 class="text-sm font-semibold text-[var(--text)] mb-1">Make.com stages</h3>
+				<h3 class="text-sm font-semibold text-[var(--text)] mb-1">Callback stages</h3>
 				<p class="text-xs text-[var(--text-muted)] mb-3">Sequence of stages completed by your Make.com scenario for this post.</p>
 				{#if stages.length > 0}
 					<div class="overflow-x-auto rounded border border-[var(--border)]">

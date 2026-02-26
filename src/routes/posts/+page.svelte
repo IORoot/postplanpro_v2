@@ -163,7 +163,7 @@
 		{#each filteredPosts as post}
 			{@const statusClass = post.status === 'draft' ? 'status-draft' : post.status === 'scheduled' ? 'status-scheduled' : post.status === 'sent' ? 'status-sent' : 'status-failed'}
 			<div
-				class="content-card content-card-accent rounded-xl p-4 shadow-sm"
+				class="content-card content-card-accent rounded-xl p-4"
 				style={`background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? 'var(--primary)'};`}
 			>
 				<div class="flex flex-wrap items-start justify-between gap-4">

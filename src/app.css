@@ -1,24 +1,24 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-surface: #ffffff;
-  --color-surface-hover: #f1f5f9;
-  --color-border: #e2e8f0;
-  --color-muted: #64748b;
-  --color-primary: #7c3aed;
-  --color-primary-focus: #6d28d9;
+  --color-surface: #f4f4f0;
+  --color-surface-hover: #e6e6dc;
+  --color-border: #d4d4c8;
+  --color-muted: #6b6b60;
+  --color-primary: #005f78;
+  --color-primary-focus: #007394;
 }
 
-/* Sidebar: always dark violet (BuildIQ-style) */
+/* Sidebar theme */
 :root,
 .dark {
-  --sidebar-bg: #1a0b24;
-  --sidebar-border: #2d1b3d;
-  --sidebar-text: #e2e8f0;
-  --sidebar-text-muted: #94a3b8;
-  --sidebar-active-bg: #7c3aed;
-  --sidebar-active-text: #ffffff;
-  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-bg: #0c0c09; /* Black */
+  --sidebar-border: #1d1d16; /* Darker */
+  --sidebar-text: #f4f4f0; /* White */
+  --sidebar-text-muted: #b0b0a5;
+  --sidebar-active-bg: #005f78; /* Primary */
+  --sidebar-active-text: #f4f4f0;
+  --sidebar-hover: rgba(244, 244, 240, 0.06);
 }
 
 .sidebar {
@@ -26,25 +26,25 @@
 }
 
 :root {
-  --bg: #f5f5f5;
+  --bg: #f4f4f0; /* White */
   --surface: #ffffff;
-  --surface-hover: #f8fafc;
-  --border: #e2e8f0;
-  --text: #1e293b;
-  --text-muted: #64748b;
-  --primary: #7c3aed;
-  --primary-hover: #6d28d9;
+  --surface-hover: #e6e6dc;
+  --border: #d4d4c8;
+  --text: #0c0c09; /* Black */
+  --text-muted: #6b6b60;
+  --primary: #005f78;
+  --primary-hover: #007394;
 }
 
 .dark {
-  --bg: #0f172a;
-  --surface: #1e293b;
-  --surface-hover: #334155;
-  --border: #334155;
-  --text: #f8fafc;
-  --text-muted: #94a3b8;
-  --primary: #8b5cf6;
-  --primary-hover: #a78bfa;
+  --bg: #0c0c09; /* Black */
+  --surface: #1d1d16; /* Darker */
+  --surface-hover: #2b2b22; /* Dark */
+  --border: #2b2b22;
+  --text: #f4f4f0; /* White */
+  --text-muted: #b0b0a5;
+  --primary: #005f78;
+  --primary-hover: #007394;
 }
 
 body {
@@ -58,7 +58,6 @@ body {
   background-color: var(--surface);
   border-radius: 0.75rem;
   box-shadow: none;
-  border: 1px solid var(--border);
 }
 .content-card-accent {
   border-left-width: 4px;
