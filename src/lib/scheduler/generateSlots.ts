@@ -147,12 +147,13 @@ function generateFromRule(
 				d.setUTCDate(d.getUTCDate() + 1);
 				d = timeToDateUTC(d, time);
 			}
+			const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
 			for (let i = 0; i < cap; i++) {
 				if (end && d > end) break;
 				slots.push(d.toISOString().slice(0, 19));
-				// Advance by 7 calendar days in UTC (avoids DST issues from adding 7*24h in ms)
-				d.setUTCDate(d.getUTCDate() + 7);
-				d = timeToDateUTC(d, time);
+				// Advance by 7 calendar days using milliseconds to avoid any edge cases
+				// around month boundaries or DST transitions.
+				d = new Date(d.getTime() + sevenDaysMs);
 			}
 			break;
 		}
