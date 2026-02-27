@@ -58,8 +58,10 @@ function rangeFor(view: CalendarView, anchor: Date): { start: Date; end: Date } 
 		return { start, end };
 	}
 	if (view === 'month') {
-		start.setDate(1);
-		end.setMonth(start.getMonth() + 1, 0);
+		// Load full year so the month nav bar can show post markers for every month.
+		start.setMonth(0, 1);
+		end.setMonth(11, 31);
+		end.setHours(23, 59, 59, 999);
 		return { start, end };
 	}
 	if (view === 'year') {

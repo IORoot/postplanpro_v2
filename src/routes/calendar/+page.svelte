@@ -9,6 +9,21 @@
 	let reschedulePending = $state(false);
 	let dragPreviewText = $state<string | null>(null);
 	let dragPreviewPos = $state<{ x: number; y: number } | null>(null);
+	let expandedYearMonths = $state<Set<string>>(new Set());
+
+	function yearMonthKey(year: number, monthIndex: number): string {
+		return `${year}-${monthIndex}`;
+	}
+
+	function toggleYearMonthExpanded(year: number, monthIndex: number) {
+		const key = yearMonthKey(year, monthIndex);
+		expandedYearMonths = new Set(expandedYearMonths);
+		if (expandedYearMonths.has(key)) {
+			expandedYearMonths.delete(key);
+		} else {
+			expandedYearMonths.add(key);
+		}
+	}
 
 	type CalendarView = 'day' | 'week' | 'month' | 'year' | 'agenda' | 'schedule';
 	type SendNowResult = {
@@ -60,6 +75,7 @@
 	}
 
 	const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+	const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 	const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 	const WEEK_HOUR_SLOT_PX = 56;
 	const WEEK_POST_HEIGHT_PX = 44;
@@ -234,6 +250,13 @@
 
 	function postsForMonth(month: number): CalendarPost[] {
 		return postsByMonth.get(month) ?? [];
+	}
+
+	function postCountForMonthInYear(year: number, monthIndex: number): number {
+		return posts.filter((p) => {
+			const d = new Date(p.scheduled_at);
+			return d.getFullYear() === year && d.getMonth() === monthIndex;
+		}).length;
 	}
 
 	function groupedAgenda(): Array<{ date: string; posts: CalendarPost[] }> {
@@ -584,6 +607,60 @@
 </div>
 
 {#if view === 'month'}
+	<div class="content-card mt-4 rounded-xl p-4">
+		<div class="mb-3 rounded-xl bg-[var(--surface)] p-3">
+			<div class="mb-3 flex items-center justify-center gap-2">
+				<a
+					href={hrefFor('month', new Date(anchor.getFullYear() - 1, anchor.getMonth(), 1))}
+					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]"
+					title="Previous year"
+				>
+					←
+				</a>
+				<span class="text-lg font-semibold text-[var(--text)]">{anchor.getFullYear()}</span>
+				<a
+					href={hrefFor('month', new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
+					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-xs text-[var(--text)] hover:bg-[var(--surface-hover)]"
+				>
+					This year
+				</a>
+				<a
+					href={hrefFor('month', new Date(anchor.getFullYear() + 1, anchor.getMonth(), 1))}
+					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]"
+					title="Next year"
+				>
+					→
+				</a>
+			</div>
+			<div class="grid w-full grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-12">
+				{#each Array.from({ length: 12 }, (_, i) => i) as monthIndex}
+					{@const isActiveMonth = anchor.getMonth() === monthIndex}
+					{@const monthPostCount = postCountForMonthInYear(anchor.getFullYear(), monthIndex)}
+					{@const isCurrentMonth = new Date().getMonth() === monthIndex && new Date().getFullYear() === anchor.getFullYear()}
+					<a
+						href={hrefFor('month', new Date(anchor.getFullYear(), monthIndex, 1))}
+						class="relative rounded-lg px-2 py-2 text-center text-xs transition {isActiveMonth
+							? 'btn-primary text-white'
+							: 'bg-[var(--bg)] text-[var(--text)] hover:bg-[var(--surface-hover)]'} {isCurrentMonth && !isActiveMonth ? 'calendar-today' : ''}"
+						title={monthPostCount > 0 ? `${monthNames[monthIndex]}: ${monthPostCount} post(s)` : monthNames[monthIndex]}
+					>
+						<div class="truncate font-medium">{monthNamesShort[monthIndex]}</div>
+						{#if monthPostCount > 0}
+							<div class="mt-1 flex items-center justify-center gap-0.5">
+								<span
+									class="h-1.5 w-1.5 rounded-full"
+									style={`background-color: ${isActiveMonth ? 'white' : 'var(--primary)'};`}
+								></span>
+								{#if monthPostCount > 1}
+									<span class="text-[10px] opacity-90">{monthPostCount > 9 ? '9+' : monthPostCount}</span>
+								{/if}
+							</div>
+						{/if}
+					</a>
+				{/each}
+			</div>
+		</div>
+	</div>
 	<div class="content-card mt-4 overflow-hidden rounded-xl">
 		<div class="grid grid-cols-7 border-b border-[var(--border)] bg-[var(--surface)]">
 			{#each dayNames as day}
@@ -780,7 +857,7 @@
 				>
 					←
 				</a>
-				<p class="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Week quick navigation</p>
+				<p class="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Day quick navigation</p>
 				<a
 					href={hrefFor('day', withOffset(anchor, 'week', 1))}
 					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]"
@@ -909,39 +986,79 @@
 	</div>
 {:else if view === 'year'}
 	<div class="content-card mt-4 rounded-xl p-4">
-		<div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-			{#each yearMonths() as monthDate}
-				{@const monthIndex = monthDate.getMonth()}
-				{@const monthPosts = postsForMonth(monthIndex)}
-				{@const isCurrentMonth = new Date().getMonth() === monthIndex && new Date().getFullYear() === anchor.getFullYear()}
-				<div
-					class="rounded-xl bg-[var(--surface)] p-3 {isCurrentMonth ? 'calendar-today' : ''}"
-					role="group"
-					aria-label="Drop to reschedule"
-					ondragover={(e) => yearDragOver(e, monthIndex)}
-					ondrop={(e) => yearDrop(e, monthIndex)}
+		<div class="mb-4 rounded-xl bg-[var(--surface)] p-3">
+			<div class="flex items-center justify-center gap-2">
+				<a
+					href={hrefFor('year', new Date(anchor.getFullYear() - 1, 0, 1))}
+					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]"
+					title="Previous year"
 				>
-					<p class="text-sm font-semibold text-[var(--text)]">{monthNames[monthIndex]}</p>
-					<p class="mt-1 text-xs text-[var(--text-muted)]">{monthPosts.length} post(s)</p>
-					<div class="mt-2 space-y-1">
-						{#each monthPosts.slice(0, 4) as post (post.id)}
-							<a
-								href={"/posts/" + post.id}
-								class="block truncate rounded-md px-2 py-1 text-xs text-[var(--text)] hover:underline cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
-								style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}
-								draggable={true}
-								ondragstart={(e) => handleDragStart(e, post)}
-								ondragend={handleDragEnd}
-							>
-								{new Date(post.scheduled_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })} · {post.title}
-							</a>
-						{/each}
-						{#if monthPosts.length > 4}
-							<p class="text-xs text-[var(--text-muted)]">+{monthPosts.length - 4} more</p>
-						{/if}
+					←
+				</a>
+				<span class="text-lg font-semibold text-[var(--text)]">{anchor.getFullYear()}</span>
+				<a
+					href={hrefFor('year', new Date(new Date().getFullYear(), 0, 1))}
+					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-xs text-[var(--text)] hover:bg-[var(--surface-hover)]"
+				>
+					This year
+				</a>
+				<a
+					href={hrefFor('year', new Date(anchor.getFullYear() + 1, 0, 1))}
+					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]"
+					title="Next year"
+				>
+					→
+				</a>
+			</div>
+		</div>
+		<div class="overflow-hidden rounded-xl border border-[var(--border)]">
+			<div class="grid grid-cols-1 gap-px bg-[var(--border)] md:grid-cols-2 xl:grid-cols-3">
+				{#each yearMonths() as monthDate}
+					{@const monthIndex = monthDate.getMonth()}
+					{@const monthPosts = posts.filter(
+						(p) =>
+							new Date(p.scheduled_at).getFullYear() === anchor.getFullYear() &&
+							new Date(p.scheduled_at).getMonth() === monthIndex
+					)}
+					{@const isCurrentMonth = new Date().getMonth() === monthIndex && new Date().getFullYear() === anchor.getFullYear()}
+					{@const yearMonth = yearMonthKey(anchor.getFullYear(), monthIndex)}
+					{@const isExpanded = expandedYearMonths.has(yearMonth)}
+					{@const postsToShow = isExpanded ? monthPosts : monthPosts.slice(0, 4)}
+					<div
+						class="min-h-[140px] bg-[var(--surface)] p-3 {isCurrentMonth ? 'calendar-today' : ''}"
+						role="group"
+						aria-label="Drop to reschedule"
+						ondragover={(e) => yearDragOver(e, monthIndex)}
+						ondrop={(e) => yearDrop(e, monthIndex)}
+					>
+						<p class="text-sm font-semibold text-[var(--text)]">{monthNames[monthIndex]}</p>
+						<p class="mt-1 text-xs text-[var(--text-muted)]">{monthPosts.length} post(s)</p>
+						<div class="mt-2 space-y-1">
+							{#each postsToShow as post (post.id)}
+								<a
+									href={"/posts/" + post.id}
+									class="block truncate rounded-md px-2 py-1 text-xs text-[var(--text)] hover:underline cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
+									style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}
+									draggable={true}
+									ondragstart={(e) => handleDragStart(e, post)}
+									ondragend={handleDragEnd}
+								>
+									{new Date(post.scheduled_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })} · {post.title}
+								</a>
+							{/each}
+							{#if monthPosts.length > 4}
+								<button
+									type="button"
+									onclick={() => toggleYearMonthExpanded(anchor.getFullYear(), monthIndex)}
+									class="mt-0.5 text-xs font-medium text-[var(--primary)] hover:underline"
+								>
+									{isExpanded ? 'Show less' : `+${monthPosts.length - 4} more`}
+								</button>
+							{/if}
+						</div>
 					</div>
-				</div>
-			{/each}
+				{/each}
+			</div>
 		</div>
 	</div>
 {:else if view === 'agenda'}
