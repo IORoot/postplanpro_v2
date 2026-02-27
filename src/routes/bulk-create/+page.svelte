@@ -23,8 +23,9 @@
 	let importStatus = $state<'draft' | 'scheduled'>('draft');
 	let skipDuplicates = $state(false);
 	let selectedPostTypeRoute = $state('');
-	let selectedSource = $state<'wordpress' | 'rss' | 'csv' | null>(null);
+	let selectedSource = $state<'wordpress' | 'rss' | 'csv' | 'squarespace' | null>(null);
 	let feedUrl = $state('');
+	let squarespaceBlogUrl = $state('');
 	let csvImportId = $state('');
 	let csvDelimiter = $state(',');
 	let csvHasHeader = $state(true);
@@ -37,6 +38,8 @@
 	let submittingImport = $state(false);
 	let submittingDiscoverRss = $state(false);
 	let submittingImportRss = $state(false);
+	let submittingDiscoverSquarespace = $state(false);
+	let submittingImportSquarespace = $state(false);
 	let includeFeaturedImage = $state(false);
 	let showCopiedToast = $state(false);
 	let copyToastTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -57,11 +60,12 @@
 
 	// Sync URL/auth/post type from discover or fetch result; default selected post type when discovered
 	$effect(() => {
-		const f = form as { site_url?: string; auth?: string; post_type_route?: string; feed_url?: string; csv_import_id?: string; csv_delimiter?: string; csv_has_header?: boolean; csv_headers?: string[] } | undefined;
+		const f = form as { site_url?: string; auth?: string; post_type_route?: string; feed_url?: string; blog_url?: string; csv_import_id?: string; csv_delimiter?: string; csv_has_header?: boolean; csv_headers?: string[] } | undefined;
 		if (f?.site_url != null) siteUrl = f.site_url;
 		if (f?.auth != null) auth = f.auth;
 		if (f?.post_type_route != null) selectedPostTypeRoute = f.post_type_route;
 		if (f?.feed_url != null) feedUrl = f.feed_url;
+		if (f?.blog_url != null) squarespaceBlogUrl = f.blog_url;
 		if (f?.csv_import_id != null) csvImportId = f.csv_import_id;
 		if (f?.csv_delimiter != null) csvDelimiter = f.csv_delimiter;
 		if (f?.csv_has_header != null) csvHasHeader = Boolean(f.csv_has_header);
@@ -72,6 +76,11 @@
 		if (selectedSource === 'rss' && (form as { rss_sample?: unknown })?.rss_sample != null) {
 			if (titlePath === 'title.rendered' || !titlePath) titlePath = 'title';
 			if (contentPath === 'content.rendered' || !contentPath) contentPath = 'content';
+		}
+		// Default Squarespace field paths when we have a sample
+		if (selectedSource === 'squarespace' && squarespaceDiscovered && (form as { sample?: unknown })?.sample != null) {
+			if (titlePath === 'title.rendered' || !titlePath) titlePath = 'title';
+			if (contentPath === 'content.rendered' || !contentPath) contentPath = 'body';
 		}
 	});
 
@@ -162,10 +171,13 @@
 	}
 
 	const fetched = $derived(Boolean((form as { fetched?: boolean })?.fetched));
+	const squarespaceDiscovered = $derived(Boolean((form as { squarespace_discovered?: boolean })?.squarespace_discovered));
 	const sample = $derived(
 		selectedSource === 'rss'
 			? ((form as { rss_sample?: unknown })?.rss_sample ?? null)
-			: ((form as { sample?: unknown })?.sample ?? null)
+			: selectedSource === 'squarespace'
+				? (squarespaceDiscovered ? ((form as { sample?: unknown })?.sample ?? null) : null)
+				: ((form as { sample?: unknown })?.sample ?? null)
 	);
 	const keys = $derived(sample ? sampleKeys(sample) : []);
 	const samplePreviewJson = $derived(
@@ -183,6 +195,7 @@
 	const rssFeedUrl = $derived((form as { feed_url?: string })?.feed_url ?? feedUrl);
 	const rssItemCount = $derived((form as { item_count?: number })?.item_count ?? 0);
 	const rssFeedTitle = $derived((form as { feed_title?: string | null })?.feed_title ?? null);
+	const squarespaceItemCount = $derived((form as { item_count?: number })?.item_count ?? 0);
 </script>
 
 <style>
@@ -244,12 +257,14 @@
 <p class="mt-1 text-sm text-[var(--text-muted)]">
 	{#if selectedSource === 'wordpress'}
 		Import posts from a WordPress site’s REST API. Discover post types, map fields, then import.
+	{:else if selectedSource === 'squarespace'}
+		Import posts from a Squarespace blog. Enter the blog page URL; we request JSON using <code class="rounded bg-[var(--surface)] px-1">?format=json-pretty</code>, then map fields and import.
 	{:else}
 		Choose a source to import content from. More options coming soon.
 	{/if}
 </p>
 
-{#if form?.error && !form?.discovered && !form?.fetched && !form?.rss_discovered}
+{#if form?.error && !form?.discovered && !form?.fetched && !form?.rss_discovered && !form?.squarespace_discovered}
 	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-error">{form?.error}</p>
 {/if}
 
@@ -258,7 +273,10 @@
 	<section class="mt-8">
 		<h2 class="text-sm font-medium uppercase tracking-wider text-[var(--text-muted)]">Choose source</h2>
 		<p class="mt-1 text-sm text-[var(--text-muted)]">Select where to import posts from.</p>
-		<div class="mt-6 flex flex-wrap gap-4">
+
+		<!-- CMS -->
+		<h3 class="mt-8 text-sm font-medium text-[var(--text-muted)]">CMS</h3>
+		<div class="mt-3 flex flex-wrap gap-4">
 			<button
 				type="button"
 				onclick={() => (selectedSource = 'wordpress')}
@@ -271,13 +289,18 @@
 			</button>
 			<button
 				type="button"
-				onclick={() => (selectedSource = 'rss')}
+				onclick={() => (selectedSource = 'squarespace')}
 				class="flex min-h-[140px] min-w-[200px] flex-col items-center justify-center gap-3 rounded-xl border-2 border-[var(--border)] bg-[var(--surface)] px-8 py-6 text-[var(--text)] transition hover:border-[var(--primary)] hover:bg-[var(--surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
 			>
-				<svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-[var(--text-muted)]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.14 20C5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
-				<span class="font-semibold text-[var(--text)]">RSS Feed</span>
-				<span class="text-center text-xs text-[var(--text-muted)]">Import from an RSS or Atom feed</span>
+				<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-black" fill="currentColor" aria-hidden="true"><title>Squarespace</title><path d="M22.655 8.719c-1.802-1.801-4.726-1.801-6.564 0l-7.351 7.35c-.45.45-.45 1.2 0 1.65.45.449 1.2.449 1.65 0l7.351-7.351c.899-.899 2.362-.899 3.264 0 .9.9.9 2.364 0 3.264l-7.239 7.239c.9.899 2.362.899 3.263 0l5.589-5.589c1.836-1.838 1.836-4.763.037-6.563zm-2.475 2.437c-.451-.45-1.201-.45-1.65 0l-7.354 7.389c-.9.899-2.361.899-3.262 0-.45-.45-1.2-.45-1.65 0s-.45 1.2 0 1.649c1.801 1.801 4.726 1.801 6.564 0l7.351-7.35c.449-.487.449-1.239.001-1.688zm-2.439-7.35c-1.801-1.801-4.726-1.801-6.564 0l-7.351 7.351c-.45.449-.45 1.199 0 1.649s1.2.45 1.65 0l7.395-7.351c.9-.899 2.371-.899 3.27 0 .451.45 1.201.45 1.65 0 .421-.487.421-1.199-.029-1.649h-.021zm-2.475 2.437c-.45-.45-1.2-.45-1.65 0l-7.351 7.389c-.899.9-2.363.9-3.265 0-.9-.899-.9-2.363 0-3.264l7.239-7.239c-.9-.9-2.362-.9-3.263 0L1.35 8.719c-1.8 1.8-1.8 4.725 0 6.563 1.801 1.801 4.725 1.801 6.564 0l7.35-7.351c.451-.488.451-1.238 0-1.688h.002z"/></svg>
+				<span class="font-semibold text-[var(--text)]">Squarespace</span>
+				<span class="text-center text-xs text-[var(--text-muted)]">Import from a Squarespace blog (JSON)</span>
 			</button>
+		</div>
+
+		<!-- Spreadsheets -->
+		<h3 class="mt-8 text-sm font-medium text-[var(--text-muted)]">Spreadsheets</h3>
+		<div class="mt-3 flex flex-wrap gap-4">
 			<button
 				type="button"
 				onclick={() => (selectedSource = 'csv')}
@@ -292,6 +315,73 @@
 				<span class="text-center text-xs text-[var(--text-muted)]">Upload and map columns from a CSV</span>
 			</button>
 		</div>
+
+		<!-- Feeds -->
+		<h3 class="mt-8 text-sm font-medium text-[var(--text-muted)]">Feeds</h3>
+		<div class="mt-3 flex flex-wrap gap-4">
+			<button
+				type="button"
+				onclick={() => (selectedSource = 'rss')}
+				class="flex min-h-[140px] min-w-[200px] flex-col items-center justify-center gap-3 rounded-xl border-2 border-[var(--border)] bg-[var(--surface)] px-8 py-6 text-[var(--text)] transition hover:border-[var(--primary)] hover:bg-[var(--surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-[var(--text-muted)]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.14 20C5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+				<span class="font-semibold text-[var(--text)]">RSS Feed</span>
+				<span class="text-center text-xs text-[var(--text-muted)]">Import from an RSS or Atom feed</span>
+			</button>
+		</div>
+	</section>
+{/if}
+
+<!-- Squarespace Stage 1: Enter blog URL and discover -->
+{#if selectedSource === 'squarespace'}
+	<section class="mt-8">
+		<div class="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+			<span class="bulk-create-step-pill active">1</span>
+			<span>Enter blog URL and discover</span>
+		</div>
+		<h2 class="mt-4 text-lg font-medium text-[var(--text)]">1. Enter blog URL and discover</h2>
+		<p class="mt-1 text-sm text-[var(--text-muted)]">
+			Enter the full URL of your Squarespace <strong>blog</strong> or collection page (e.g. <code class="rounded bg-[var(--surface)] px-1 py-0.5 text-xs">https://yoursite.squarespace.com/blog</code>). Squarespace can return the same page as JSON instead of HTML: we append <code class="rounded bg-[var(--surface)] px-1 py-0.5 text-xs">?format=json-pretty</code> to your URL and fetch that. The response is a JSON object; we look for an <code class="rounded bg-[var(--surface)] px-1 py-0.5 text-xs">items</code> array (each item is a blog post or entry). The first entry is used as the example for mapping fields in the next step.
+		</p>
+		<form
+			method="POST"
+			action="?/discoverSquarespace"
+			use:enhance={() => {
+				submittingDiscoverSquarespace = true;
+				return async ({ update }) => {
+					await update();
+					submittingDiscoverSquarespace = false;
+				};
+			}}
+			class="mt-4 max-w-2xl space-y-4"
+		>
+			<div>
+				<label for="squarespace_blog_url" class="block text-sm font-medium text-[var(--text)]">Blog or collection page URL *</label>
+				<input
+					id="squarespace_blog_url"
+					type="url"
+					name="blog_url"
+					bind:value={squarespaceBlogUrl}
+					required
+					placeholder="https://yoursite.squarespace.com/blog"
+					class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]"
+				/>
+			</div>
+			<button type="submit" disabled={submittingDiscoverSquarespace} class="rounded-lg btn-primary px-4 py-2 text-sm font-medium text-white disabled:cursor-wait min-h-[44px] inline-flex items-center justify-center gap-2">
+				{#if submittingDiscoverSquarespace}
+					<span class="bulk-create-spinner" aria-hidden="true"></span>
+					<span>Discovering…</span>
+				{:else}
+					Discover blog
+				{/if}
+			</button>
+		</form>
+		{#if squarespaceDiscovered}
+			<div class="mt-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+				<p class="text-sm font-medium text-[var(--text)]">Blog discovered</p>
+				<p class="mt-1 text-xs text-[var(--text-muted)]">{squarespaceItemCount} item(s) · <code class="rounded bg-[var(--bg)] px-1 py-0.5 text-xs">{squarespaceBlogUrl}</code></p>
+			</div>
+		{/if}
 	</section>
 {/if}
 
@@ -1344,4 +1434,231 @@
 		</form>
 	</section>
 {/if}
+{/if}
+
+<!-- Squarespace Stage 2: Map fields and import -->
+{#if selectedSource === 'squarespace' && squarespaceDiscovered}
+	<section class="mt-10 border-t border-[var(--border)] pt-8">
+		<div class="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+			<span class="bulk-create-step-pill done">1</span>
+			<span class="bulk-create-step-pill active">2</span>
+			<span>Map fields and import</span>
+		</div>
+		<h2 class="mt-4 text-lg font-medium text-[var(--text)]">2. Map fields and import</h2>
+		<p class="mt-1 text-sm text-[var(--text-muted)]">Set how each Squarespace item field maps into your posts, choose how many items to import, then run the import.</p>
+
+		<form
+			method="POST"
+			action="?/importFromSquarespace"
+			use:enhance={() => {
+				submittingImportSquarespace = true;
+				return async ({ update }) => {
+					await update();
+					submittingImportSquarespace = false;
+				};
+			}}
+			class="bulk-create-step3-grid mt-6 gap-8"
+		>
+			<input type="hidden" name="blog_url" value={squarespaceBlogUrl} />
+			<input type="hidden" name="custom_mapping" value={customMappingJson()} />
+			<input type="hidden" name="filter_rules" value={filterRulesJson()} />
+
+			<div class="min-w-0 space-y-6">
+				<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
+					<h3 class="text-sm font-semibold text-[var(--text)]">Field mapping</h3>
+					<p class="mt-1 text-xs text-[var(--text-muted)]">Map Squarespace item fields to your post. Use the reference panel on the right for path syntax.</p>
+					<div class="mt-4">
+						<label for="sq_title_path" class="block text-sm font-medium text-[var(--text)]">Title</label>
+						<input id="sq_title_path" type="text" name="title_path" bind:value={titlePath} list="sq_title_paths" class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" placeholder="e.g. title or title.rendered" />
+						<datalist id="sq_title_paths">
+							{#each keys as k}
+								<option value={k}></option>
+							{/each}
+						</datalist>
+						<label class="mt-3 flex cursor-pointer items-center gap-2 text-sm text-[var(--text-muted)]">
+							<input type="checkbox" name="title_unescape_newlines" bind:checked={titleUnescapeNewlines} value="on" class="rounded border-[var(--border)]" />
+							Convert <code class="rounded bg-[var(--surface)] px-1">\n</code> to newlines
+						</label>
+					</div>
+					<div class="mt-6">
+						<label for="sq_content_path" class="block text-sm font-medium text-[var(--text)]">Content path or expression</label>
+						<input id="sq_content_path" type="text" name="content_path" bind:value={contentPath} list="sq_content_paths" class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" placeholder="e.g. body or body.rendered" />
+						<datalist id="sq_content_paths">
+							{#each keys as k}
+								<option value={k}></option>
+							{/each}
+						</datalist>
+						<label class="mt-3 flex cursor-pointer items-center gap-2 text-sm text-[var(--text-muted)]">
+							<input type="checkbox" name="content_unescape_newlines" bind:checked={contentUnescapeNewlines} value="on" class="rounded border-[var(--border)]" />
+							Convert <code class="rounded bg-[var(--surface)] px-1">\n</code> to newlines
+						</label>
+					</div>
+					<div class="mt-6">
+						<label for="sq_image_url_path" class="block text-sm font-medium text-[var(--text)]">Image URL (optional)</label>
+						<input id="sq_image_url_path" type="text" name="image_url_path" bind:value={imageUrlPath} list="sq_image_url_paths" class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" placeholder="e.g. assetUrl or imageUrl" />
+						<datalist id="sq_image_url_paths">
+							{#each keys as k}
+								<option value={k}></option>
+							{/each}
+						</datalist>
+					</div>
+
+					<div class="mt-8 pt-6 border-t border-[var(--border)]">
+						<p class="text-sm font-medium text-[var(--text)]">Custom fields (response path → key)</p>
+						<div class="mt-2 space-y-3">
+							{#each customMappings as m, i}
+								<div class="flex flex-wrap items-end gap-2 rounded border border-[var(--border)] bg-[var(--surface)] p-2">
+									<input type="text" bind:value={m.path} placeholder="path or expression" list="sq_custom_paths" class="min-w-[180px] min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" />
+									<input type="text" bind:value={m.key} placeholder="Key" class="min-w-[100px] min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" />
+									<select bind:value={m.type} class="min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]">
+										<option value="string">string</option>
+										<option value="number">number</option>
+										<option value="boolean">boolean</option>
+										<option value="json">json</option>
+									</select>
+									<label class="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm text-[var(--text-muted)]">
+										<input type="checkbox" bind:checked={m.unescapeNewlines} class="rounded border-[var(--border)]" />
+										<code class="text-xs">\n</code>→newline
+									</label>
+									<button type="button" onclick={() => removeCustomMapping(i)} class="min-h-[44px] rounded border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]">Remove</button>
+								</div>
+							{/each}
+						</div>
+						<datalist id="sq_custom_paths">
+							{#each keys as k}
+								<option value={k}></option>
+							{/each}
+						</datalist>
+						<div class="mt-2 flex flex-wrap gap-2">
+							<button type="button" onclick={addCustomMapping} class="min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]">+ Add custom field</button>
+						</div>
+					</div>
+				</div>
+
+				<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
+					<h3 class="text-sm font-semibold text-[var(--text)]">Import range</h3>
+					<p class="mt-1 text-xs text-[var(--text-muted)]">Choose which items to import by start position and count. Max 500 per import.</p>
+					<div class="mt-4 grid gap-4 sm:grid-cols-2">
+						<div>
+							<label for="sq_import_start" class="block text-sm font-medium text-[var(--text)]">Start at item</label>
+							<input id="sq_import_start" type="number" name="import_start" bind:value={importStart} min="1" max="500" class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" />
+						</div>
+						<div>
+							<label for="sq_import_count" class="block text-sm font-medium text-[var(--text)]">Number of items</label>
+							<input id="sq_import_count" type="number" name="per_page" bind:value={perPage} min="1" max="500" class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" />
+							<p class="mt-0.5 text-xs text-[var(--text-muted)]">Imports items {importStart}–{Math.min(500, importStart + perPage - 1)}</p>
+						</div>
+					</div>
+				</div>
+
+				<div class="rounded-xl border-2 border-[var(--border)] bg-[var(--surface)] p-5 ring-1 ring-[var(--border)]/50">
+					<div class="flex items-center gap-2">
+						<span class="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--surface)] text-sm font-semibold text-[var(--text-muted)]" aria-hidden="true">◇</span>
+						<h3 class="text-sm font-semibold text-[var(--text)]">Import filters</h3>
+					</div>
+					<p class="mt-2 text-xs text-[var(--text-muted)]">Only items that pass these checks are imported. Leave empty to import all.</p>
+					<div class="mt-3 flex flex-wrap items-center gap-2">
+						<label for="sq_filter_combine" class="text-sm text-[var(--text-muted)]">Match</label>
+						<select id="sq_filter_combine" bind:value={filterCombine} class="min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]">
+							<option value="and">all rules (AND)</option>
+							<option value="or">any rule (OR)</option>
+						</select>
+					</div>
+					<div class="mt-3 space-y-2">
+						{#each filterRules as rule, i}
+							<div class="flex flex-wrap items-end gap-2 rounded border border-[var(--border)] bg-[var(--surface)] p-2">
+								<input type="text" bind:value={rule.path} placeholder="Field path" list="sq_filter_paths" class="min-w-[160px] min-h-[40px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]" />
+								<select bind:value={rule.operator} class="min-h-[40px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]">
+									{#each FILTER_OPERATORS as op}
+										<option value={op.value}>{op.label}</option>
+									{/each}
+								</select>
+								{#if FILTER_OPERATORS.find((o) => o.value === rule.operator)?.needsValue}
+									<input type="text" bind:value={rule.value} placeholder="Value" class="min-w-[120px] min-h-[40px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]" />
+								{/if}
+								<button type="button" onclick={() => removeFilterRule(i)} class="min-h-[40px] rounded border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]">Remove</button>
+							</div>
+						{/each}
+					</div>
+					<datalist id="sq_filter_paths">
+						{#each keys as k}
+							<option value={k}></option>
+						{/each}
+					</datalist>
+					<button type="button" onclick={addFilterRule} class="mt-2 min-h-[40px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]">+ Add filter rule</button>
+				</div>
+
+				<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
+					<h3 class="text-sm font-semibold text-[var(--text)]">Destination</h3>
+					<div class="mt-4 space-y-4">
+						<div>
+							<label for="sq_webhook_id" class="block text-sm font-medium text-[var(--text)]">Target webhook *</label>
+							<select id="sq_webhook_id" name="webhook_id" bind:value={webhookId} required class="mt-1 w-full min-h-[44px] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]">
+								<option value="">Select webhook</option>
+								{#each data.webhooks as w}
+									<option value={w.id}>{w.name}</option>
+								{/each}
+							</select>
+						</div>
+						<div>
+							<label for="sq_schedule_id" class="block text-sm font-medium text-[var(--text)]">Apply schedule after import (optional)</label>
+							<select id="sq_schedule_id" name="schedule_id" bind:value={scheduleId} class="mt-1 w-full min-h-[44px] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]">
+								<option value="">None</option>
+								{#each data.schedules as s}
+									<option value={s.id}>{s.name}</option>
+								{/each}
+							</select>
+						</div>
+						<div>
+							<label for="sq_import_status" class="block text-sm font-medium text-[var(--text)]">Status after import</label>
+							<select id="sq_import_status" name="import_status" bind:value={importStatus} class="mt-1 w-full min-h-[44px] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]">
+								<option value="draft">Draft</option>
+								<option value="scheduled">Scheduled</option>
+							</select>
+						</div>
+						<label class="flex cursor-pointer items-center gap-2 text-sm text-[var(--text)]">
+							<input type="checkbox" name="skip_duplicates" bind:checked={skipDuplicates} value="on" class="rounded border-[var(--border)]" />
+							Skip duplicates (don’t import if already imported from this source)
+						</label>
+					</div>
+					<button type="submit" disabled={submittingImportSquarespace} class="mt-6 w-full rounded-lg btn-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-wait min-h-[48px] inline-flex items-center justify-center gap-2 sm:w-auto">
+						{#if submittingImportSquarespace}
+							<span class="bulk-create-spinner" aria-hidden="true"></span>
+							<span>Importing…</span>
+						{:else}
+							Import posts
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<aside class="bulk-create-step3-sidebar space-y-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
+				<h3 class="text-sm font-semibold text-[var(--text)]">Reference</h3>
+				{#if samplePreviewData != null}
+					<div class="space-y-2">
+						<p class="font-medium text-[var(--text)]">Example item (first entry from <code class="rounded bg-[var(--surface)] px-1">items</code>)</p>
+						<p class="text-xs text-[var(--text-muted)]">Click any key to copy its path to the clipboard.</p>
+						<div class="relative">
+							<div class="max-h-[600px] overflow-auto rounded-lg bg-black p-3 text-xs font-mono text-white">
+								<SampleJsonViewer data={samplePreviewData} onCopied={handleCopiedToClipboard} />
+							</div>
+							{#if showCopiedToast}
+								<p class="mt-2 rounded-lg bg-[var(--primary)] px-3 py-2 text-center text-xs font-medium text-white shadow-sm" role="status">Copied to clipboard</p>
+							{/if}
+						</div>
+					</div>
+				{/if}
+				<div class="pt-2 border-t border-[var(--border)]">
+					<p class="font-medium text-[var(--text)]">Path expressions</p>
+					<p class="mt-1 text-xs text-[var(--text-muted)]">Use a path (e.g. <code class="rounded bg-[var(--surface)] px-1">title</code>, <code class="rounded bg-[var(--surface)] px-1">body</code>) or a function:</p>
+					<ul class="mt-2 list-inside list-disc space-y-1 text-xs text-[var(--text-muted)]">
+						<li><code class="rounded bg-[var(--surface)] px-1">removeHtml(path)</code></li>
+						<li><code class="rounded bg-[var(--surface)] px-1">regex(path, "pattern")</code> or <code class="rounded bg-[var(--surface)] px-1">regex(path, "p", "repl")</code></li>
+						<li><code class="rounded bg-[var(--surface)] px-1">substring(path, start, length)</code></li>
+						<li><code class="rounded bg-[var(--surface)] px-1">replace(path, "find", "repl")</code></li>
+					</ul>
+				</div>
+			</aside>
+		</form>
+	</section>
 {/if}
