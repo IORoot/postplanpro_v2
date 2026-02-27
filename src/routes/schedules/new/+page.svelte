@@ -65,6 +65,20 @@
 		rules = rules.map((r, idx) => (idx === i ? { ...r, config: { ...r.config, [key]: value } } : r));
 	}
 
+function getCronParts(expr: string | undefined): string[] {
+	const fallback = (expr && expr.trim().length ? expr : '0 9 * * *').trim().split(/\s+/);
+	const parts = [...fallback];
+	while (parts.length < 5) parts.push('*');
+	return parts.slice(0, 5);
+}
+
+function setCronPart(ruleIndex: number, partIndex: number, value: string) {
+	const current = rules[ruleIndex]?.config.expression as string | undefined;
+	const parts = getCronParts(current);
+	parts[partIndex] = value.trim() || '*';
+	updateRuleConfig(ruleIndex, 'expression', parts.join(' '));
+}
+
 	function addField() {
 		const nextIndex = fieldIndices.length > 0 ? Math.max(...fieldIndices) + 1 : 0;
 		fieldIndices = [...fieldIndices, nextIndex];
@@ -212,15 +226,67 @@
 						</div>
 					</div>
 					{#if rule.type === 'cron'}
-						<label for="rule-{i}-cron" class="block text-xs font-medium text-[var(--text-muted)]">CRON notation</label>
-						<input
-							id="rule-{i}-cron"
-							type="text"
-							value={(rule.config.expression as string) ?? ''}
-							oninput={(e) => updateRuleConfig(i, 'expression', e.currentTarget.value)}
-							placeholder="0 18 * * 6"
-							class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]"
-						/>
+						{@const cronParts = getCronParts(rule.config.expression as string)}
+						<p class="text-xs font-medium text-[var(--text-muted)]">CRON notation</p>
+						<p class="mt-0.5 text-[10px] text-[var(--text-muted)]">Minute, Hour, Day of month, Month, Day of week</p>
+						<div class="mt-2 grid gap-2 sm:grid-cols-5">
+							<div>
+								<label for="rule-{i}-cron-min" class="block text-[10px] font-medium text-[var(--text-muted)]">Minute</label>
+								<input
+									id="rule-{i}-cron-min"
+									type="text"
+									value={cronParts[0]}
+									oninput={(e) => setCronPart(i, 0, e.currentTarget.value)}
+									placeholder="0"
+									class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1.5 text-xs text-[var(--text)] min-h-[36px]"
+								/>
+							</div>
+							<div>
+								<label for="rule-{i}-cron-hour" class="block text-[10px] font-medium text-[var(--text-muted)]">Hour</label>
+								<input
+									id="rule-{i}-cron-hour"
+									type="text"
+									value={cronParts[1]}
+									oninput={(e) => setCronPart(i, 1, e.currentTarget.value)}
+									placeholder="9"
+									class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1.5 text-xs text-[var(--text)] min-h-[36px]"
+								/>
+							</div>
+							<div>
+								<label for="rule-{i}-cron-dom" class="block text-[10px] font-medium text-[var(--text-muted)]">Day of month</label>
+								<input
+									id="rule-{i}-cron-dom"
+									type="text"
+									value={cronParts[2]}
+									oninput={(e) => setCronPart(i, 2, e.currentTarget.value)}
+									placeholder="*"
+									class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1.5 text-xs text-[var(--text)] min-h-[36px]"
+								/>
+							</div>
+							<div>
+								<label for="rule-{i}-cron-mon" class="block text-[10px] font-medium text-[var(--text-muted)]">Month</label>
+								<input
+									id="rule-{i}-cron-mon"
+									type="text"
+									value={cronParts[3]}
+									oninput={(e) => setCronPart(i, 3, e.currentTarget.value)}
+									placeholder="*"
+									class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1.5 text-xs text-[var(--text)] min-h-[36px]"
+								/>
+							</div>
+							<div>
+								<label for="rule-{i}-cron-dow" class="block text-[10px] font-medium text-[var(--text-muted)]">Day of week</label>
+								<input
+									id="rule-{i}-cron-dow"
+									type="text"
+									value={cronParts[4]}
+									oninput={(e) => setCronPart(i, 4, e.currentTarget.value)}
+									placeholder="1-5"
+									class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1.5 text-xs text-[var(--text)] min-h-[36px]"
+								/>
+							</div>
+						</div>
+						<p class="mt-1 text-[10px] text-[var(--text-muted)]">Example: <code class="rounded bg-[var(--surface)] px-1">0 18 * * 6</code> = Saturday at 18:00.</p>
 					{:else if rule.type === 'daily'}
 						<label for="rule-{i}-daily-time" class="block text-xs font-medium text-[var(--text-muted)]">Time</label>
 						<input
