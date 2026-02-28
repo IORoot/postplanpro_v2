@@ -4,6 +4,15 @@
 
 	let { data, form } = $props();
 
+	const currentSection = $derived(
+		((data as { section?: string }).section ?? 'targets') as
+			| 'targets'
+			| 'imports'
+			| 'callbacks'
+			| 'templates'
+			| 'globals'
+	);
+
 	// Make.com callback: show full token once after generation
 	let generatedCallbackToken = $state<string | null>(null);
 
@@ -62,10 +71,23 @@
 </svelte:head>
 
 <h1 class="text-2xl font-bold text-[var(--text)]">Settings</h1>
-<p class="mt-1 text-sm text-[var(--text-muted)]">Configure webhook URLs and global variables sent with every request.</p>
+<p class="mt-1 text-sm text-[var(--text-muted)]">Configure webhook URLs, imports, callbacks, templates, and global variables.</p>
 
-<!-- Webhooks -->
-<section class="mt-8">
+<div class="mt-6 settings-layout">
+	<aside class="settings-sidebar">
+		<nav class="settings-nav">
+			<a href="/settings?section=targets" class="settings-nav-link {currentSection === 'targets' ? 'settings-nav-link-active' : ''}">Targets</a>
+			<a href="/settings?section=imports" class="settings-nav-link {currentSection === 'imports' ? 'settings-nav-link-active' : ''}">Imports</a>
+			<a href="/settings?section=callbacks" class="settings-nav-link {currentSection === 'callbacks' ? 'settings-nav-link-active' : ''}">Callbacks</a>
+			<a href="/settings?section=templates" class="settings-nav-link {currentSection === 'templates' ? 'settings-nav-link-active' : ''}">Templates</a>
+			<a href="/settings?section=globals" class="settings-nav-link {currentSection === 'globals' ? 'settings-nav-link-active' : ''}">Globals</a>
+		</nav>
+	</aside>
+	<div class="settings-content">
+
+{#if currentSection === 'targets'}
+<!-- Webhooks (Targets) -->
+<section class="mt-8" id="settings-targets">
 	<h2 class="text-lg font-medium text-[var(--text)]">Webhook URLs</h2>
 	<p class="mt-1 text-sm text-[var(--text-muted)]">Target endpoints for scheduled posts. Each can have an API key (x-make-apikey) and optional HTTP headers.</p>
 
@@ -183,9 +205,93 @@
 		<button type="button" onclick={openNewWebhook} class="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add webhook</button>
 	{/if}
 </section>
+{/if}
 
+{#if currentSection === 'imports'}
+<!-- JSON import callback -->
+<section class="mt-10" id="settings-imports">
+	<h2 class="text-lg font-medium text-[var(--text)]">JSON import callback</h2>
+	<p class="mt-1 text-sm text-[var(--text-muted)]">
+		Use this callback to import posts from external tools (Make.com, n8n, custom scripts) by sending JSON.
+		It uses the same callback token as the Make.com callbacks.
+	</p>
+
+	<div class="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 space-y-4">
+		<div>
+			<p class="block text-sm font-medium text-[var(--text)]">Callback URL</p>
+			{#if data.importCallbackUrl}
+				<div class="mt-1 flex flex-wrap items-center gap-2">
+					<code class="flex-1 min-w-0 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] break-all">{data.importCallbackUrl}</code>
+					<button
+						type="button"
+						onclick={() =>
+							navigator.clipboard
+								.writeText(data.importCallbackUrl ?? '')
+								.then(() => alert('Copied to clipboard'))}
+						class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]"
+					>
+						Copy
+					</button>
+				</div>
+				<p class="mt-1 text-xs text-[var(--text-muted)]">
+					Send <code class="rounded bg-[var(--bg)] px-1 text-xs">POST {data.importCallbackUrl}</code> with
+					<code class="rounded bg-[var(--bg)] px-1 text-xs">Content-Type: application/json</code>.
+				</p>
+			{:else}
+				<p class="mt-1 text-xs text-[var(--text-muted)]">Set <code>APP_BASE_URL</code> to see the callback URL.</p>
+			{/if}
+		</div>
+
+		<div class="pt-4 border-t border-[var(--border)]">
+			<p class="block text-sm font-medium text-[var(--text)]">Authentication</p>
+			<p class="mt-1 text-xs text-[var(--text-muted)]">
+				This callback uses the same token as the Make.com callbacks above. Authenticate with either:
+			</p>
+			<ul class="mt-2 list-disc list-inside space-y-1 text-xs text-[var(--text-muted)]">
+				<li><code class="rounded bg-[var(--bg)] px-1 text-xs">Authorization: Bearer &lt;callback_token&gt;</code></li>
+				<li>or <code class="rounded bg-[var(--bg)] px-1 text-xs">X-Callback-Token: &lt;callback_token&gt;</code></li>
+			</ul>
+			<p class="mt-1 text-xs text-[var(--text-muted)]">
+				You can generate or revoke the token in the <strong>Callbacks</strong> section.
+			</p>
+		</div>
+
+		<div class="mt-4 pt-4 border-t border-[var(--border)]">
+			<p class="block text-sm font-medium text-[var(--text)]">Expected JSON payload</p>
+			<p class="mt-1 text-xs text-[var(--text-muted)]">
+				Send an object with a target webhook and an array of posts:
+			</p>
+			<pre class="mt-2 overflow-x-auto rounded border border-[var(--border)] bg-[var(--bg)] p-3 text-xs text-[var(--text)]"><code>{`{
+  "webhook_id": "<your-webhook-id>",
+  "posts": [
+    {
+      "title": "My imported post",
+      "content": "Optional body text",
+      "image_url": "https://example.com/image.jpg",
+      "external_id": "external-123",
+      "fields": {
+        "source": "make.com",
+        "raw": { "foo": "bar" }
+      }
+    }
+  ]
+}`}</code></pre>
+			<ul class="mt-2 list-disc list-inside space-y-1 text-xs text-[var(--text-muted)]">
+				<li><code class="rounded bg-[var(--bg)] px-1">webhook_id</code> – must be one of your existing Targets (webhook IDs).</li>
+				<li><code class="rounded bg-[var(--bg)] px-1">posts[].title</code> – required string.</li>
+				<li><code class="rounded bg-[var(--bg)] px-1">posts[].content</code> – optional string or JSON.</li>
+				<li><code class="rounded bg-[var(--bg)] px-1">posts[].image_url</code> – optional string.</li>
+				<li><code class="rounded bg-[var(--bg)] px-1">posts[].external_id</code> – optional string; duplicates with the same external_id are skipped.</li>
+				<li><code class="rounded bg-[var(--bg)] px-1">posts[].fields</code> – optional object mapped into custom fields.</li>
+			</ul>
+		</div>
+	</div>
+</section>
+{/if}
+
+{#if currentSection === 'callbacks'}
 <!-- Make.com callbacks -->
-<section class="mt-10">
+<section class="mt-10" id="settings-callbacks">
 	<h2 class="text-lg font-medium text-[var(--text)]">Make.com callbacks</h2>
 	<p class="mt-1 text-sm text-[var(--text-muted)]">When a post is sent to Make.com, your scenario can notify PostPlan that the post reached a certain step (e.g. “published to Instagram”). PostPlan records these stages and shows them on the post’s edit page.</p>
 
@@ -280,9 +386,11 @@
 		</div>
 	</div>
 </section>
+{/if}
 
+{#if currentSection === 'templates'}
 <!-- Custom field templates -->
-<section class="mt-10">
+<section class="mt-10" id="settings-templates">
 	<h2 class="text-lg font-medium text-[var(--text)]">Custom field templates</h2>
 	<p class="mt-1 text-sm text-[var(--text-muted)]">Reusable field structures for post custom fields. Use dotted keys for nested output (e.g. instagram.title).</p>
 
@@ -394,9 +502,11 @@
 		<button type="button" onclick={openNewTemplate} class="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add template</button>
 	{/if}
 </section>
+{/if}
 
+{#if currentSection === 'globals'}
 <!-- Global variables -->
-<section class="mt-10">
+<section class="mt-10" id="settings-globals">
 	<h2 class="text-lg font-medium text-[var(--text)]">Global variables</h2>
 	<p class="mt-1 text-sm text-[var(--text-muted)]">Key-value pairs merged into every webhook JSON payload.</p>
 
@@ -494,3 +604,60 @@
 		<button type="button" onclick={() => (newGlobal = true)} class="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">+ Add variable</button>
 	{/if}
 </section>
+{/if}
+
+	</div>
+</div>
+
+<style>
+	.settings-layout {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+	}
+	@media (min-width: 1024px) {
+		.settings-layout {
+			flex-direction: row;
+			align-items: flex-start;
+		}
+		.settings-sidebar {
+			width: 220px;
+			flex-shrink: 0;
+		}
+		.settings-content {
+			flex: 1;
+			min-width: 0;
+		}
+	}
+	.settings-nav {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+	@media (min-width: 1024px) {
+		.settings-nav {
+			flex-direction: column;
+		}
+	}
+	.settings-nav-link {
+		display: inline-flex;
+		align-items: center;
+		justify-content: flex-start;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+		color: var(--text-muted);
+		border: 1px solid transparent;
+		text-decoration: none;
+	}
+	.settings-nav-link:hover {
+		color: var(--text);
+		border-color: var(--border);
+		background: var(--surface);
+	}
+	.settings-nav-link-active {
+		color: var(--text);
+		border-color: var(--border);
+		background: var(--surface);
+	}
+</style>
