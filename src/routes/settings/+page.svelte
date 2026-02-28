@@ -339,7 +339,16 @@
 					>curl</button>
 				</div>
 				{#if importExampleTab === 'json'}
-					<pre class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-[var(--bg)] p-3 text-xs text-[var(--text)]"><code>{`{
+					<div class="relative">
+						<button
+							type="button"
+							class="absolute top-2 right-2 rounded border border-white/30 bg-black/80 px-2 py-1 text-xs text-white hover:bg-white/10 min-h-[44px] min-w-[44px]"
+							onclick={(e) => {
+								const code = (e.currentTarget as HTMLButtonElement).parentElement?.querySelector('pre code');
+								if (code) navigator.clipboard.writeText(code.textContent ?? '').then(() => alert('Copied to clipboard'));
+							}}
+						>Copy</button>
+						<pre class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code>{`{
   "posts": [
     {
       "title": "My post title",
@@ -356,11 +365,22 @@
     }
   ]
 }`}</code></pre>
+					</div>
 				{:else}
-					<pre class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-[var(--bg)] p-3 text-xs text-[var(--text)]"><code>{`curl -X POST "${data.importCallbackUrl ?? 'https://your-app.com/api/callbacks/import'}" \\
+					<div class="relative">
+						<button
+							type="button"
+							class="absolute top-2 right-2 rounded border border-white/30 bg-black/80 px-2 py-1 text-xs text-white hover:bg-white/10 min-h-[44px] min-w-[44px]"
+							onclick={(e) => {
+								const code = (e.currentTarget as HTMLButtonElement).parentElement?.querySelector('pre code');
+								if (code) navigator.clipboard.writeText(code.textContent ?? '').then(() => alert('Copied to clipboard'));
+							}}
+						>Copy</button>
+						<pre class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code>{`curl -X POST "${data.importCallbackUrl ?? 'https://your-app.com/api/callbacks/import'}" \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer YOUR_CALLBACK_TOKEN" \\
   -d '{"posts":[{"title":"My post title","webhook_id":"<webhook-id>","content":"Optional post body."}]}'`}</code></pre>
+					</div>
 				{/if}
 				<ul class="mt-2 list-disc list-inside space-y-0.5 text-xs">
 					<li><code>posts[].title</code> – required</li>
@@ -418,15 +438,35 @@
 					>curl</button>
 				</div>
 				{#if postNotificationExampleTab === 'json'}
-					<pre class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-[var(--bg)] p-3 text-xs text-[var(--text)]"><code>{`{
+					<div class="relative">
+						<button
+							type="button"
+							class="absolute top-2 right-2 rounded border border-white/30 bg-black/80 px-2 py-1 text-xs text-white hover:bg-white/10 min-h-[44px] min-w-[44px]"
+							onclick={(e) => {
+								const code = (e.currentTarget as HTMLButtonElement).parentElement?.querySelector('pre code');
+								if (code) navigator.clipboard.writeText(code.textContent ?? '').then(() => alert('Copied to clipboard'));
+							}}
+						>Copy</button>
+						<pre class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code>{`{
   "post_id": "uuid-of-the-post",
   "stage": "instagram_published"
 }`}</code></pre>
+					</div>
 				{:else}
-					<pre class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-[var(--bg)] p-3 text-xs text-[var(--text)]"><code>{`curl -X POST "${data.callbackUrl ?? 'https://your-app.com/api/callbacks/stage'}" \\
+					<div class="relative">
+						<button
+							type="button"
+							class="absolute top-2 right-2 rounded border border-white/30 bg-black/80 px-2 py-1 text-xs text-white hover:bg-white/10 min-h-[44px] min-w-[44px]"
+							onclick={(e) => {
+								const code = (e.currentTarget as HTMLButtonElement).parentElement?.querySelector('pre code');
+								if (code) navigator.clipboard.writeText(code.textContent ?? '').then(() => alert('Copied to clipboard'));
+							}}
+						>Copy</button>
+						<pre class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code>{`curl -X POST "${data.callbackUrl ?? 'https://your-app.com/api/callbacks/stage'}" \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer YOUR_CALLBACK_TOKEN" \\
   -d '{"post_id":"uuid-of-the-post","stage":"instagram_published"}'`}</code></pre>
+					</div>
 				{/if}
 			</div>
 		</div>
