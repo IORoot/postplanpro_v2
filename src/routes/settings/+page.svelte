@@ -292,8 +292,8 @@
 {#if currentSection === 'callbacks'}
 <!-- Make.com callbacks -->
 <section class="mt-10" id="settings-callbacks">
-	<h2 class="text-lg font-medium text-[var(--text)]">Make.com callbacks</h2>
-	<p class="mt-1 text-sm text-[var(--text-muted)]">When a post is sent to Make.com, your scenario can notify PostPlan that the post reached a certain step (e.g. “published to Instagram”). PostPlan records these stages and shows them on the post’s edit page.</p>
+	<h2 class="text-lg font-medium text-[var(--text)]">Post Notification callbacks</h2>
+	<p class="mt-1 text-sm text-[var(--text-muted)]">When a post is sent to Make.com/N8N/Zapier, your scenario can notify PostPlan that the post reached a certain step (e.g. “published to Instagram”). PostPlan records these stages and shows them on the post edit page.</p>
 
 	<div class="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 space-y-4">
 		{#if data.callbackUrl}
