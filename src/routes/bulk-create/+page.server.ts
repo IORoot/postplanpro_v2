@@ -3,6 +3,9 @@ import { generateSlots } from '$lib/scheduler/generateSlots.js';
 import Parser from 'rss-parser';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import { parse as parseCsv } from 'csv-parse/sync';
 
 const rssParser = new Parser({ timeout: 10000 });
 
@@ -250,6 +253,34 @@ function normalizeFeedUrl(input: string): string {
 	}
 }
 
+/** Normalize Squarespace blog URL and build URL for JSON (append ?format=json-pretty or &format=json-pretty) */
+function squarespaceJsonUrl(blogUrl: string): string {
+	let url = blogUrl.trim();
+	if (!url) return url;
+	try {
+		const u = new URL(url);
+		u.hash = '';
+		if (u.protocol !== 'http:' && u.protocol !== 'https:') u.protocol = 'https:';
+		const base = u.toString().replace(/\/$/, '') || u.toString();
+		return base.includes('?') ? `${base}&format=json-pretty` : `${base}?format=json-pretty`;
+	} catch {
+		return blogUrl.includes('?') ? `${blogUrl}&format=json-pretty` : `${blogUrl}?format=json-pretty`;
+	}
+}
+
+function normalizeSquarespaceBlogUrl(blogUrl: string): string {
+	let url = blogUrl.trim();
+	if (!url) return url;
+	try {
+		const u = new URL(url);
+		u.hash = '';
+		if (u.protocol !== 'http:' && u.protocol !== 'https:') u.protocol = 'https:';
+		return u.toString().replace(/\/$/, '') || u.toString();
+	} catch {
+		return url;
+	}
+}
+
 /** Convert rss-parser item to plain object for mapping/filtering */
 function rssItemToPlain(item: Parser.Item & Record<string, unknown>): Record<string, unknown> {
 	const out: Record<string, unknown> = {};
@@ -258,6 +289,18 @@ function rssItemToPlain(item: Parser.Item & Record<string, unknown>): Record<str
 		if (v !== undefined && v !== null) out[key] = v;
 	}
 	return out;
+}
+
+/** Directory where temporary CSV uploads are stored between steps. */
+const CSV_IMPORT_DIR = path.join(process.cwd(), 'data', 'csv-imports');
+
+async function ensureCsvDir() {
+	await fs.mkdir(CSV_IMPORT_DIR, { recursive: true });
+}
+
+async function csvPath(importId: string): Promise<string> {
+	await ensureCsvDir();
+	return path.join(CSV_IMPORT_DIR, `${importId}.csv`);
 }
 
 type PostTypeOption = { slug: string; name: string; route: string };
@@ -288,6 +331,91 @@ async function discoverPostTypes(siteUrl: string, auth: string): Promise<PostTyp
 
 /** Discover post types from WordPress REST API index (GET /wp-json/) */
 export const actions: Actions = {
+	discoverCsv: async ({ request, locals }) => {
+		if (!locals.userId) return fail(401, { error: 'Unauthorized' });
+		const formData = await request.formData();
+
+		// Either we have a new file upload (stage 1) or we're configuring an existing import (stage 2)
+		let importId = (formData.get('csv_import_id') as string)?.trim() || '';
+		const uploaded = formData.get('csv_file') as File | null;
+
+		let delimiter = (formData.get('delimiter') as string) ?? '';
+		if (delimiter === '\\t') delimiter = '\t';
+		const hasHeaderRaw = formData.get('has_header') as string;
+		const hasHeader =
+			hasHeaderRaw === 'on' ||
+			hasHeaderRaw === 'true';
+
+		try {
+			if (uploaded && uploaded.size > 0) {
+				// New upload: create an import id and persist the file
+				importId = crypto.randomUUID();
+				const p = await csvPath(importId);
+				const buf = Buffer.from(await uploaded.arrayBuffer());
+				await fs.writeFile(p, buf);
+			}
+
+			if (!importId) return fail(400, { error: 'CSV file is required', action: 'discoverCsv' });
+
+			const p = await csvPath(importId);
+			const content = await fs.readFile(p, 'utf8');
+
+			// Always return the first couple of raw lines for inspection
+			const rawLines = content.split(/\r?\n/).filter((l) => l.length > 0).slice(0, 2);
+
+			// If no delimiter provided yet, this is stage 1: just upload + raw preview
+			if (!delimiter) {
+				return {
+					csv_import_id: importId,
+					csv_raw_lines: rawLines
+				};
+			}
+
+			// Parse a small sample
+			const records: unknown[] = parseCsv(content, {
+				delimiter: delimiter,
+				columns: hasHeader,
+				relax_column_count: true,
+				skip_empty_lines: true,
+				from_line: 1,
+				to_line: 20
+			}) as unknown[];
+
+			let headers: string[] = [];
+			let rows: Record<string, string>[] = [];
+
+			if (Array.isArray(records) && records.length > 0) {
+				if (hasHeader && records[0] && typeof records[0] === 'object' && !Array.isArray(records[0])) {
+					// columns: true -> array of objects
+					rows = records as Record<string, string>[];
+					headers = Object.keys(rows[0] ?? {});
+				} else if (!hasHeader && Array.isArray(records[0])) {
+					const first = records[0] as string[];
+					const cols = first.length;
+					headers = Array.from({ length: cols }, (_, i) => `col_${i + 1}`);
+					rows = (records as string[][]).map((r) => {
+						const obj: Record<string, string> = {};
+						headers.forEach((h, i) => {
+							obj[h] = r[i] ?? '';
+						});
+						return obj;
+					});
+				}
+			}
+
+			return {
+				csv_import_id: importId,
+				csv_delimiter: delimiter,
+				csv_has_header: hasHeader,
+				csv_raw_lines: rawLines,
+				csv_headers: headers,
+				csv_sample_rows: rows
+			};
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : 'Failed to read CSV file';
+			return fail(400, { error: msg, action: 'discoverCsv' });
+		}
+	},
 	discoverWordPress: async ({ request, locals }) => {
 		if (!locals.userId) return fail(401, { error: 'Unauthorized' });
 		const data = await request.formData();
@@ -304,6 +432,34 @@ export const actions: Actions = {
 			};
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : 'Failed to fetch';
+			return fail(400, { error: msg });
+		}
+	},
+	/** Discover Squarespace blog: fetch URL with ?format=json-pretty, use "items" array and first entry as sample. */
+	discoverSquarespace: async ({ request, locals }) => {
+		if (!locals.userId) return fail(401, { error: 'Unauthorized' });
+		const data = await request.formData();
+		const blogUrl = (data.get('blog_url') as string)?.trim() ?? '';
+		if (!blogUrl) return fail(400, { error: 'Blog URL is required' });
+		const normalized = normalizeSquarespaceBlogUrl(blogUrl);
+		const jsonUrl = squarespaceJsonUrl(normalized);
+		try {
+			const res = await fetch(jsonUrl, { headers: { Accept: 'application/json' } });
+			if (!res.ok) return fail(400, { error: `Failed to fetch: ${res.status} ${res.statusText}` });
+			const body = (await res.json()) as Record<string, unknown>;
+			const items = body?.items;
+			if (!Array.isArray(items) || items.length === 0) {
+				return fail(400, { error: 'No "items" array found in the JSON, or it is empty. Make sure the URL is a Squarespace blog or collection page.' });
+			}
+			const sample = items[0] ?? null;
+			return {
+				squarespace_discovered: true,
+				blog_url: normalized,
+				item_count: items.length,
+				sample
+			};
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : 'Failed to fetch or parse JSON';
 			return fail(400, { error: msg });
 		}
 	},
@@ -554,6 +710,150 @@ export const actions: Actions = {
 
 		throw redirect(303, `/posts?imported=${createdIds.length}`);
 	},
+	importFromSquarespace: async ({ request, locals }) => {
+		const accountId = locals.userId;
+		if (!accountId) return fail(401, { error: 'Unauthorized' });
+		const data = await request.formData();
+		const blogUrl = normalizeSquarespaceBlogUrl((data.get('blog_url') as string) ?? '');
+		const webhookId = data.get('webhook_id') as string;
+		const scheduleId = (data.get('schedule_id') as string)?.trim() || null;
+		const importStatus = ((data.get('import_status') as string) || 'draft').trim() === 'scheduled' ? 'scheduled' : 'draft';
+		const titlePath = (data.get('title_path') as string)?.trim() || 'title';
+		const contentPath = (data.get('content_path') as string)?.trim() || 'body';
+		const imageUrlPath = (data.get('image_url_path') as string)?.trim() || '';
+		const titleUnescapeNewlines = (data.get('title_unescape_newlines') as string) === 'on';
+		const contentUnescapeNewlines = (data.get('content_unescape_newlines') as string) === 'on';
+		const customMappingJson = (data.get('custom_mapping') as string)?.trim() || '[]';
+		const importStart = Math.max(1, parseInt((data.get('import_start') as string) || '1', 10));
+		const importCount = Math.min(500, Math.max(1, parseInt((data.get('per_page') as string) || '20', 10)));
+		const skipDuplicates = (data.get('skip_duplicates') as string) === 'on';
+		if (!blogUrl || !webhookId) return fail(400, { error: 'Blog URL and webhook are required' });
+
+		let customMapping: { path: string; key: string; type: string; unescapeNewlines?: boolean }[];
+		try {
+			customMapping = JSON.parse(customMappingJson) as { path: string; key: string; type: string; unescapeNewlines?: boolean }[];
+		} catch {
+			customMapping = [];
+		}
+
+		const filterJson = (data.get('filter_rules') as string)?.trim() || '';
+		let filterConfig: FilterConfig | null = null;
+		if (filterJson) {
+			try {
+				const parsed = JSON.parse(filterJson) as FilterConfig;
+				if (parsed?.rules?.length) {
+					filterConfig = {
+						combine: parsed.combine === 'or' ? 'or' : 'and',
+						rules: parsed.rules.filter((r: FilterRule) => (r.path ?? '').trim() !== '')
+					};
+				}
+			} catch {
+				// ignore
+			}
+		}
+
+		const jsonUrl = squarespaceJsonUrl(blogUrl);
+		let items: Record<string, unknown>[];
+		try {
+			const res = await fetch(jsonUrl, { headers: { Accept: 'application/json' } });
+			if (!res.ok) return fail(400, { error: `Failed to fetch Squarespace JSON: ${res.status}` });
+			const body = (await res.json()) as Record<string, unknown>;
+			const raw = (body?.items ?? []) as Record<string, unknown>[];
+			const start = importStart - 1;
+			items = raw.slice(start, start + importCount);
+		} catch (e) {
+			return fail(400, { error: e instanceof Error ? e.message : 'Fetch failed' });
+		}
+
+		const db = getDatabase();
+		const webhook = db
+			.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
+			.get(webhookId, accountId) as { id: string } | undefined;
+		if (!webhook) return fail(400, { error: 'Invalid webhook' });
+		if (scheduleId) {
+			const schedule = db
+				.prepare('SELECT id FROM schedule WHERE id = ? AND account_id = ?')
+				.get(scheduleId, accountId) as { id: string } | undefined;
+			if (!schedule) return fail(400, { error: 'Invalid schedule' });
+		}
+		const insertPost = db.prepare(
+			'INSERT INTO post (id, account_id, webhook_id, title, content, image_url, color, status, import_source_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+		);
+		const insertField = db.prepare('INSERT INTO post_field (id, post_id, key, type, value) VALUES (?, ?, ?, ?, ?)');
+		const existingBySource = skipDuplicates
+			? db.prepare('SELECT 1 FROM post WHERE account_id = ? AND import_source_id = ? LIMIT 1')
+			: null;
+
+		function squarespaceImportSourceId(item: Record<string, unknown>, index: number): string {
+			const id = item?.id ?? item?.url ?? item?.fullUrl;
+			if (id != null && String(id).trim()) return `squarespace:${blogUrl}:${String(id).trim()}`;
+			return `squarespace:${blogUrl}:${importStart + index}`;
+		}
+
+		const createdIds: string[] = [];
+		const transaction = db.transaction(() => {
+			for (let i = 0; i < items.length; i++) {
+				const item = items[i];
+				if (!evaluateFilter(item, filterConfig)) continue;
+				const sourceId = squarespaceImportSourceId(item, i);
+				if (skipDuplicates && existingBySource?.get(accountId, sourceId)) continue;
+				const title = resolveValue(item, titlePath, titleUnescapeNewlines, 'string');
+				const content = resolveValue(item, contentPath, contentUnescapeNewlines, 'string');
+				const imageUrl = imageUrlPath ? (resolveValue(item, imageUrlPath, false, 'string') as string)?.trim() || null : null;
+				const id = crypto.randomUUID();
+				insertPost.run(id, accountId, webhookId, title || '(no title)', content, imageUrl, null, 'draft', sourceId);
+				createdIds.push(id);
+				for (const m of customMapping) {
+					if (!m.path.trim() || !m.key.trim()) continue;
+					const value = resolveValue(
+						item,
+						m.path,
+						Boolean(m.unescapeNewlines),
+						m.type === 'json' ? 'json' : 'string'
+					);
+					const fieldId = crypto.randomUUID();
+					insertField.run(fieldId, id, m.key, m.type, value);
+				}
+			}
+		});
+		transaction();
+
+		if (scheduleId && createdIds.length > 0) {
+			const scheduleRow = db.prepare('SELECT color FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { color: string | null } | undefined;
+			const scheduleColor = scheduleRow?.color ?? null;
+			const ruleCount = db.prepare('SELECT COUNT(*) as n FROM schedule_rule WHERE schedule_id = ?').get(scheduleId) as { n: number };
+			let slotDatetimes: string[];
+			if (ruleCount.n > 0) {
+				slotDatetimes = generateSlots(scheduleId, createdIds.length, undefined, accountId);
+			} else {
+				const fixedSlots = db
+					.prepare('SELECT scheduled_at FROM schedule_slot WHERE schedule_id = ? ORDER BY order_index')
+					.all(scheduleId) as { scheduled_at: string }[];
+				slotDatetimes = fixedSlots.map((s) => s.scheduled_at);
+			}
+			const scheduleFields = db
+				.prepare('SELECT key, type, value FROM schedule_field WHERE schedule_id = ?')
+				.all(scheduleId) as { key: string; type: string; value: string | null }[];
+			const setScheduleOnly = db.prepare("UPDATE post SET schedule_id = ?, color = ?, status = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+			const setScheduleAndSlot = db.prepare("UPDATE post SET scheduled_at = ?, schedule_id = ?, status = ?, color = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+			for (let i = 0; i < createdIds.length; i++) {
+				const postId = createdIds[i];
+				const slot = slotDatetimes[i];
+				const status = importStatus === 'scheduled' && slot ? 'scheduled' : 'draft';
+				if (slot) {
+					setScheduleAndSlot.run(slot, scheduleId, status, scheduleColor, postId, accountId);
+				} else {
+					setScheduleOnly.run(scheduleId, scheduleColor, status, postId, accountId);
+				}
+				for (const sf of scheduleFields) {
+					const fieldId = crypto.randomUUID();
+					db.prepare('INSERT INTO post_field (id, post_id, key, type, value) VALUES (?, ?, ?, ?, ?)').run(fieldId, postId, sf.key, sf.type, sf.value ?? '');
+				}
+			}
+		}
+
+		throw redirect(303, `/posts?imported=${createdIds.length}`);
+	},
 	discoverRss: async ({ request, locals }) => {
 		if (!locals.userId) return fail(401, { error: 'Unauthorized' });
 		const data = await request.formData();
@@ -674,6 +974,199 @@ export const actions: Actions = {
 					if (!m.path.trim() || !m.key.trim()) continue;
 					const value = resolveValue(
 						item,
+						m.path,
+						Boolean(m.unescapeNewlines),
+						m.type === 'json' ? 'json' : 'string'
+					);
+					const fieldId = crypto.randomUUID();
+					insertField.run(fieldId, id, m.key, m.type, value);
+				}
+			}
+		});
+		transaction();
+
+		if (scheduleId && createdIds.length > 0) {
+			const scheduleRow = db.prepare('SELECT color FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { color: string | null } | undefined;
+			const scheduleColor = scheduleRow?.color ?? null;
+			const ruleCount = db.prepare('SELECT COUNT(*) as n FROM schedule_rule WHERE schedule_id = ?').get(scheduleId) as { n: number };
+			let slotDatetimes: string[];
+			if (ruleCount.n > 0) {
+				slotDatetimes = generateSlots(scheduleId, createdIds.length, undefined, accountId);
+			} else {
+				const fixedSlots = db
+					.prepare('SELECT scheduled_at FROM schedule_slot WHERE schedule_id = ? ORDER BY order_index')
+					.all(scheduleId) as { scheduled_at: string }[];
+				slotDatetimes = fixedSlots.map((s) => s.scheduled_at);
+			}
+			const scheduleFields = db
+				.prepare('SELECT key, type, value FROM schedule_field WHERE schedule_id = ?')
+				.all(scheduleId) as { key: string; type: string; value: string | null }[];
+			const setScheduleOnly = db.prepare("UPDATE post SET schedule_id = ?, color = ?, status = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+			const setScheduleAndSlot = db.prepare("UPDATE post SET scheduled_at = ?, schedule_id = ?, status = ?, color = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
+			for (let i = 0; i < createdIds.length; i++) {
+				const postId = createdIds[i];
+				const slot = slotDatetimes[i];
+				const status = importStatus === 'scheduled' && slot ? 'scheduled' : 'draft';
+				if (slot) {
+					setScheduleAndSlot.run(slot, scheduleId, status, scheduleColor, postId, accountId);
+				} else {
+					setScheduleOnly.run(scheduleId, scheduleColor, status, postId, accountId);
+				}
+				for (const sf of scheduleFields) {
+					const fieldId = crypto.randomUUID();
+					db.prepare('INSERT INTO post_field (id, post_id, key, type, value) VALUES (?, ?, ?, ?, ?)').run(fieldId, postId, sf.key, sf.type, sf.value ?? '');
+				}
+			}
+		}
+
+		throw redirect(303, `/posts?imported=${createdIds.length}`);
+	},
+	importFromCsv: async ({ request, locals }) => {
+		const accountId = locals.userId;
+		if (!accountId) return fail(401, { error: 'Unauthorized' });
+		const data = await request.formData();
+
+		const importId = (data.get('csv_import_id') as string)?.trim() || '';
+		if (!importId) return fail(400, { error: 'Missing CSV import id', action: 'importFromCsv' });
+
+		let delimiter = (data.get('delimiter') as string) ?? ',';
+		if (delimiter === '\\t') delimiter = '\t';
+		const hasHeader =
+			(data.get('has_header') as string) === 'on' ||
+			(data.get('has_header') as string) === 'true';
+
+		const webhookId = data.get('webhook_id') as string;
+		const scheduleId = (data.get('schedule_id') as string)?.trim() || null;
+		const importStatus = ((data.get('import_status') as string) || 'draft').trim() === 'scheduled' ? 'scheduled' : 'draft';
+		const titleColumn = (data.get('title_column') as string)?.trim() || '';
+		const contentColumn = (data.get('content_column') as string)?.trim() || '';
+		const imageUrlColumn = (data.get('image_url_column') as string)?.trim() || '';
+
+		const customMappingJson = (data.get('custom_mapping') as string)?.trim() || '[]';
+		const importStart = Math.max(1, parseInt((data.get('import_start') as string) || '1', 10));
+		const importCount = Math.min(500, Math.max(1, parseInt((data.get('per_page') as string) || '20', 10)));
+		const skipDuplicates = (data.get('skip_duplicates') as string) === 'on';
+
+		if (!webhookId) return fail(400, { error: 'Webhook is required', action: 'importFromCsv' });
+
+		let customMapping: { path: string; key: string; type: string; unescapeNewlines?: boolean }[];
+		try {
+			customMapping = JSON.parse(customMappingJson) as { path: string; key: string; type: string; unescapeNewlines?: boolean }[];
+		} catch {
+			customMapping = [];
+		}
+
+		const filterJson = (data.get('filter_rules') as string)?.trim() || '';
+		let filterConfig: FilterConfig | null = null;
+		if (filterJson) {
+			try {
+				const parsed = JSON.parse(filterJson) as FilterConfig;
+				if (parsed?.rules?.length) {
+					filterConfig = {
+						combine: parsed.combine === 'or' ? 'or' : 'and',
+						rules: parsed.rules.filter((r: FilterRule) => (r.path ?? '').trim() !== '')
+					};
+				}
+			} catch {
+				// ignore invalid filter JSON
+			}
+		}
+
+		// Load CSV rows
+		const p = await csvPath(importId);
+		let content: string;
+		try {
+			content = await fs.readFile(p, 'utf8');
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : 'Failed to read CSV file';
+			return fail(400, { error: msg, action: 'importFromCsv' });
+		}
+
+		let rows: Record<string, unknown>[];
+		try {
+			const parsed = parseCsv(content, {
+				delimiter: delimiter || ',',
+				columns: hasHeader,
+				relax_column_count: true,
+				skip_empty_lines: true
+			}) as unknown;
+
+			if (hasHeader && Array.isArray(parsed) && parsed[0] && typeof parsed[0] === 'object' && !Array.isArray(parsed[0])) {
+				rows = parsed as Record<string, unknown>[];
+			} else if (!hasHeader && Array.isArray(parsed)) {
+				const arr = parsed as string[][];
+				const cols = arr[0]?.length ?? 0;
+				const headers = Array.from({ length: cols }, (_, i) => `col_${i + 1}`);
+				rows = arr.map((r) => {
+					const obj: Record<string, unknown> = {};
+					headers.forEach((h, i) => {
+						obj[h] = r[i] ?? '';
+					});
+					return obj;
+				});
+			} else {
+				rows = [];
+			}
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : 'Failed to parse CSV';
+			return fail(400, { error: msg, action: 'importFromCsv' });
+		}
+
+		const startIndex = Math.max(0, importStart - 1);
+		const endIndex = Math.min(rows.length, startIndex + importCount);
+		const slice = rows.slice(startIndex, endIndex);
+
+		const db = getDatabase();
+		const webhook = db
+			.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
+			.get(webhookId, accountId) as { id: string } | undefined;
+		if (!webhook) return fail(400, { error: 'Invalid webhook', action: 'importFromCsv' });
+		if (scheduleId) {
+			const schedule = db
+				.prepare('SELECT id FROM schedule WHERE id = ? AND account_id = ?')
+				.get(scheduleId, accountId) as { id: string } | undefined;
+			if (!schedule) return fail(400, { error: 'Invalid schedule', action: 'importFromCsv' });
+		}
+
+		const insertPost = db.prepare(
+			'INSERT INTO post (id, account_id, webhook_id, title, content, image_url, color, status, import_source_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+		);
+		const insertField = db.prepare('INSERT INTO post_field (id, post_id, key, type, value) VALUES (?, ?, ?, ?, ?)');
+		const existingBySource =
+			skipDuplicates
+				? db.prepare('SELECT 1 FROM post WHERE account_id = ? AND import_source_id = ? LIMIT 1')
+				: null;
+
+		function csvImportSourceId(row: Record<string, unknown>, index: number): string {
+			const id = (row.id as string)?.trim();
+			if (id) return `csv:${importId}:${id}`;
+			return `csv:${importId}:${importStart + index}`;
+		}
+
+		const createdIds: string[] = [];
+		const transaction = db.transaction(() => {
+			for (let i = 0; i < slice.length; i++) {
+				const row = slice[i];
+				if (!evaluateFilter(row, filterConfig)) continue;
+				const sourceId = csvImportSourceId(row, i);
+				if (skipDuplicates && existingBySource?.get(accountId, sourceId)) continue;
+
+				const titleRaw = titleColumn ? getAtPath(row, titleColumn) : undefined;
+				const contentRaw = contentColumn ? getAtPath(row, contentColumn) : undefined;
+				const imageRaw = imageUrlColumn ? getAtPath(row, imageUrlColumn) : undefined;
+
+				const title = stringValue(titleRaw) || '(no title)';
+				const content = stringValue(contentRaw);
+				const imageUrl = imageRaw != null ? stringValue(imageRaw).trim() || null : null;
+
+				const id = crypto.randomUUID();
+				insertPost.run(id, accountId, webhookId, title, content, imageUrl, null, 'draft', sourceId);
+				createdIds.push(id);
+
+				for (const m of customMapping) {
+					if (!m.path.trim() || !m.key.trim()) continue;
+					const value = resolveValue(
+						row,
 						m.path,
 						Boolean(m.unescapeNewlines),
 						m.type === 'json' ? 'json' : 'string'

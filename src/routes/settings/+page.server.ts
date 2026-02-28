@@ -38,16 +38,16 @@ function parseTemplateFieldsJson(
 	}
 }
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const accountId = locals.userId;
 	if (!accountId) return { webhooks: [], globals: [], templates: [] };
 	const db = getDatabase();
 	const webhooks = db.prepare('SELECT id, name, url, api_key FROM webhook_config WHERE account_id = ? ORDER BY name').all(accountId) as {
-		id: string;
-		name: string;
-		url: string;
-		api_key: string | null;
-	}[];
+			id: string;
+			name: string;
+			url: string;
+			api_key: string | null;
+		}[];
 	const headerRows = db.prepare('SELECT h.id, h.webhook_id, h.key, h.value FROM webhook_header h JOIN webhook_config w ON w.id = h.webhook_id WHERE w.account_id = ? ORDER BY h.key').all(accountId) as {
 		id: string;
 		webhook_id: string;
@@ -87,7 +87,18 @@ export const load: PageServerLoad = async ({ locals }) => {
 		fieldsByTemplate.set(row.template_id, list);
 	}
 
+	const base = env.APP_BASE_URL?.trim();
+	const importCallbackUrl = base ? base.replace(/\/$/, '') + '/api/callbacks/import' : null;
+
+	const sectionParam = (url.searchParams.get('section') ?? 'targets') as
+		| 'targets'
+		| 'imports'
+		| 'callbacks'
+		| 'templates'
+		| 'globals';
+
 	return {
+		section: sectionParam,
 		webhooks: webhooks.map((w) => ({
 			...w,
 			api_key: w.api_key ? '••••••••' : null,
@@ -113,10 +124,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 			return '••••••••••••' + t.slice(-4);
 		})(),
 		callbackUrl: (() => {
-			const base = env.APP_BASE_URL?.trim();
 			if (!base) return null;
 			return base.replace(/\/$/, '') + '/api/callbacks/stage';
-		})()
+		})(),
+		importCallbackUrl
 	};
 };
 

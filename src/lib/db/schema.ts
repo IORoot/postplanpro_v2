@@ -53,6 +53,18 @@ CREATE TABLE IF NOT EXISTS webhook_header (
 );
 CREATE INDEX IF NOT EXISTS idx_webhook_header_webhook ON webhook_header(webhook_id);
 
+-- Inbound import webhooks (JSON → posts)
+CREATE TABLE IF NOT EXISTS import_webhook (
+  id TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  path_token TEXT NOT NULL UNIQUE,
+  secret_key TEXT NOT NULL,
+  webhook_id TEXT NOT NULL REFERENCES webhook_config(id),
+  created_at TEXT DEFAULT (datetime('now')),
+  last_used_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_import_webhook_account ON import_webhook(account_id);
+
 -- Global variables merged into every outbound JSON
 CREATE TABLE IF NOT EXISTS global_variable (
   id TEXT PRIMARY KEY,
