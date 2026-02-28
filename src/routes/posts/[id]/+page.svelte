@@ -35,6 +35,10 @@
 	let scheduleByInput = $state<'none' | 'datetime' | 'schedule'>('none');
 	let overrideEnabled = $state(false);
 	let overrideText = $state('');
+	let webhookIds = $state<string[]>([]);
+	$effect(() => {
+		webhookIds = data.webhook_ids ?? (data.post?.webhook_id ? [data.post.webhook_id] : []);
+	});
 	$effect(() => {
 		fieldRows =
 			(data.fields?.length ?? 0) > 0
@@ -282,13 +286,29 @@
 
 			<!-- Webhook -->
 			<section class="content-card rounded-xl p-6 shadow-sm">
-				<h2 class="text-base font-semibold text-[var(--text)] mb-4">Webhook</h2>
-				<label for="webhook_id" class="block text-sm font-medium text-[var(--text)]">Target webhook *</label>
-				<select id="webhook_id" name="webhook_id" required class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]">
+				<h2 class="text-base font-semibold text-[var(--text)] mb-4">Webhooks</h2>
+				<p class="text-sm font-medium text-[var(--text)] mb-2">Target webhooks * (at least one; all will receive the post when published)</p>
+				<div class="mt-1 flex flex-wrap gap-x-4 gap-y-2">
 					{#each data.webhooks as w}
-						<option value={w.id} selected={w.id === data.post.webhook_id}>{w.name}</option>
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input
+								type="checkbox"
+								name="webhook_ids"
+								value={w.id}
+								checked={webhookIds.includes(w.id)}
+								onchange={(e) => {
+									const checked = (e.target as HTMLInputElement).checked;
+									webhookIds = checked ? [...webhookIds, w.id] : webhookIds.filter((id) => id !== w.id);
+								}}
+								class="rounded border-[var(--border)]"
+							/>
+							<span class="text-sm text-[var(--text)]">{w.name}</span>
+						</label>
 					{/each}
-				</select>
+				</div>
+				{#if webhookIds.length === 0}
+					<p class="mt-2 text-xs text-amber-600 dark:text-amber-400">Select at least one webhook.</p>
+				{/if}
 			</section>
 
 			<!-- Schedule -->

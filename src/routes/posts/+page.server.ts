@@ -23,8 +23,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		params.push(status);
 	}
 	if (webhookId) {
-		sql += ' AND p.webhook_id = ?';
-		params.push(webhookId);
+		sql += ' AND (p.webhook_id = ? OR EXISTS (SELECT 1 FROM post_webhook pw WHERE pw.post_id = p.id AND pw.webhook_id = ?))';
+		params.push(webhookId, webhookId);
 	}
 	if (scheduled === 'yes') {
 		sql += ' AND p.scheduled_at IS NOT NULL';

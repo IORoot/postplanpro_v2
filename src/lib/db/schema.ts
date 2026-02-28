@@ -169,6 +169,14 @@ CREATE TABLE IF NOT EXISTS post_field (
   value TEXT
 );
 
+-- Post → webhooks (many-to-many); post.webhook_id remains as primary/first for display and backward compat
+CREATE TABLE IF NOT EXISTS post_webhook (
+  post_id TEXT NOT NULL REFERENCES post(id) ON DELETE CASCADE,
+  webhook_id TEXT NOT NULL REFERENCES webhook_config(id),
+  PRIMARY KEY (post_id, webhook_id)
+);
+CREATE INDEX IF NOT EXISTS idx_post_webhook_post ON post_webhook(post_id);
+
 CREATE INDEX IF NOT EXISTS idx_post_webhook ON post(webhook_id);
 CREATE INDEX IF NOT EXISTS idx_post_scheduled_at ON post(scheduled_at);
 CREATE INDEX IF NOT EXISTS idx_post_status ON post(status);
@@ -197,7 +205,7 @@ CREATE INDEX IF NOT EXISTS idx_post_account ON post(account_id);
 CREATE INDEX IF NOT EXISTS idx_post_account_scheduled_at ON post(account_id, scheduled_at);
 CREATE INDEX IF NOT EXISTS idx_send_log_account ON send_log(account_id);
 
--- Make.com callbacks: stage completions per post (status: pass | fail from stage_passed / stage_failed)
+-- callbacks: stage completions per post (status: pass | fail from stage_passed / stage_failed)
 CREATE TABLE IF NOT EXISTS post_stage (
   id TEXT PRIMARY KEY,
   post_id TEXT NOT NULL REFERENCES post(id) ON DELETE CASCADE,

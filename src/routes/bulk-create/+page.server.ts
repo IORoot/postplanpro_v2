@@ -1,4 +1,5 @@
 import { getDatabase } from '$lib/db/index.js';
+import { setPostWebhooks } from '$lib/db/postWebhooks.js';
 import { generateSlots } from '$lib/scheduler/generateSlots.js';
 import Parser from 'rss-parser';
 import { fail, redirect } from '@sveltejs/kit';
@@ -514,7 +515,7 @@ export const actions: Actions = {
 		const siteUrl = normalizeSiteUrl((data.get('site_url') as string) ?? '');
 		const auth = (data.get('auth') as string)?.trim() || '';
 		const postTypeRoute = (data.get('post_type_route') as string)?.trim() || '/wp/v2/posts';
-		const webhookId = data.get('webhook_id') as string;
+		const webhookIds = data.getAll('webhook_ids').filter((v): v is string => typeof v === 'string' && v.trim() !== '');
 		const scheduleId = (data.get('schedule_id') as string)?.trim() || null;
 		const importStatus = ((data.get('import_status') as string) || 'draft').trim() === 'scheduled' ? 'scheduled' : 'draft';
 		const titlePath = (data.get('title_path') as string)?.trim() || 'title.rendered';
@@ -531,7 +532,7 @@ export const actions: Actions = {
 		const fetchFullPerItem = (data.get('fetch_full_per_item') as string) !== 'off';
 		const skipDuplicates = (data.get('skip_duplicates') as string) === 'on';
 		const includeFeaturedImage = (data.get('include_featured_image') as string) === 'on';
-		if (!siteUrl || !webhookId) return fail(400, { error: 'Site URL and webhook are required' });
+		if (!siteUrl || webhookIds.length === 0) return fail(400, { error: 'Site URL and at least one webhook are required' });
 		if (!postTypeRoute.startsWith('/wp/v2/')) return fail(400, { error: 'Invalid post type route' });
 
 		let customMapping: { path: string; key: string; type: string; unescapeNewlines?: boolean }[];
@@ -611,10 +612,12 @@ export const actions: Actions = {
 		}
 
 		const db = getDatabase();
-		const webhook = db
-			.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
-			.get(webhookId, accountId) as { id: string } | undefined;
-		if (!webhook) return fail(400, { error: 'Invalid webhook' });
+		for (const wid of webhookIds) {
+			const webhook = db
+				.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
+				.get(wid, accountId) as { id: string } | undefined;
+			if (!webhook) return fail(400, { error: 'Invalid webhook selected' });
+		}
 		if (scheduleId) {
 			const schedule = db
 				.prepare('SELECT id FROM schedule WHERE id = ? AND account_id = ?')
@@ -649,7 +652,7 @@ export const actions: Actions = {
 				insertPost.run(
 					id,
 					accountId,
-					webhookId,
+					webhookIds[0],
 					title || '(no title)',
 					content,
 					imageUrl,
@@ -672,6 +675,10 @@ export const actions: Actions = {
 			}
 		});
 		transaction();
+
+		for (const postId of createdIds) {
+			setPostWebhooks(db, postId, accountId, webhookIds);
+		}
 
 		// Optionally apply schedule to all created posts
 		if (scheduleId && createdIds.length > 0) {
@@ -715,7 +722,7 @@ export const actions: Actions = {
 		if (!accountId) return fail(401, { error: 'Unauthorized' });
 		const data = await request.formData();
 		const blogUrl = normalizeSquarespaceBlogUrl((data.get('blog_url') as string) ?? '');
-		const webhookId = data.get('webhook_id') as string;
+		const webhookIds = data.getAll('webhook_ids').filter((v): v is string => typeof v === 'string' && v.trim() !== '');
 		const scheduleId = (data.get('schedule_id') as string)?.trim() || null;
 		const importStatus = ((data.get('import_status') as string) || 'draft').trim() === 'scheduled' ? 'scheduled' : 'draft';
 		const titlePath = (data.get('title_path') as string)?.trim() || 'title';
@@ -727,7 +734,7 @@ export const actions: Actions = {
 		const importStart = Math.max(1, parseInt((data.get('import_start') as string) || '1', 10));
 		const importCount = Math.min(500, Math.max(1, parseInt((data.get('per_page') as string) || '20', 10)));
 		const skipDuplicates = (data.get('skip_duplicates') as string) === 'on';
-		if (!blogUrl || !webhookId) return fail(400, { error: 'Blog URL and webhook are required' });
+		if (!blogUrl || webhookIds.length === 0) return fail(400, { error: 'Blog URL and at least one webhook are required' });
 
 		let customMapping: { path: string; key: string; type: string; unescapeNewlines?: boolean }[];
 		try {
@@ -766,10 +773,12 @@ export const actions: Actions = {
 		}
 
 		const db = getDatabase();
-		const webhook = db
-			.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
-			.get(webhookId, accountId) as { id: string } | undefined;
-		if (!webhook) return fail(400, { error: 'Invalid webhook' });
+		for (const wid of webhookIds) {
+			const webhook = db
+				.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
+				.get(wid, accountId) as { id: string } | undefined;
+			if (!webhook) return fail(400, { error: 'Invalid webhook selected' });
+		}
 		if (scheduleId) {
 			const schedule = db
 				.prepare('SELECT id FROM schedule WHERE id = ? AND account_id = ?')
@@ -801,7 +810,7 @@ export const actions: Actions = {
 				const content = resolveValue(item, contentPath, contentUnescapeNewlines, 'string');
 				const imageUrl = imageUrlPath ? (resolveValue(item, imageUrlPath, false, 'string') as string)?.trim() || null : null;
 				const id = crypto.randomUUID();
-				insertPost.run(id, accountId, webhookId, title || '(no title)', content, imageUrl, null, 'draft', sourceId);
+				insertPost.run(id, accountId, webhookIds[0], title || '(no title)', content, imageUrl, null, 'draft', sourceId);
 				createdIds.push(id);
 				for (const m of customMapping) {
 					if (!m.path.trim() || !m.key.trim()) continue;
@@ -817,6 +826,10 @@ export const actions: Actions = {
 			}
 		});
 		transaction();
+
+		for (const postId of createdIds) {
+			setPostWebhooks(db, postId, accountId, webhookIds);
+		}
 
 		if (scheduleId && createdIds.length > 0) {
 			const scheduleRow = db.prepare('SELECT color FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { color: string | null } | undefined;
@@ -882,7 +895,7 @@ export const actions: Actions = {
 		if (!accountId) return fail(401, { error: 'Unauthorized' });
 		const data = await request.formData();
 		const feedUrl = (data.get('feed_url') as string)?.trim() ?? '';
-		const webhookId = data.get('webhook_id') as string;
+		const webhookIds = data.getAll('webhook_ids').filter((v): v is string => typeof v === 'string' && v.trim() !== '');
 		const scheduleId = (data.get('schedule_id') as string)?.trim() || null;
 		const importStatus = ((data.get('import_status') as string) || 'draft').trim() === 'scheduled' ? 'scheduled' : 'draft';
 		const titlePath = (data.get('title_path') as string)?.trim() || 'title';
@@ -894,7 +907,7 @@ export const actions: Actions = {
 		const importStart = Math.max(1, parseInt((data.get('import_start') as string) || '1', 10));
 		const importCount = Math.min(500, Math.max(1, parseInt((data.get('per_page') as string) || '20', 10)));
 		const skipDuplicates = (data.get('skip_duplicates') as string) === 'on';
-		if (!feedUrl || !webhookId) return fail(400, { error: 'Feed URL and webhook are required' });
+		if (!feedUrl || webhookIds.length === 0) return fail(400, { error: 'Feed URL and at least one webhook are required' });
 
 		let customMapping: { path: string; key: string; type: string; unescapeNewlines?: boolean }[];
 		try {
@@ -931,10 +944,12 @@ export const actions: Actions = {
 		}
 
 		const db = getDatabase();
-		const webhook = db
-			.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
-			.get(webhookId, accountId) as { id: string } | undefined;
-		if (!webhook) return fail(400, { error: 'Invalid webhook' });
+		for (const wid of webhookIds) {
+			const webhook = db
+				.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
+				.get(wid, accountId) as { id: string } | undefined;
+			if (!webhook) return fail(400, { error: 'Invalid webhook selected' });
+		}
 		if (scheduleId) {
 			const schedule = db
 				.prepare('SELECT id FROM schedule WHERE id = ? AND account_id = ?')
@@ -968,7 +983,7 @@ export const actions: Actions = {
 				const content = resolveValue(item, contentPath, contentUnescapeNewlines, 'string');
 				const imageUrl = imageUrlPath ? (resolveValue(item, imageUrlPath, false, 'string') as string)?.trim() || null : null;
 				const id = crypto.randomUUID();
-				insertPost.run(id, accountId, webhookId, title || '(no title)', content, imageUrl, null, 'draft', sourceId);
+				insertPost.run(id, accountId, webhookIds[0], title || '(no title)', content, imageUrl, null, 'draft', sourceId);
 				createdIds.push(id);
 				for (const m of customMapping) {
 					if (!m.path.trim() || !m.key.trim()) continue;
@@ -984,6 +999,10 @@ export const actions: Actions = {
 			}
 		});
 		transaction();
+
+		for (const postId of createdIds) {
+			setPostWebhooks(db, postId, accountId, webhookIds);
+		}
 
 		if (scheduleId && createdIds.length > 0) {
 			const scheduleRow = db.prepare('SELECT color FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { color: string | null } | undefined;
@@ -1035,7 +1054,7 @@ export const actions: Actions = {
 			(data.get('has_header') as string) === 'on' ||
 			(data.get('has_header') as string) === 'true';
 
-		const webhookId = data.get('webhook_id') as string;
+		const webhookIds = data.getAll('webhook_ids').filter((v): v is string => typeof v === 'string' && v.trim() !== '');
 		const scheduleId = (data.get('schedule_id') as string)?.trim() || null;
 		const importStatus = ((data.get('import_status') as string) || 'draft').trim() === 'scheduled' ? 'scheduled' : 'draft';
 		const titleColumn = (data.get('title_column') as string)?.trim() || '';
@@ -1047,7 +1066,7 @@ export const actions: Actions = {
 		const importCount = Math.min(500, Math.max(1, parseInt((data.get('per_page') as string) || '20', 10)));
 		const skipDuplicates = (data.get('skip_duplicates') as string) === 'on';
 
-		if (!webhookId) return fail(400, { error: 'Webhook is required', action: 'importFromCsv' });
+		if (webhookIds.length === 0) return fail(400, { error: 'At least one webhook is required', action: 'importFromCsv' });
 
 		let customMapping: { path: string; key: string; type: string; unescapeNewlines?: boolean }[];
 		try {
@@ -1117,10 +1136,12 @@ export const actions: Actions = {
 		const slice = rows.slice(startIndex, endIndex);
 
 		const db = getDatabase();
-		const webhook = db
-			.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
-			.get(webhookId, accountId) as { id: string } | undefined;
-		if (!webhook) return fail(400, { error: 'Invalid webhook', action: 'importFromCsv' });
+		for (const wid of webhookIds) {
+			const webhook = db
+				.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
+				.get(wid, accountId) as { id: string } | undefined;
+			if (!webhook) return fail(400, { error: 'Invalid webhook selected', action: 'importFromCsv' });
+		}
 		if (scheduleId) {
 			const schedule = db
 				.prepare('SELECT id FROM schedule WHERE id = ? AND account_id = ?')
@@ -1160,7 +1181,7 @@ export const actions: Actions = {
 				const imageUrl = imageRaw != null ? stringValue(imageRaw).trim() || null : null;
 
 				const id = crypto.randomUUID();
-				insertPost.run(id, accountId, webhookId, title, content, imageUrl, null, 'draft', sourceId);
+				insertPost.run(id, accountId, webhookIds[0], title, content, imageUrl, null, 'draft', sourceId);
 				createdIds.push(id);
 
 				for (const m of customMapping) {
@@ -1177,6 +1198,10 @@ export const actions: Actions = {
 			}
 		});
 		transaction();
+
+		for (const postId of createdIds) {
+			setPostWebhooks(db, postId, accountId, webhookIds);
+		}
 
 		if (scheduleId && createdIds.length > 0) {
 			const scheduleRow = db.prepare('SELECT color FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { color: string | null } | undefined;
