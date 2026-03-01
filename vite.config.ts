@@ -1,5 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
+import { svelteTesting } from '@testing-library/svelte/vite';
 import { defineConfig, loadEnv } from 'vite';
 
 export default defineConfig(({ mode }) => {
@@ -16,9 +17,22 @@ export default defineConfig(({ mode }) => {
 	}
 
 	return {
-		plugins: [tailwindcss(), sveltekit()],
+		plugins: [tailwindcss(), sveltekit(), svelteTesting()],
 		server: {
 			allowedHosts
+		},
+		test: {
+			include: ['src/**/*.{test,spec}.{ts,svelte}', 'tests/**/*.{test,spec}.ts'],
+			exclude: ['**/node_modules/**', '**/dist/**', 'tests/e2e/**'],
+			environment: 'jsdom',
+			globals: true,
+			setupFiles: ['tests/setup.ts'],
+			coverage: {
+				provider: 'v8',
+				reporter: ['text', 'json', 'html'],
+				include: ['src/lib/**/*.ts', 'src/routes/**/*.ts'],
+				exclude: ['src/**/*.test.*', 'src/**/*.spec.*', 'src/**/$types*', '**/node_modules/**']
+			}
 		}
 	};
 });
