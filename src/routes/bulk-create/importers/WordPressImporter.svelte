@@ -27,7 +27,7 @@
 	let customMappings = $state<CustomMapping[]>([]);
 	let filterCombine = $state<'and' | 'or'>('and');
 	let filterRules = $state<FilterRule[]>([]);
-	let webhookId = $state('');
+	let webhookIds = $state<string[]>([]);
 	let scheduleId = $state('');
 	let importStatus = $state<'draft' | 'scheduled'>('draft');
 	let skipDuplicates = $state(false);
@@ -365,13 +365,29 @@
 					<h3 class="text-sm font-semibold text-[var(--text)]">Destination</h3>
 					<div class="mt-4 space-y-4">
 						<div>
-							<label for="wp_webhook_id" class="block text-sm font-medium text-[var(--text)]">Target webhook *</label>
-							<select id="wp_webhook_id" name="webhook_id" bind:value={webhookId} required class="mt-1 w-full min-h-[44px] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]">
-								<option value="">Select webhook</option>
+							<p class="block text-sm font-medium text-[var(--text)]">Target webhooks *</p>
+							<p class="mt-0.5 text-xs text-[var(--text-muted)]">Select at least one; all will receive each imported post when published.</p>
+							<div class="mt-2 flex flex-wrap gap-x-4 gap-y-2">
 								{#each data.webhooks as w}
-									<option value={w.id}>{w.name}</option>
+									<label class="flex cursor-pointer items-center gap-2">
+										<input
+											type="checkbox"
+											name="webhook_ids"
+											value={w.id}
+											checked={webhookIds.includes(w.id)}
+											onchange={(e) => {
+												const checked = (e.target as HTMLInputElement).checked;
+												webhookIds = checked ? [...webhookIds, w.id] : webhookIds.filter((id) => id !== w.id);
+											}}
+											class="rounded border-[var(--border)]"
+										/>
+										<span class="text-sm text-[var(--text)]">{w.name}</span>
+									</label>
 								{/each}
-							</select>
+							</div>
+							{#if webhookIds.length === 0}
+								<p class="mt-2 text-xs text-amber-600 dark:text-amber-400">Select at least one webhook.</p>
+							{/if}
 						</div>
 						<div>
 							<label for="wp_schedule_id" class="block text-sm font-medium text-[var(--text)]">Apply schedule after import (optional)</label>

@@ -1,4 +1,5 @@
 import { getDatabase } from '$lib/db/index.js';
+import { getWebhookIdsForPost } from '$lib/db/postWebhooks.js';
 import { buildPostPayload } from '$lib/payload.js';
 import { env } from '$env/dynamic/private';
 
@@ -117,14 +118,11 @@ export async function sendDuePosts(): Promise<{ sent: number; failed: number; er
 	const errors: string[] = [];
 
 	for (const post of due) {
-		const webhook = db.prepare('SELECT url, api_key FROM webhook_config WHERE id = ? AND account_id = ?').get(post.webhook_id, post.account_id) as {
-			url: string;
-			api_key: string | null;
-		} | undefined;
-		if (!webhook) {
-			updateFailed.run('Webhook not found', post.id);
+		const webhookIds = getWebhookIdsForPost(db, post.id, post.webhook_id);
+		if (webhookIds.length === 0) {
+			updateFailed.run('No webhook configured', post.id);
 			failed++;
-			errors.push(`Post ${post.id}: Webhook not found`);
+			errors.push(`Post ${post.id}: No webhook configured`);
 			continue;
 		}
 
@@ -164,40 +162,43 @@ export async function sendDuePosts(): Promise<{ sent: number; failed: number; er
 			post.account_id
 		);
 		const requestJson = JSON.stringify(bodyWithCallback);
-		const headers: Record<string, string> = {
-			'Content-Type': 'application/json'
-		};
-		if (webhook.api_key) {
-			headers['x-make-apikey'] = webhook.api_key;
-		}
-		const extraHeaders = db.prepare('SELECT key, value FROM webhook_header WHERE webhook_id = ?').all(post.webhook_id) as { key: string; value: string }[];
-		for (const h of extraHeaders) {
-			if (h.key.trim()) headers[h.key.trim()] = h.value;
-		}
 
-		try {
-			const res = await fetch(webhook.url, {
-				method: 'POST',
-				headers,
-				body: requestJson
-			});
-			const responseBody = await res.text();
-			if (res.ok) {
-				updateSent.run(post.id);
-				sent++;
-			} else {
-				const errMsg = `${res.status} ${res.statusText}: ${responseBody.slice(0, 200)}`;
-				updateFailed.run(errMsg, post.id);
-				failed++;
-				errors.push(`Post ${post.id}: ${errMsg}`);
+		let lastError: string | null = null;
+		let anySuccess = false;
+		for (const wid of webhookIds) {
+			const webhook = db.prepare('SELECT url, api_key FROM webhook_config WHERE id = ? AND account_id = ?').get(wid, post.account_id) as {
+				url: string;
+				api_key: string | null;
+			} | undefined;
+			if (!webhook) {
+				lastError = 'Webhook not found';
+				insertSendLog(db, post.account_id, post.id, requestJson, null, lastError, false);
+				continue;
 			}
-			insertSendLog(db, post.account_id, post.id, requestJson, res.status, responseBody, res.ok);
-		} catch (e) {
-			const errMsg = e instanceof Error ? e.message : 'Request failed';
-			updateFailed.run(errMsg, post.id);
+			const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+			if (webhook.api_key) headers['x-make-apikey'] = webhook.api_key;
+			const extraHeaders = db.prepare('SELECT key, value FROM webhook_header WHERE webhook_id = ?').all(wid) as { key: string; value: string }[];
+			for (const h of extraHeaders) {
+				if (h.key.trim()) headers[h.key.trim()] = h.value;
+			}
+			try {
+				const res = await fetch(webhook.url, { method: 'POST', headers, body: requestJson });
+				const responseBody = await res.text();
+				if (res.ok) anySuccess = true;
+				else lastError = `${res.status} ${res.statusText}: ${responseBody.slice(0, 200)}`;
+				insertSendLog(db, post.account_id, post.id, requestJson, res.status, responseBody, res.ok);
+			} catch (e) {
+				lastError = e instanceof Error ? e.message : 'Request failed';
+				insertSendLog(db, post.account_id, post.id, requestJson, null, lastError, false);
+			}
+		}
+		if (lastError) {
+			updateFailed.run(lastError, post.id);
 			failed++;
-			errors.push(`Post ${post.id}: ${errMsg}`);
-			insertSendLog(db, post.account_id, post.id, requestJson, null, errMsg, false);
+			errors.push(`Post ${post.id}: ${lastError}`);
+		} else {
+			updateSent.run(post.id);
+			sent++;
 		}
 	}
 
@@ -234,14 +235,12 @@ export async function sendPost(postId: string, accountId: string): Promise<SendP
 		| undefined;
 	if (!post) return { success: false, error: 'Post not found', responseStatus: null, responseBody: null };
 
-	const webhook = db.prepare('SELECT url, api_key FROM webhook_config WHERE id = ? AND account_id = ?').get(post.webhook_id, accountId) as
-		| { url: string; api_key: string | null }
-		| undefined;
-	if (!webhook) {
+	const webhookIds = getWebhookIdsForPost(db, post.id, post.webhook_id);
+	if (webhookIds.length === 0) {
 		db.prepare(
 			"UPDATE post SET status = 'failed', error_message = ?, updated_at = datetime('now') WHERE id = ?"
-		).run('Webhook not found', post.id);
-		return { success: false, error: 'Webhook not found', responseStatus: null, responseBody: null };
+		).run('No webhook configured', post.id);
+		return { success: false, error: 'No webhook configured', responseStatus: null, responseBody: null };
 	}
 
 	const postFields = db.prepare('SELECT key, type, value FROM post_field WHERE post_id = ?').all(post.id) as {
@@ -266,15 +265,6 @@ export async function sendPost(postId: string, accountId: string): Promise<SendP
 		globals
 	);
 
-	const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-	if (webhook.api_key) {
-		headers['x-make-apikey'] = webhook.api_key;
-	}
-	const extraHeaders = db.prepare('SELECT key, value FROM webhook_header WHERE webhook_id = ?').all(post.webhook_id) as { key: string; value: string }[];
-	for (const h of extraHeaders) {
-		if (h.key.trim()) headers[h.key.trim()] = h.value;
-	}
-
 	const resolved = resolveRequestBody(post, fallbackBody);
 	if (resolved.error) {
 		db.prepare(
@@ -297,22 +287,42 @@ export async function sendPost(postId: string, accountId: string): Promise<SendP
 		"UPDATE post SET status = 'failed', error_message = ?, updated_at = datetime('now') WHERE id = ?"
 	);
 
-	try {
-		const res = await fetch(webhook.url, { method: 'POST', headers, body: requestJson });
-		const responseBody = await res.text();
-		if (res.ok) {
-			updateSent.run(post.id);
-			insertSendLog(db, accountId, post.id, requestJson, res.status, responseBody, true);
-			return { success: true, responseStatus: res.status, responseBody };
+	let lastStatus: number | null = null;
+	let lastBody: string | null = null;
+	let lastError: string | null = null;
+	for (const wid of webhookIds) {
+		const webhook = db.prepare('SELECT url, api_key FROM webhook_config WHERE id = ? AND account_id = ?').get(wid, accountId) as
+			| { url: string; api_key: string | null }
+			| undefined;
+		if (!webhook) {
+			lastError = 'Webhook not found';
+			insertSendLog(db, accountId, post.id, requestJson, null, lastError, false);
+			continue;
 		}
-		const errMsg = `${res.status} ${res.statusText}: ${responseBody.slice(0, 200)}`;
-		updateFailed.run(errMsg, post.id);
-		insertSendLog(db, accountId, post.id, requestJson, res.status, responseBody, false);
-		return { success: false, error: errMsg, responseStatus: res.status, responseBody };
-	} catch (e) {
-		const errMsg = e instanceof Error ? e.message : 'Request failed';
-		updateFailed.run(errMsg, post.id);
-		insertSendLog(db, accountId, post.id, requestJson, null, errMsg, false);
-		return { success: false, error: errMsg, responseStatus: null, responseBody: errMsg };
+		const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+		if (webhook.api_key) headers['x-make-apikey'] = webhook.api_key;
+		const extraHeaders = db.prepare('SELECT key, value FROM webhook_header WHERE webhook_id = ?').all(wid) as { key: string; value: string }[];
+		for (const h of extraHeaders) {
+			if (h.key.trim()) headers[h.key.trim()] = h.value;
+		}
+		try {
+			const res = await fetch(webhook.url, { method: 'POST', headers, body: requestJson });
+			const responseBody = await res.text();
+			lastStatus = res.status;
+			lastBody = responseBody;
+			insertSendLog(db, accountId, post.id, requestJson, res.status, responseBody, res.ok);
+			if (!res.ok) lastError = `${res.status} ${res.statusText}: ${responseBody.slice(0, 200)}`;
+		} catch (e) {
+			lastError = e instanceof Error ? e.message : 'Request failed';
+			lastStatus = null;
+			lastBody = lastError;
+			insertSendLog(db, accountId, post.id, requestJson, null, lastError, false);
+		}
 	}
+	if (lastError) {
+		updateFailed.run(lastError, post.id);
+		return { success: false, error: lastError, responseStatus: lastStatus, responseBody: lastBody };
+	}
+	updateSent.run(post.id);
+	return { success: true, responseStatus: lastStatus ?? 200, responseBody: lastBody };
 }

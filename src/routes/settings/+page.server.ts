@@ -90,12 +90,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const base = env.APP_BASE_URL?.trim();
 	const importCallbackUrl = base ? base.replace(/\/$/, '') + '/api/callbacks/import' : null;
 
-	const sectionParam = (url.searchParams.get('section') ?? 'targets') as
-		| 'targets'
-		| 'imports'
-		| 'callbacks'
-		| 'templates'
-		| 'globals';
+	const sectionRaw = url.searchParams.get('section') ?? 'outputs';
+	const sectionParam = (
+		sectionRaw === 'targets' ? 'outputs' : sectionRaw === 'imports' || sectionRaw === 'callbacks' ? 'inputs' : sectionRaw
+	) as 'outputs' | 'inputs' | 'templates' | 'globals';
 
 	return {
 		section: sectionParam,

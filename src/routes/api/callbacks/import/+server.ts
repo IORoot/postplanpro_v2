@@ -1,4 +1,5 @@
 import { getDatabase } from '$lib/db/index.js';
+import { setPostWebhooks } from '$lib/db/postWebhooks.js';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
@@ -8,10 +9,11 @@ type ImportPost = {
 	image_url?: unknown;
 	external_id?: unknown;
 	fields?: Record<string, unknown>;
+	webhook_id?: unknown;
+	webhook_ids?: unknown;
 };
 
 type ImportPayload = {
-	webhook_id?: unknown;
 	posts?: unknown;
 };
 
@@ -48,19 +50,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({ error: 'Invalid JSON body.' }, { status: 400 });
 	}
 
-	const webhookIdRaw = body.webhook_id;
-	if (typeof webhookIdRaw !== 'string' || !webhookIdRaw.trim()) {
-		return json({ error: 'Body must include a non-empty "webhook_id" string.' }, { status: 400 });
-	}
-	const webhookId = webhookIdRaw.trim();
-
-	const webhook = db
-		.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
-		.get(webhookId, accountId) as { id: string } | undefined;
-	if (!webhook) {
-		return json({ error: 'Invalid webhook_id for this account.' }, { status: 400 });
-	}
-
 	if (!Array.isArray(body.posts) || body.posts.length === 0) {
 		return json({ error: 'Body must include a non-empty "posts" array.' }, { status: 400 });
 	}
@@ -71,6 +60,41 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ error: 'Each entry in "posts" must be an object.' }, { status: 400 });
 		}
 		posts.push(raw as ImportPost);
+	}
+
+	/** Resolve webhook IDs from a post (webhook_ids array or webhook_id string). */
+	function resolvePostWebhookIds(post: ImportPost): string[] {
+		const rawIds = post.webhook_ids;
+		const rawId = post.webhook_id;
+		if (Array.isArray(rawIds) && rawIds.length > 0) {
+			return rawIds
+				.filter((v): v is string => typeof v === 'string' && v.trim() !== '')
+				.map((v) => v.trim());
+		}
+		if (typeof rawId === 'string' && rawId.trim()) {
+			return [rawId.trim()];
+		}
+		return [];
+	}
+
+	const postWebhookIds: string[][] = [];
+	for (let i = 0; i < posts.length; i++) {
+		const webhookIds = resolvePostWebhookIds(posts[i]);
+		if (webhookIds.length === 0) {
+			return json(
+				{ error: `Post at index ${i} must include "webhook_id" (string) or "webhook_ids" (array of strings).` },
+				{ status: 400 }
+			);
+		}
+		for (const wid of webhookIds) {
+			const webhook = db
+				.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
+				.get(wid, accountId) as { id: string } | undefined;
+			if (!webhook) {
+				return json({ error: `Invalid webhook_id "${wid}" for this account (post index ${i}).` }, { status: 400 });
+			}
+		}
+		postWebhookIds.push(webhookIds);
 	}
 
 	const insertPost = db.prepare(
@@ -86,7 +110,11 @@ export const POST: RequestHandler = async ({ request }) => {
 	const createdIds: string[] = [];
 
 	const tx = db.transaction(() => {
-		for (const post of posts) {
+		for (let i = 0; i < posts.length; i++) {
+			const post = posts[i];
+			const webhookIds = postWebhookIds[i];
+			const primaryWebhookId = webhookIds[0];
+
 			const rawTitle = typeof post.title === 'string' ? post.title.trim() : '';
 			if (!rawTitle) {
 				throw new Error('Each post must include a non-empty "title" string.');
@@ -106,7 +134,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				typeof post.external_id === 'string' ? post.external_id.trim() || null : null;
 
 			const importSourceId = externalId
-				? `import-callback:${webhookId}:${externalId}`
+				? `import-callback:${primaryWebhookId}:${externalId}`
 				: null;
 
 			if (importSourceId) {
@@ -120,7 +148,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			insertPost.run(
 				id,
 				accountId,
-				webhookId,
+				primaryWebhookId,
 				rawTitle,
 				content,
 				imageUrl,
@@ -129,6 +157,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				importSourceId
 			);
 			createdIds.push(id);
+
+			setPostWebhooks(db, id, accountId, webhookIds);
 
 			const fields = post.fields;
 			if (fields && typeof fields === 'object' && !Array.isArray(fields)) {

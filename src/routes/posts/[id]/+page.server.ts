@@ -1,4 +1,5 @@
 import { getDatabase } from '$lib/db/index.js';
+import { getWebhookIdsForPost, setPostWebhooks } from '$lib/db/postWebhooks.js';
 import { normalizePostColor } from '$lib/postColors.js';
 import { getNextFreeSlot } from '$lib/scheduler/generateSlots.js';
 import { fail, redirect } from '@sveltejs/kit';
@@ -77,7 +78,9 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		.prepare('SELECT stage, status, completed_at FROM post_stage WHERE post_id = ? ORDER BY completed_at')
 		.all(params.id) as { stage: string; status: string; completed_at: string }[];
 
-	return { post, fields, globals, webhooks, schedules, templates: [...byTemplate.values()], stages };
+	const webhook_ids = getWebhookIdsForPost(db, params.id, post.webhook_id);
+
+	return { post, fields, globals, webhooks, schedules, templates: [...byTemplate.values()], stages, webhook_ids };
 };
 
 export const actions: Actions = {
@@ -100,7 +103,7 @@ export const actions: Actions = {
 				return fail(400, { error: 'Override JSON is invalid' });
 			}
 		}
-		const webhook_id = data.get('webhook_id') as string;
+		const webhookIds = data.getAll('webhook_ids').filter((v): v is string => typeof v === 'string' && v.trim() !== '');
 		const scheduleBy = (data.get('schedule_by') as string) || 'none';
 		const schedule_id = (data.get('schedule_id') as string)?.trim() || null;
 		let scheduled_at: string | null;
@@ -116,27 +119,30 @@ export const actions: Actions = {
 			scheduled_at = null;
 		}
 		const status = (scheduled_at ? 'scheduled' : 'draft') as 'draft' | 'scheduled';
-		if (!title || !webhook_id) return fail(400, { error: 'Title and webhook are required' });
+		if (!title) return fail(400, { error: 'Title is required' });
+		if (webhookIds.length === 0) return fail(400, { error: 'Select at least one webhook' });
 
 		const db = getDatabase();
 		const existing = db
 			.prepare('SELECT id FROM post WHERE id = ? AND account_id = ?')
 			.get(params.id, accountId) as { id: string } | undefined;
 		if (!existing) return fail(404, { error: 'Post not found' });
-		const webhookExists = db
-			.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
-			.get(webhook_id, accountId) as { id: string } | undefined;
-		if (!webhookExists) return fail(400, { error: 'Invalid webhook' });
+		for (const wid of webhookIds) {
+			const webhookExists = db
+				.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
+				.get(wid, accountId) as { id: string } | undefined;
+			if (!webhookExists) return fail(400, { error: 'Invalid webhook selected' });
+		}
 		if (schedule_id) {
 			const scheduleExists = db
 				.prepare('SELECT id FROM schedule WHERE id = ? AND account_id = ?')
 				.get(schedule_id, accountId) as { id: string } | undefined;
 			if (!scheduleExists) return fail(400, { error: 'Invalid schedule' });
 		}
+		setPostWebhooks(db, params.id, accountId, webhookIds);
 		db.prepare(
-			"UPDATE post SET webhook_id = ?, schedule_id = ?, title = ?, content = ?, image_url = ?, color = ?, payload_override = ?, scheduled_at = ?, status = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?"
+			"UPDATE post SET schedule_id = ?, title = ?, content = ?, image_url = ?, color = ?, payload_override = ?, scheduled_at = ?, status = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?"
 		).run(
-			webhook_id,
 			resolvedScheduleId,
 			title,
 			content,

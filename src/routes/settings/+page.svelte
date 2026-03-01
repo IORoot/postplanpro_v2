@@ -5,16 +5,19 @@
 	let { data, form } = $props();
 
 	const currentSection = $derived(
-		((data as { section?: string }).section ?? 'targets') as
-			| 'targets'
-			| 'imports'
-			| 'callbacks'
+		((data as { section?: string }).section ?? 'outputs') as
+			| 'outputs'
+			| 'inputs'
 			| 'templates'
 			| 'globals'
 	);
 
-	// Make.com callback: show full token once after generation
+	// callback: show full token once after generation
 	let generatedCallbackToken = $state<string | null>(null);
+
+	// Example tabs: JSON vs curl for each callback
+	let importExampleTab = $state<'json' | 'curl'>('json');
+	let postNotificationExampleTab = $state<'json' | 'curl'>('json');
 
 	// When form action returns a token (e.g. after redirect), show it
 	$effect(() => {
@@ -71,25 +74,24 @@
 </svelte:head>
 
 <h1 class="text-2xl font-bold text-[var(--text)]">Settings</h1>
-<p class="mt-1 text-sm text-[var(--text-muted)]">Configure webhook URLs, imports, callbacks, templates, and global variables.</p>
+<p class="mt-1 text-sm text-[var(--text-muted)]">Configure outputs, inputs, templates, and global variables.</p>
 
 <div class="mt-6 settings-layout">
 	<aside class="settings-sidebar">
 		<nav class="settings-nav">
-			<a href="/settings?section=targets" class="settings-nav-link {currentSection === 'targets' ? 'settings-nav-link-active' : ''}">Targets</a>
-			<a href="/settings?section=imports" class="settings-nav-link {currentSection === 'imports' ? 'settings-nav-link-active' : ''}">Imports</a>
-			<a href="/settings?section=callbacks" class="settings-nav-link {currentSection === 'callbacks' ? 'settings-nav-link-active' : ''}">Callbacks</a>
+			<a href="/settings?section=outputs" class="settings-nav-link {currentSection === 'outputs' ? 'settings-nav-link-active' : ''}">Outputs</a>
+			<a href="/settings?section=inputs" class="settings-nav-link {currentSection === 'inputs' ? 'settings-nav-link-active' : ''}">Inputs</a>
 			<a href="/settings?section=templates" class="settings-nav-link {currentSection === 'templates' ? 'settings-nav-link-active' : ''}">Templates</a>
 			<a href="/settings?section=globals" class="settings-nav-link {currentSection === 'globals' ? 'settings-nav-link-active' : ''}">Globals</a>
 		</nav>
 	</aside>
 	<div class="settings-content">
 
-{#if currentSection === 'targets'}
-<!-- Webhooks (Targets) -->
-<section class="mt-8" id="settings-targets">
-	<h2 class="text-lg font-medium text-[var(--text)]">Webhook URLs</h2>
-	<p class="mt-1 text-sm text-[var(--text-muted)]">Target endpoints for scheduled posts. Each can have an API key (x-make-apikey) and optional HTTP headers.</p>
+{#if currentSection === 'outputs'}
+<!-- Outputs (Webhook URLs) -->
+<section class="mt-8" id="settings-outputs">
+	<h2 class="text-lg font-medium text-[var(--text)]">Outputs</h2>
+	<p class="mt-1 text-sm text-[var(--text-muted)]">Webhook endpoints for scheduled posts. Each can have an API key (x-make-apikey) and optional HTTP headers.</p>
 
 	<div class="mt-4 space-y-3">
 		{#each data.webhooks as webhook}
@@ -140,9 +142,20 @@
 				</form>
 			{:else}
 				<div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-					<div class="min-w-0">
+					<div class="min-w-0 flex-1">
 						<p class="font-medium text-[var(--text)]">{webhook.name}</p>
 						<p class="truncate text-sm text-[var(--text-muted)]">{webhook.url}</p>
+						<div class="mt-2 flex items-center gap-2">
+							<span class="text-xs text-[var(--text-muted)]">ID:</span>
+							<code class="rounded bg-[var(--bg)] px-1.5 py-0.5 text-xs font-mono text-[var(--text)]" title="Webhook ID for API and import callback">{webhook.id}</code>
+							<button
+								type="button"
+								onclick={() => navigator.clipboard.writeText(webhook.id)}
+								class="rounded border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition-colors"
+							>
+								Copy
+							</button>
+						</div>
 					</div>
 					<div class="flex gap-2">
 						<button type="button" onclick={() => openEditWebhook(webhook)} class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] min-w-[44px]">Edit</button>
@@ -207,117 +220,20 @@
 </section>
 {/if}
 
-{#if currentSection === 'imports'}
-<!-- JSON import callback -->
-<section class="mt-10" id="settings-imports">
-	<h2 class="text-lg font-medium text-[var(--text)]">JSON import callback</h2>
-	<p class="mt-1 text-sm text-[var(--text-muted)]">
-		Use this callback to import posts from external tools (Make.com, n8n, custom scripts) by sending JSON.
-		It uses the same callback token as the Make.com callbacks.
-	</p>
+{#if currentSection === 'inputs'}
+<!-- Inputs: Import callback + Post notification callbacks -->
+<section class="mt-8" id="settings-inputs">
+	<h2 class="text-lg font-medium text-[var(--text)]">Inputs</h2>
+	<p class="mt-1 text-sm text-[var(--text-muted)]">Inbound callbacks: import posts via JSON and receive post notifications from Make.com.</p>
 
-	<div class="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 space-y-4">
-		<div>
-			<p class="block text-sm font-medium text-[var(--text)]">Callback URL</p>
-			{#if data.importCallbackUrl}
-				<div class="mt-1 flex flex-wrap items-center gap-2">
-					<code class="flex-1 min-w-0 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] break-all">{data.importCallbackUrl}</code>
-					<button
-						type="button"
-						onclick={() =>
-							navigator.clipboard
-								.writeText(data.importCallbackUrl ?? '')
-								.then(() => alert('Copied to clipboard'))}
-						class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]"
-					>
-						Copy
-					</button>
-				</div>
-				<p class="mt-1 text-xs text-[var(--text-muted)]">
-					Send <code class="rounded bg-[var(--bg)] px-1 text-xs">POST {data.importCallbackUrl}</code> with
-					<code class="rounded bg-[var(--bg)] px-1 text-xs">Content-Type: application/json</code>.
-				</p>
-			{:else}
-				<p class="mt-1 text-xs text-[var(--text-muted)]">Set <code>APP_BASE_URL</code> to see the callback URL.</p>
-			{/if}
-		</div>
-
-		<div class="pt-4 border-t border-[var(--border)]">
-			<p class="block text-sm font-medium text-[var(--text)]">Authentication</p>
-			<p class="mt-1 text-xs text-[var(--text-muted)]">
-				This callback uses the same token as the Make.com callbacks above. Authenticate with either:
-			</p>
-			<ul class="mt-2 list-disc list-inside space-y-1 text-xs text-[var(--text-muted)]">
-				<li><code class="rounded bg-[var(--bg)] px-1 text-xs">Authorization: Bearer &lt;callback_token&gt;</code></li>
-				<li>or <code class="rounded bg-[var(--bg)] px-1 text-xs">X-Callback-Token: &lt;callback_token&gt;</code></li>
-			</ul>
-			<p class="mt-1 text-xs text-[var(--text-muted)]">
-				You can generate or revoke the token in the <strong>Callbacks</strong> section.
-			</p>
-		</div>
-
-		<div class="mt-4 pt-4 border-t border-[var(--border)]">
-			<p class="block text-sm font-medium text-[var(--text)]">Expected JSON payload</p>
-			<p class="mt-1 text-xs text-[var(--text-muted)]">
-				Send an object with a target webhook and an array of posts:
-			</p>
-			<pre class="mt-2 overflow-x-auto rounded border border-[var(--border)] bg-[var(--bg)] p-3 text-xs text-[var(--text)]"><code>{`{
-  "webhook_id": "<your-webhook-id>",
-  "posts": [
-    {
-      "title": "My imported post",
-      "content": "Optional body text",
-      "image_url": "https://example.com/image.jpg",
-      "external_id": "external-123",
-      "fields": {
-        "source": "make.com",
-        "raw": { "foo": "bar" }
-      }
-    }
-  ]
-}`}</code></pre>
-			<ul class="mt-2 list-disc list-inside space-y-1 text-xs text-[var(--text-muted)]">
-				<li><code class="rounded bg-[var(--bg)] px-1">webhook_id</code> – must be one of your existing Targets (webhook IDs).</li>
-				<li><code class="rounded bg-[var(--bg)] px-1">posts[].title</code> – required string.</li>
-				<li><code class="rounded bg-[var(--bg)] px-1">posts[].content</code> – optional string or JSON.</li>
-				<li><code class="rounded bg-[var(--bg)] px-1">posts[].image_url</code> – optional string.</li>
-				<li><code class="rounded bg-[var(--bg)] px-1">posts[].external_id</code> – optional string; duplicates with the same external_id are skipped.</li>
-				<li><code class="rounded bg-[var(--bg)] px-1">posts[].fields</code> – optional object mapped into custom fields.</li>
-			</ul>
-		</div>
-	</div>
-</section>
-{/if}
-
-{#if currentSection === 'callbacks'}
-<!-- Make.com callbacks -->
-<section class="mt-10" id="settings-callbacks">
-	<h2 class="text-lg font-medium text-[var(--text)]">Make.com callbacks</h2>
-	<p class="mt-1 text-sm text-[var(--text-muted)]">When a post is sent to Make.com, your scenario can notify PostPlan that the post reached a certain step (e.g. “published to Instagram”). PostPlan records these stages and shows them on the post’s edit page.</p>
-
-	<div class="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 space-y-4">
-		{#if data.callbackUrl}
-			<div>
-				<p class="block text-sm font-medium text-[var(--text)]">Callback URL</p>
-				<div class="mt-1 flex flex-wrap items-center gap-2">
-					<code class="flex-1 min-w-0 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] break-all">{data.callbackUrl}</code>
-					<button
-						type="button"
-						onclick={() => navigator.clipboard.writeText(data.callbackUrl ?? '').then(() => alert('Copied to clipboard'))}
-						class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]"
-					>
-						Copy
-					</button>
-				</div>
-			</div>
-		{:else}
-			<p class="text-sm text-[var(--text-muted)]">Set <code>APP_BASE_URL</code> in your environment to see the callback URL.</p>
-		{/if}
-
-		<div>
-			<p class="block text-sm font-medium text-[var(--text)]">Callback token</p>
+	<!-- Callback token (shared by both inputs) -->
+	<div class="mt-8">
+		<h3 class="text-base font-medium text-[var(--text)]">Callback token</h3>
+		<div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+			<div class="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+				<p class="text-xs font-medium text-[var(--text-muted)] mb-2">Token</p>
 			{#if generatedCallbackToken}
-				<p class="mt-1 text-xs text-[var(--text-muted)]">Save this token; it won’t be shown again. Use it in Make.com as <code>Authorization: Bearer &lt;token&gt;</code>.</p>
+				<p class="text-xs text-[var(--text-muted)]">Save this token; it won’t be shown again.</p>
 				<div class="mt-2 flex flex-wrap items-center gap-2">
 					<code class="flex-1 min-w-0 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] break-all font-mono">{generatedCallbackToken}</code>
 					<button
@@ -327,10 +243,10 @@
 					>
 						Copy
 					</button>
-					<button type="button" onclick={() => (generatedCallbackToken = null)} class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">Dismiss</button>
+					<button type="button" onclick={() => (generatedCallbackToken = null)} class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">Dismiss</button>
 				</div>
 			{:else if data.callbackTokenMasked}
-				<div class="mt-2 flex flex-wrap items-center gap-2">
+				<div class="flex flex-wrap items-center gap-2">
 					<code class="rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] font-mono">{data.callbackTokenMasked}</code>
 					<form method="POST" action="?/revokeCallbackToken" use:enhance={({ cancel }) => { if (!confirm('Revoke the callback token? Make.com scenarios using it will stop working until you generate a new one.')) cancel(); return async () => { generatedCallbackToken = null; await invalidateAll(); }; }} class="inline">
 						<button type="submit" class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]">Revoke</button>
@@ -349,7 +265,7 @@
 						<button type="submit" class="rounded-lg border border-amber-500 px-3 py-2 text-sm font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 min-h-[44px]">Regenerate</button>
 					</form>
 				</div>
-				<p class="mt-1 text-xs text-[var(--text-muted)]">Use this token in Make.com: <code>Authorization: Bearer &lt;token&gt;</code>. Regenerating invalidates the previous token.</p>
+				<p class="mt-1 text-xs text-[var(--text-muted)]">Regenerating invalidates the previous token.</p>
 			{:else}
 				<form
 					method="POST"
@@ -360,29 +276,199 @@
 						}
 						await invalidateAll();
 					}}
-					class="mt-2"
+					class="inline"
 				>
 					<button type="submit" class="rounded-lg btn-primary px-4 py-2 text-sm font-medium text-white min-h-[44px]">Generate callback token</button>
 				</form>
-				<p class="mt-1 text-xs text-[var(--text-muted)]">Generate a token so Make.com can authenticate when calling the callback URL. The payload sent to Make.com will include <code>callback_url</code> and <code>callback_token</code> when set.</p>
+				<p class="mt-1 text-xs text-[var(--text-muted)]">The payload sent to Make.com will include <code>callback_url</code> and <code>callback_token</code> when set.</p>
 			{/if}
+			</div>
+			<div class="text-sm text-[var(--text-muted)]">
+				<p class="mt-0">Used to authenticate the import callback and post notification callbacks below.</p>
+				<p class="mt-2">Send in requests as:</p>
+				<ul class="mt-1 list-disc list-inside space-y-0.5">
+					<li><code class="rounded bg-[var(--bg)] px-1 text-xs">Authorization: Bearer &lt;token&gt;</code></li>
+					<li>or <code class="rounded bg-[var(--bg)] px-1 text-xs">X-Callback-Token: &lt;token&gt;</code></li>
+				</ul>
+			</div>
 		</div>
+	</div>
 
-		<!-- How to use the callback -->
-		<div class="mt-6 pt-4 border-t border-[var(--border)]">
-			<h3 class="text-sm font-semibold text-[var(--text)]">How to use the callback in Make.com</h3>
-			<ol class="mt-2 list-decimal list-inside space-y-2 text-sm text-[var(--text-muted)]">
-				<li>When PostPlan sends a post to your webhook, the payload includes <code class="rounded bg-[var(--bg)] px-1 text-xs">callback_url</code>, <code class="rounded bg-[var(--bg)] px-1 text-xs">callback_token</code>, and <code class="rounded bg-[var(--bg)] px-1 text-xs">id</code> (the post ID).</li>
-				<li>After your scenario does something with the post (e.g. publishes it), add an <strong>HTTP – Make a request</strong> module.</li>
-				<li>Set <strong>URL</strong> to the <code class="rounded bg-[var(--bg)] px-1 text-xs">callback_url</code> from the webhook (or copy it from above).</li>
-				<li>Set <strong>Method</strong> to <code class="rounded bg-[var(--bg)] px-1 text-xs">POST</code>.</li>
-				<li>Add a header: <code class="rounded bg-[var(--bg)] px-1 text-xs">Authorization</code> = <code class="rounded bg-[var(--bg)] px-1 text-xs">Bearer {'{{callback_token}}'}</code> (use the token from the webhook payload).</li>
-				<li>Set <strong>Body type</strong> to raw JSON and use:
-					<pre class="mt-2 overflow-x-auto rounded border border-[var(--border)] bg-[var(--bg)] p-3 text-xs text-[var(--text)]"><code>{'{"post_id": "{{id}}",\n  "stage": "instagram_published"}'}</code></pre>
-					Use the webhook’s <code class="rounded bg-[var(--bg)] px-1 text-xs">id</code> as <code class="rounded bg-[var(--bg)] px-1 text-xs">post_id</code>, and any label you like for <code class="rounded bg-[var(--bg)] px-1 text-xs">stage</code> (e.g. <code class="rounded bg-[var(--bg)] px-1 text-xs">facebook_published</code>, <code class="rounded bg-[var(--bg)] px-1 text-xs">reviewed</code>).
-				</li>
-				<li>Run the scenario. Completed stages appear on the post’s edit page under “Make.com stages”.</li>
-			</ol>
+	<!-- Import callback -->
+	<div class="mt-8">
+		<h3 class="text-base font-medium text-[var(--text)]">Import callback</h3>
+		<div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+			<div class="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+				<p class="text-xs font-medium text-[var(--text-muted)] mb-2">Callback URL</p>
+				{#if data.importCallbackUrl}
+					<div class="flex flex-wrap items-center gap-2">
+						<code class="flex-1 min-w-0 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] break-all">{data.importCallbackUrl}</code>
+						<button
+							type="button"
+							onclick={() =>
+								navigator.clipboard
+									.writeText(data.importCallbackUrl ?? '')
+									.then(() => alert('Copied to clipboard'))}
+							class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]"
+						>
+							Copy
+						</button>
+					</div>
+					<p class="mt-2 text-xs text-[var(--text-muted)]">
+						Send <code class="rounded bg-[var(--bg)] px-1 text-xs">POST</code> with <code class="rounded bg-[var(--bg)] px-1 text-xs">Content-Type: application/json</code>.
+					</p>
+				{:else}
+					<p class="text-xs text-[var(--text-muted)]">Set <code>APP_BASE_URL</code> to see the callback URL.</p>
+				{/if}
+			</div>
+			<div class="text-sm text-[var(--text-muted)]">
+				<p class="mt-0">Import posts from external tools (Make.com, n8n, custom scripts) by sending JSON. Use the callback token above to authenticate.</p>
+				<p class="mt-2">Send <code class="rounded bg-[var(--bg)] px-1 text-xs">Authorization: Bearer &lt;token&gt;</code> or <code class="rounded bg-[var(--bg)] px-1 text-xs">X-Callback-Token: &lt;token&gt;</code>.</p>
+				<p class="mt-3 font-medium text-[var(--text)]">Example request</p>
+				<p class="mt-1 text-xs">Send an object with a <code class="rounded bg-[var(--bg)] px-1">posts</code> array. Each post must include <code class="rounded bg-[var(--bg)] px-1">webhook_id</code> or <code class="rounded bg-[var(--bg)] px-1">webhook_ids</code>. Webhook IDs are on the <strong>Outputs</strong> page.</p>
+				<div class="mt-2 flex gap-1 border-b border-[var(--border)]">
+					<button
+						type="button"
+						class="rounded-t border border-[var(--border)] border-b-0 px-3 py-1.5 text-xs font-medium min-h-[44px] {importExampleTab === 'json' ? 'bg-[var(--surface)] text-[var(--text)]' : 'bg-transparent text-[var(--text-muted)] hover:bg-[var(--surface-hover)]'}"
+						onclick={() => (importExampleTab = 'json')}
+					>JSON</button>
+					<button
+						type="button"
+						class="rounded-t border border-[var(--border)] border-b-0 px-3 py-1.5 text-xs font-medium min-h-[44px] {importExampleTab === 'curl' ? 'bg-[var(--surface)] text-[var(--text)]' : 'bg-transparent text-[var(--text-muted)] hover:bg-[var(--surface-hover)]'}"
+						onclick={() => (importExampleTab = 'curl')}
+					>curl</button>
+				</div>
+				{#if importExampleTab === 'json'}
+					<div class="relative">
+						<button
+							type="button"
+							class="absolute top-2 right-2 rounded border border-white/30 bg-black/80 px-2 py-1 text-xs text-white hover:bg-white/10 min-h-[44px] min-w-[44px]"
+							onclick={(e) => {
+								const code = (e.currentTarget as HTMLButtonElement).parentElement?.querySelector('pre code');
+								if (code) navigator.clipboard.writeText(code.textContent ?? '').then(() => alert('Copied to clipboard'));
+							}}
+						>Copy</button>
+						<pre class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code>{`{
+  "posts": [
+    {
+      "title": "My post title",
+      "webhook_id": "<webhook-id>",
+      "content": "Optional post body text.",
+      "image_url": "https://example.com/image.jpg",
+      "external_id": "external-123",
+      "fields": { "instagram.caption": "Custom caption" }
+    },
+    {
+      "title": "Another post",
+      "webhook_ids": ["<id1>", "<id2>"],
+      "content": "..."
+    }
+  ]
+}`}</code></pre>
+					</div>
+				{:else}
+					<div class="relative">
+						<button
+							type="button"
+							class="absolute top-2 right-2 rounded border border-white/30 bg-black/80 px-2 py-1 text-xs text-white hover:bg-white/10 min-h-[44px] min-w-[44px]"
+							onclick={(e) => {
+								const code = (e.currentTarget as HTMLButtonElement).parentElement?.querySelector('pre code');
+								if (code) navigator.clipboard.writeText(code.textContent ?? '').then(() => alert('Copied to clipboard'));
+							}}
+						>Copy</button>
+						<pre class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code>{`curl -X POST "${data.importCallbackUrl ?? 'https://your-app.com/api/callbacks/import'}" \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer YOUR_CALLBACK_TOKEN" \\
+  -d '{"posts":[{"title":"My post title","webhook_id":"<webhook-id>","content":"Optional post body."}]}'`}</code></pre>
+					</div>
+				{/if}
+				<ul class="mt-2 list-disc list-inside space-y-0.5 text-xs">
+					<li><code>posts[].title</code> – required</li>
+					<li><code>posts[].webhook_id</code> or <code>webhook_ids</code></li>
+					<li><code>posts[].content</code>, <code>image_url</code>, <code>external_id</code>, <code>fields</code> – optional</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+
+	<!-- Post notification callbacks -->
+	<div class="mt-10 pt-8 border-t border-[var(--border)]">
+		<h3 class="text-base font-medium text-[var(--text)]">Post notification callbacks</h3>
+		<div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+			<div class="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+				<p class="text-xs font-medium text-[var(--text-muted)] mb-2">Callback URL</p>
+				{#if data.callbackUrl}
+					<div class="flex flex-wrap items-center gap-2">
+						<code class="flex-1 min-w-0 rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] break-all">{data.callbackUrl}</code>
+						<button
+							type="button"
+							onclick={() => navigator.clipboard.writeText(data.callbackUrl ?? '').then(() => alert('Copied to clipboard'))}
+							class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]"
+						>
+							Copy
+						</button>
+					</div>
+				{:else}
+					<p class="text-xs text-[var(--text-muted)]">Set <code>APP_BASE_URL</code> in your environment to see the callback URL.</p>
+				{/if}
+				<p class="mt-2 text-xs text-[var(--text-muted)]">Use the callback token from the section above when calling this URL from Make.com.</p>
+			</div>
+			<div class="text-sm text-[var(--text-muted)]">
+				<p class="mt-0">When a post is sent to Make.com/N8N/Zapier, your scenario can notify PostPlan that the post reached a certain step (e.g. published to Instagram). PostPlan records these stages on the post edit page.</p>
+				<p class="mt-3 font-medium text-[var(--text)]">How to use in Make.com</p>
+				<ol class="mt-2 list-decimal list-inside space-y-2 text-xs">
+					<li>PostPlan sends <code class="rounded bg-[var(--bg)] px-1">callback_url</code>, <code class="rounded bg-[var(--bg)] px-1">callback_token</code>, and <code class="rounded bg-[var(--bg)] px-1">id</code> in the webhook payload.</li>
+					<li>After your scenario runs (e.g. publishes the post), add <strong>HTTP – Make a request</strong>.</li>
+					<li>URL: the <code class="rounded bg-[var(--bg)] px-1">callback_url</code> from the payload (or copy from the left).</li>
+					<li>Method: <code class="rounded bg-[var(--bg)] px-1">POST</code>. Header: <code class="rounded bg-[var(--bg)] px-1">Authorization: Bearer {'{{callback_token}}'}</code>.</li>
+					<li>Body (raw JSON): use <code class="rounded bg-[var(--bg)] px-1">post_id</code> (webhook <code class="rounded bg-[var(--bg)] px-1">id</code>) and any <code class="rounded bg-[var(--bg)] px-1">stage</code> label.</li>
+					<li>Completed stages appear on the post edit page under Make.com stages.</li>
+				</ol>
+				<p class="mt-3 font-medium text-[var(--text)]">Example request</p>
+				<div class="mt-2 flex gap-1 border-b border-[var(--border)]">
+					<button
+						type="button"
+						class="rounded-t border border-[var(--border)] border-b-0 px-3 py-1.5 text-xs font-medium min-h-[44px] {postNotificationExampleTab === 'json' ? 'bg-[var(--surface)] text-[var(--text)]' : 'bg-transparent text-[var(--text-muted)] hover:bg-[var(--surface-hover)]'}"
+						onclick={() => (postNotificationExampleTab = 'json')}
+					>JSON</button>
+					<button
+						type="button"
+						class="rounded-t border border-[var(--border)] border-b-0 px-3 py-1.5 text-xs font-medium min-h-[44px] {postNotificationExampleTab === 'curl' ? 'bg-[var(--surface)] text-[var(--text)]' : 'bg-transparent text-[var(--text-muted)] hover:bg-[var(--surface-hover)]'}"
+						onclick={() => (postNotificationExampleTab = 'curl')}
+					>curl</button>
+				</div>
+				{#if postNotificationExampleTab === 'json'}
+					<div class="relative">
+						<button
+							type="button"
+							class="absolute top-2 right-2 rounded border border-white/30 bg-black/80 px-2 py-1 text-xs text-white hover:bg-white/10 min-h-[44px] min-w-[44px]"
+							onclick={(e) => {
+								const code = (e.currentTarget as HTMLButtonElement).parentElement?.querySelector('pre code');
+								if (code) navigator.clipboard.writeText(code.textContent ?? '').then(() => alert('Copied to clipboard'));
+							}}
+						>Copy</button>
+						<pre class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code>{`{
+  "post_id": "uuid-of-the-post",
+  "stage": "instagram_published"
+}`}</code></pre>
+					</div>
+				{:else}
+					<div class="relative">
+						<button
+							type="button"
+							class="absolute top-2 right-2 rounded border border-white/30 bg-black/80 px-2 py-1 text-xs text-white hover:bg-white/10 min-h-[44px] min-w-[44px]"
+							onclick={(e) => {
+								const code = (e.currentTarget as HTMLButtonElement).parentElement?.querySelector('pre code');
+								if (code) navigator.clipboard.writeText(code.textContent ?? '').then(() => alert('Copied to clipboard'));
+							}}
+						>Copy</button>
+						<pre class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code>{`curl -X POST "${data.callbackUrl ?? 'https://your-app.com/api/callbacks/stage'}" \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer YOUR_CALLBACK_TOKEN" \\
+  -d '{"post_id":"uuid-of-the-post","stage":"instagram_published"}'`}</code></pre>
+					</div>
+				{/if}
+			</div>
 		</div>
 	</div>
 </section>

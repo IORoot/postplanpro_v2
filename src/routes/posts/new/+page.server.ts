@@ -1,4 +1,5 @@
 import { getDatabase } from '$lib/db/index.js';
+import { setPostWebhooks } from '$lib/db/postWebhooks.js';
 import { normalizePostColor } from '$lib/postColors.js';
 import { getNextFreeSlot } from '$lib/scheduler/generateSlots.js';
 import { fail, redirect } from '@sveltejs/kit';
@@ -54,7 +55,7 @@ export const actions: Actions = {
 		const content = (data.get('content') as string)?.trim() ?? '';
 		const image_url = (data.get('image_url') as string)?.trim() || null;
 		let color = normalizePostColor(data.get('color') as string) ?? null;
-		const webhook_id = data.get('webhook_id') as string;
+		const webhookIds = data.getAll('webhook_ids').filter((v): v is string => typeof v === 'string' && v.trim() !== '');
 		const scheduleBy = (data.get('schedule_by') as string) || 'none';
 		const schedule_id = (data.get('schedule_id') as string)?.trim() || null;
 		let scheduled_at: string | null;
@@ -70,13 +71,16 @@ export const actions: Actions = {
 			scheduled_at = null;
 		}
 		const status = (scheduled_at ? 'scheduled' : 'draft') as 'draft' | 'scheduled';
-		if (!title || !webhook_id) return fail(400, { error: 'Title and webhook are required' });
+		if (!title) return fail(400, { error: 'Title is required' });
+		if (webhookIds.length === 0) return fail(400, { error: 'Select at least one webhook' });
 
 		const db = getDatabase();
-		const webhookExists = db
-			.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
-			.get(webhook_id, accountId) as { id: string } | undefined;
-		if (!webhookExists) return fail(400, { error: 'Invalid webhook' });
+		for (const wid of webhookIds) {
+			const webhookExists = db
+				.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
+				.get(wid, accountId) as { id: string } | undefined;
+			if (!webhookExists) return fail(400, { error: 'Invalid webhook selected' });
+		}
 		if (schedule_id) {
 			const scheduleRow = db
 				.prepare('SELECT id, color FROM schedule WHERE id = ? AND account_id = ?')
@@ -87,7 +91,8 @@ export const actions: Actions = {
 		const id = crypto.randomUUID();
 		db.prepare(
 			'INSERT INTO post (id, account_id, webhook_id, schedule_id, title, content, image_url, color, scheduled_at, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-		).run(id, accountId, webhook_id, resolvedScheduleId, title, content, image_url, color, scheduled_at, status);
+		).run(id, accountId, webhookIds[0], resolvedScheduleId, title, content, image_url, color, scheduled_at, status);
+		setPostWebhooks(db, id, accountId, webhookIds);
 
 		// Custom fields: field_key_0, field_type_0, field_value_0, ...
 		const fieldKeys = [...data.entries()].filter(([k]) => k.startsWith('field_key_')).map(([k]) => k.replace('field_key_', ''));
