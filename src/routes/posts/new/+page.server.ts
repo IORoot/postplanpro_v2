@@ -1,6 +1,6 @@
 import { getDatabase } from '$lib/db/index.js';
 import { setPostWebhooks } from '$lib/db/postWebhooks.js';
-import { normalizePostColor } from '$lib/postColors.js';
+import { normalizePostColor, DEFAULT_MANUAL_POST_COLOR } from '$lib/postColors.js';
 import { getNextFreeSlot } from '$lib/scheduler/generateSlots.js';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -54,7 +54,7 @@ export const actions: Actions = {
 		const title = (data.get('title') as string)?.trim();
 		const content = (data.get('content') as string)?.trim() ?? '';
 		const image_url = (data.get('image_url') as string)?.trim() || null;
-		let color = normalizePostColor(data.get('color') as string) ?? null;
+		let color = normalizePostColor(data.get('color') as string) ?? DEFAULT_MANUAL_POST_COLOR;
 		const webhookIds = data.getAll('webhook_ids').filter((v): v is string => typeof v === 'string' && v.trim() !== '');
 		const scheduleBy = (data.get('schedule_by') as string) || 'none';
 		const schedule_id = (data.get('schedule_id') as string)?.trim() || null;

@@ -17,6 +17,15 @@
 </svelte:head>
 
 <div class="space-y-8">
+	<!-- Workflow diagram -->
+	<div class="w-full overflow-hidden rounded-xl bg-[var(--surface)] px-40 py-12">
+		<img
+			src="/workflow.svg"
+			alt="PostPlanPro workflow: import from various sources into Manager, Importer, Scheduler, Publisher; publish to APIs and integrations"
+			class="block w-full max-w-full h-auto object-contain"
+		/>
+	</div>
+
 	<!-- Header -->
 	<div>
 		<h1 class="text-2xl font-bold text-[var(--text)]">Dashboard</h1>

@@ -3,6 +3,17 @@
 	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
+	let copiedId = $state<string | null>(null);
+
+	async function copyScheduleId(id: string) {
+		try {
+			await navigator.clipboard.writeText(id);
+			copiedId = id;
+			setTimeout(() => (copiedId = null), 2000);
+		} catch {
+			// ignore
+		}
+	}
 </script>
 
 <svelte:head>
@@ -36,7 +47,15 @@
 							{schedule.rule_count > 0 ? schedule.rule_count + ' rule(s)' : schedule.slot_count + ' slot(s)'}
 						</p>
 					</div>
-					<div class="flex gap-2">
+					<div class="flex flex-wrap items-center gap-2">
+						<button
+							type="button"
+							onclick={() => copyScheduleId(schedule.id)}
+							class="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--text)] border border-[var(--border)] rounded px-2 py-1.5 hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
+							title="Copy schedule ID"
+						>
+							{copiedId === schedule.id ? 'Copied!' : schedule.id}
+						</button>
 						<a href="/schedules/{schedule.id}" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center justify-center shadow-sm">Edit</a>
 						<form method="POST" action="?/deleteSchedule" use:enhance={({ cancel }) => { if (!confirm('Delete this schedule? Posts using it will be unassigned.')) cancel(); return () => invalidateAll(); }} class="inline">
 							<input type="hidden" name="id" value={schedule.id} />

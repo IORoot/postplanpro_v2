@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { DEFAULT_POST_COLOR, TAILWIND_POST_COLORS, normalizePostColor } from '$lib/postColors';
+	import { DEFAULT_MANUAL_POST_COLOR, TAILWIND_POST_COLORS, normalizePostColor } from '$lib/postColors';
 
 	let { data, form } = $props();
 	let fieldRows = $state<{ key: string; type: string; value: string }[]>([
 		{ key: '', type: 'string', value: '' }
 	]);
-	let selectedColor = $state<string>(DEFAULT_POST_COLOR);
-	let hexColorInput = $state<string>(DEFAULT_POST_COLOR);
+	let selectedColor = $state<string>(DEFAULT_MANUAL_POST_COLOR);
+	let hexColorInput = $state<string>(DEFAULT_MANUAL_POST_COLOR);
 	let webhookIds = $state<string[]>([]);
 
 	function addField() {
@@ -64,7 +64,7 @@
 			</div>
 			<div>
 				<p class="block text-sm font-medium text-[var(--text)]">Post color</p>
-				<p class="mt-0.5 text-xs text-[var(--text-muted)]">Default is white. Optionally choose a palette or HEX color.</p>
+				<p class="mt-0.5 text-xs text-[var(--text-muted)]">Default is light grey. Optionally choose a palette or HEX color.</p>
 				<div class="mt-2 flex flex-wrap gap-2">
 					{#each TAILWIND_POST_COLORS as color}
 						<button

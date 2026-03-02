@@ -150,6 +150,19 @@
 		fieldIndices = fieldIndices.filter((i) => i !== index);
 		fieldCount = fieldIndices.length;
 	}
+
+	let copyFeedback = $state(false);
+	async function copyScheduleId() {
+		const id = data.schedule?.id;
+		if (!id) return;
+		try {
+			await navigator.clipboard.writeText(id);
+			copyFeedback = true;
+			setTimeout(() => (copyFeedback = false), 2000);
+		} catch {
+			// ignore
+		}
+	}
 </script>
 
 <svelte:head>
@@ -165,9 +178,24 @@
 				<input type="hidden" name="rules_json" value={rules.length > 0 ? rulesJson() : ''} />
 
 
+				<div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+					<h1 class="text-2xl font-bold text-[var(--text)]">Edit schedule</h1>
+					<button
+						type="button"
+						onclick={copyScheduleId}
+						class="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--text)] border border-[var(--border)] rounded px-2 py-1.5 hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
+						title="Copy schedule ID"
+					>
+						{#if copyFeedback}
+							Copied!
+						{:else}
+							{data.schedule.id}
+						{/if}
+					</button>
+				</div>
+
 				<div class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
 					<div class="min-w-0">
-						<h1 class="text-2xl font-bold text-[var(--text)]">Edit schedule</h1>
 						<div class="mt-6">
 							<label for="name" class="block text-sm font-medium text-[var(--text)]">Name *</label>
 							<input id="name" type="text" name="name" value={data.schedule.name} required class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]" />

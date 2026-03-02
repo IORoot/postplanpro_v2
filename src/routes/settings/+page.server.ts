@@ -186,7 +186,19 @@ export const actions: Actions = {
 		if (!accountId) return fail(401, { error: 'Unauthorized' });
 		const id = (await request.formData()).get('id') as string;
 		if (!id) return fail(400, { error: 'ID required' });
-		getDatabase().prepare('DELETE FROM webhook_config WHERE id = ? AND account_id = ?').run(id, accountId);
+		const db = getDatabase();
+		const usedByPost =
+			db.prepare('SELECT 1 FROM post WHERE account_id = ? AND (webhook_id = ? OR id IN (SELECT post_id FROM post_webhook WHERE webhook_id = ?)) LIMIT 1').get(
+				accountId,
+				id,
+				id
+			);
+		if (usedByPost) {
+			return fail(400, {
+				error: "This webhook can't be removed because it is used by one or more posts. Remove or reassign the webhook from those posts first."
+			});
+		}
+		db.prepare('DELETE FROM webhook_config WHERE id = ? AND account_id = ?').run(id, accountId);
 		return { success: true };
 	},
 	// Global variables
