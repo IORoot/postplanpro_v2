@@ -26,18 +26,24 @@
 	<nav class="flex shrink-0 flex-col gap-1 lg:w-52" aria-label="Report types">
 		<a
 			href="/reports"
-			class="rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors {data.reportType === 'logs'
+			class="flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors {data.reportType === 'logs'
 				? 'bg-[var(--primary)]/15 text-[var(--primary)]'
 				: 'text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]'}"
 		>
+			<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+				<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H5.25a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H5.25a1.125 1.125 0 00-1.125 1.125v7.5c0 .621.504 1.125 1.125 1.125h7.5a1.125 1.125 0 001.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25z" />
+			</svg>
 			Request / Response
 		</a>
 		<a
 			href="/reports?report=callback-stages"
-			class="rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors {data.reportType === 'callback-stages'
+			class="flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors {data.reportType === 'callback-stages'
 				? 'bg-[var(--primary)]/15 text-[var(--primary)]'
 				: 'text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]'}"
 		>
+			<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+				<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+			</svg>
 			Callback stages
 		</a>
 	</nav>

@@ -36,9 +36,22 @@
 	let overrideEnabled = $state(false);
 	let overrideText = $state('');
 	let webhookIds = $state<string[]>([]);
+	let copyFeedback = $state(false);
 	$effect(() => {
 		webhookIds = data.webhook_ids ?? (data.post?.webhook_id ? [data.post.webhook_id] : []);
 	});
+
+	async function copyPostId() {
+		const id = data.post?.id;
+		if (!id) return;
+		try {
+			await navigator.clipboard.writeText(id);
+			copyFeedback = true;
+			setTimeout(() => (copyFeedback = false), 2000);
+		} catch {
+			// ignore
+		}
+	}
 	$effect(() => {
 		fieldRows =
 			(data.fields?.length ?? 0) > 0
@@ -149,7 +162,14 @@
 
 <div class="flex flex-wrap items-start justify-between gap-2">
 	<h1 class="text-2xl font-bold text-[var(--text)]">Edit post</h1>
-	<code class="rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-xs font-mono text-[var(--text-muted)]" title="Post ID">{data.post.id}</code>
+	<button
+		type="button"
+		onclick={copyPostId}
+		class="rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-xs font-mono text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
+		title="Copy post ID"
+	>
+		{copyFeedback ? 'Copied!' : data.post.id}
+	</button>
 </div>
 <p class="mt-1 flex items-center gap-2">
 	<span
@@ -184,7 +204,7 @@
 	<div class="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
 		<div class="space-y-6">
 			<!-- Top section: title, content, image url, color -->
-			<section class="content-card rounded-xl p-6 shadow-sm">
+			<section class="content-card rounded-xl border border-[var(--border)] p-6 shadow-sm">
 				<h2 class="text-base font-semibold text-[var(--text)] mb-4">Post</h2>
 				<div class="space-y-4">
 					<div>
@@ -240,7 +260,7 @@
 			</section>
 
 			<!-- Custom fields -->
-			<section class="content-card rounded-xl p-6 shadow-sm">
+			<section class="content-card rounded-xl border border-[var(--border)] p-6 shadow-sm">
 				<h2 class="text-base font-semibold text-[var(--text)] mb-4">Custom fields</h2>
 				<p class="text-xs text-[var(--text-muted)] mb-3">Use dotted paths for nesting (e.g. <code>instagram.title</code>). Use <code>json</code> type for arrays/objects.</p>
 				<div class="flex flex-wrap items-center gap-2 mb-3">
@@ -285,7 +305,7 @@
 			</section>
 
 			<!-- Webhook -->
-			<section class="content-card rounded-xl p-6 shadow-sm">
+			<section class="content-card rounded-xl border border-[var(--border)] p-6 shadow-sm">
 				<h2 class="text-base font-semibold text-[var(--text)] mb-4">Webhooks</h2>
 				<p class="text-sm font-medium text-[var(--text)] mb-2">Target webhooks * (at least one; all will receive the post when published)</p>
 				<div class="mt-1 flex flex-wrap gap-x-4 gap-y-2">
@@ -312,7 +332,7 @@
 			</section>
 
 			<!-- Schedule -->
-			<section class="content-card rounded-xl p-6 shadow-sm">
+			<section class="content-card rounded-xl border border-[var(--border)] p-6 shadow-sm">
 				<h2 class="text-base font-semibold text-[var(--text)] mb-4">Schedule</h2>
 				<p class="text-xs text-[var(--text-muted)] mb-3">Draft, pick a date/time, or assign the next free slot from a schedule.</p>
 				<div class="space-y-3">
@@ -366,7 +386,7 @@
 		</div>
 
 		<!-- Right column: Live JSON + JSON Override -->
-		<aside class="content-card rounded-xl p-4 shadow-sm xl:sticky xl:top-6 xl:h-fit space-y-4">
+		<aside class="content-card rounded-xl border border-[var(--border)] p-4 shadow-sm xl:sticky xl:top-6 xl:h-fit space-y-4">
 			{#if imageUrlInput?.trim()}
 				<div class="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--bg)]">
 					<img

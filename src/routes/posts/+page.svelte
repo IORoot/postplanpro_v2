@@ -8,6 +8,17 @@
 	let selectedIds = $state<Set<string>>(new Set());
 	let bulkActionError = $state<string | null>(null);
 	let searchQuery = $state('');
+	let copiedId = $state<string | null>(null);
+
+	async function copyPostId(id: string) {
+		try {
+			await navigator.clipboard.writeText(id);
+			copiedId = id;
+			setTimeout(() => (copiedId = null), 2000);
+		} catch {
+			// ignore
+		}
+	}
 
 	const searchLower = $derived(searchQuery.trim().toLowerCase());
 	const filteredPosts = $derived(
@@ -184,6 +195,14 @@
 					</div>
 					</div>
 					<div class="flex flex-wrap items-center gap-2">
+						<button
+							type="button"
+							onclick={() => copyPostId(post.id)}
+							class="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--text)] border border-[var(--border)] rounded px-2 py-1.5 hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
+							title="Copy post ID"
+						>
+							{copiedId === post.id ? 'Copied!' : post.id}
+						</button>
 						<button
 							type="button"
 							disabled={sendingId === post.id}

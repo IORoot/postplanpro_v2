@@ -79,19 +79,48 @@
 <div class="mt-6 settings-layout">
 	<aside class="settings-sidebar">
 		<nav class="settings-nav">
-			<a href="/settings?section=outputs" class="settings-nav-link {currentSection === 'outputs' ? 'settings-nav-link-active' : ''}">Outputs</a>
-			<a href="/settings?section=inputs" class="settings-nav-link {currentSection === 'inputs' ? 'settings-nav-link-active' : ''}">Inputs</a>
-			<a href="/settings?section=templates" class="settings-nav-link {currentSection === 'templates' ? 'settings-nav-link-active' : ''}">Templates</a>
-			<a href="/settings?section=globals" class="settings-nav-link {currentSection === 'globals' ? 'settings-nav-link-active' : ''}">Globals</a>
+			<a href="/settings?section=outputs" class="settings-nav-link {currentSection === 'outputs' ? 'settings-nav-link-active' : ''}">
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+				</svg>
+				Outputs
+			</a>
+			<a href="/settings?section=inputs" class="settings-nav-link {currentSection === 'inputs' ? 'settings-nav-link-active' : ''}">
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+				</svg>
+				Inputs
+			</a>
+			<a href="/settings?section=templates" class="settings-nav-link {currentSection === 'templates' ? 'settings-nav-link-active' : ''}">
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5v-7.5H8.25v7.5z" />
+				</svg>
+				Templates
+			</a>
+			<a href="/settings?section=globals" class="settings-nav-link {currentSection === 'globals' ? 'settings-nav-link-active' : ''}">
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+				</svg>
+				Globals
+			</a>
 		</nav>
 	</aside>
 	<div class="settings-content">
 
 {#if currentSection === 'outputs'}
 <!-- Outputs (Webhook URLs) -->
-<section class="mt-8" id="settings-outputs">
+<section class="mt-8 " id="settings-outputs">
+	<div class="mb-6 w-full overflow-hidden rounded-xl bg-[var(--surface)]">
+		<img src="/Send.svg" alt="Outputs: send content to webhooks" class="block max-w-full h-auto object-contain" />
+	</div>
 	<h2 class="text-lg font-medium text-[var(--text)]">Outputs</h2>
 	<p class="mt-1 text-sm text-[var(--text-muted)]">Webhook endpoints for scheduled posts. Each can have an API key (x-make-apikey) and optional HTTP headers.</p>
+
+	{#if (form as { error?: string })?.error}
+		<div class="mt-4 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200" role="alert">
+			{(form as { error: string }).error}
+		</div>
+	{/if}
 
 	<div class="mt-4 space-y-3">
 		{#each data.webhooks as webhook}
@@ -223,6 +252,9 @@
 {#if currentSection === 'inputs'}
 <!-- Inputs: Import callback + Post notification callbacks -->
 <section class="mt-8" id="settings-inputs">
+	<div class="mb-6 overflow-hidden rounded-xl bg-[var(--surface)]">
+		<img src="/Receive.svg" alt="Inputs: receive callbacks" class="block h-auto object-contain" />
+	</div>
 	<h2 class="text-lg font-medium text-[var(--text)]">Inputs</h2>
 	<p class="mt-1 text-sm text-[var(--text-muted)]">Inbound callbacks: import posts via JSON and receive post notifications from Make.com.</p>
 
@@ -299,6 +331,11 @@
 		<h3 class="text-base font-medium text-[var(--text)]">Import callback</h3>
 		<div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
 			<div class="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+
+				<div class="my-3 overflow-hidden rounded-lg bg-[var(--surface)]">
+					<img src="/Callback_Import.svg" alt="Import callback setup" class="block h-auto object-contain" />
+				</div>
+
 				<p class="text-xs font-medium text-[var(--text-muted)] mb-2">Callback URL</p>
 				{#if data.importCallbackUrl}
 					<div class="flex flex-wrap items-center gap-2">
@@ -356,6 +393,9 @@
       "content": "Optional post body text.",
       "image_url": "https://example.com/image.jpg",
       "external_id": "external-123",
+      "colour": "#F4F4F0",
+      "schedule_ids": ["<schedule-id-1>", "<schedule-id-2>"],
+      "schedule_specific": "2025-01-01T09:00:00Z",
       "fields": { "instagram.caption": "Custom caption" }
     },
     {
@@ -382,10 +422,16 @@
   -d '{"posts":[{"title":"My post title","webhook_id":"<webhook-id>","content":"Optional post body."}]}'`}</code></pre>
 					</div>
 				{/if}
+				<p class="mt-2 text-xs text-[var(--text-muted)]">
+					<code class="rounded bg-[var(--bg)] px-1 text-xs">external_id</code> is an optional stable ID from your system (e.g. a post or item ID); when you send the same value again for the same webhook, PostPlan skips creating a duplicate draft.
+				</p>
+				<p class="mt-1 text-xs text-[var(--text-muted)]">
+					<code class="rounded bg-[var(--bg)] px-1 text-xs">colour</code> (or <code class="rounded bg-[var(--bg)] px-1 text-xs">color</code>) is an optional hex colour for the post; if omitted or invalid, it defaults to <code class="rounded bg-[var(--bg)] px-1 text-xs">#F4F4F0</code>. <code class="rounded bg-[var(--bg)] px-1 text-xs">schedule_ids</code> is an optional array of schedule IDs – one post is created per schedule using the same content – and <code class="rounded bg-[var(--bg)] px-1 text-xs">schedule_specific</code> is an optional ISO datetime to schedule a single post at an exact time; if neither is set, the post is imported as an unscheduled draft.
+				</p>
 				<ul class="mt-2 list-disc list-inside space-y-0.5 text-xs">
 					<li><code>posts[].title</code> – required</li>
 					<li><code>posts[].webhook_id</code> or <code>webhook_ids</code></li>
-					<li><code>posts[].content</code>, <code>image_url</code>, <code>external_id</code>, <code>fields</code> – optional</li>
+					<li><code>posts[].content</code>, <code>image_url</code>, <code>external_id</code>, <code>colour</code>/<code>color</code>, <code>schedule_ids</code>, <code>schedule_specific</code>, <code>fields</code> – optional</li>
 				</ul>
 			</div>
 		</div>
@@ -396,6 +442,9 @@
 		<h3 class="text-base font-medium text-[var(--text)]">Post notification callbacks</h3>
 		<div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
 			<div class="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+				<div class="my-3  overflow-hidden rounded-lg bg-[var(--surface)]">
+					<img src="/Callback_Notification.svg" alt="Post notification callback setup" class="block h-auto object-contain" />
+				</div>
 				<p class="text-xs font-medium text-[var(--text-muted)] mb-2">Callback URL</p>
 				{#if data.callbackUrl}
 					<div class="flex flex-wrap items-center gap-2">
@@ -728,6 +777,7 @@
 	.settings-nav-link {
 		display: inline-flex;
 		align-items: center;
+		gap: 0.5rem;
 		justify-content: flex-start;
 		padding: 0.5rem 0.75rem;
 		border-radius: 0.5rem;
