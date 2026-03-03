@@ -1,5 +1,7 @@
 import { getDatabase } from '$lib/db/index.js';
 import { setPostWebhooks } from '$lib/db/postWebhooks.js';
+import { getNextFreeSlot } from '$lib/scheduler/generateSlots.js';
+import { DEFAULT_MANUAL_POST_COLOR, normalizePostColor } from '$lib/postColors.js';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
@@ -11,6 +13,10 @@ type ImportPost = {
 	fields?: Record<string, unknown>;
 	webhook_id?: unknown;
 	webhook_ids?: unknown;
+	color?: unknown;
+	colour?: unknown;
+	schedule_ids?: unknown;
+	schedule_specific?: unknown;
 };
 
 type ImportPayload = {
@@ -98,7 +104,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	const insertPost = db.prepare(
-		'INSERT INTO post (id, account_id, webhook_id, title, content, image_url, color, status, import_source_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+		'INSERT INTO post (id, account_id, webhook_id, schedule_id, title, content, image_url, color, scheduled_at, status, import_source_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 	);
 	const insertField = db.prepare(
 		'INSERT INTO post_field (id, post_id, key, type, value) VALUES (?, ?, ?, ?, ?)'
@@ -130,49 +136,129 @@ export const POST: RequestHandler = async ({ request }) => {
 			const imageUrl =
 				typeof post.image_url === 'string' ? post.image_url.trim() || null : null;
 
+			// Color: allow either "color" or "colour"; default to manual post color when missing/invalid.
+			const rawColor =
+				typeof post.color === 'string'
+					? post.color
+					: typeof post.colour === 'string'
+						? post.colour
+						: null;
+			const baseColor = normalizePostColor(rawColor) ?? DEFAULT_MANUAL_POST_COLOR;
+
 			const externalId =
 				typeof post.external_id === 'string' ? post.external_id.trim() || null : null;
 
-			const importSourceId = externalId
-				? `import-callback:${primaryWebhookId}:${externalId}`
-				: null;
-
-			if (importSourceId) {
-				const exists = existingBySource.get(accountId, importSourceId) as
-					| { 1: number }
-					| undefined;
-				if (exists) continue;
+			// Optional scheduling fields
+			let scheduleSpecific: string | null = null;
+			if (typeof post.schedule_specific === 'string') {
+				const trimmed = post.schedule_specific.trim();
+				scheduleSpecific = trimmed || null;
 			}
 
-			const id = crypto.randomUUID();
-			insertPost.run(
-				id,
-				accountId,
-				primaryWebhookId,
-				rawTitle,
-				content,
-				imageUrl,
-				null,
-				'draft',
-				importSourceId
-			);
-			createdIds.push(id);
+			let scheduleIds: string[] = [];
+			if (Array.isArray(post.schedule_ids)) {
+				scheduleIds = post.schedule_ids
+					.filter((v): v is string => typeof v === 'string' && v.trim() !== '')
+					.map((v) => v.trim());
+			} else if (typeof post.schedule_ids === 'string' && post.schedule_ids.trim()) {
+				scheduleIds = [post.schedule_ids.trim()];
+			}
 
-			setPostWebhooks(db, id, accountId, webhookIds);
+			if (scheduleIds.length > 0 && scheduleSpecific) {
+				throw new Error(
+					`Post at index ${i} cannot have both "schedule_ids" and "schedule_specific".`
+				);
+			}
 
-			const fields = post.fields;
-			if (fields && typeof fields === 'object' && !Array.isArray(fields)) {
-				for (const [key, value] of Object.entries(fields)) {
-					const fieldKey = key.trim();
-					if (!fieldKey) continue;
-					const fieldId = crypto.randomUUID();
-					const valString =
-						typeof value === 'string'
-							? value
-							: value == null
-								? ''
-								: JSON.stringify(value);
-					insertField.run(fieldId, id, fieldKey, 'json', valString);
+			// If scheduleIds is non-empty, we create one post per schedule.
+			// Otherwise we create a single post (optionally using schedule_specific).
+			const targetScheduleIds = scheduleIds.length > 0 ? scheduleIds : [null];
+
+			for (const scheduleId of targetScheduleIds) {
+				let resolvedScheduleId: string | null = null;
+				let scheduledAt: string | null = null;
+				let status: 'draft' | 'scheduled' = 'draft';
+				let colorForPost: string | null = baseColor;
+
+				if (scheduleId) {
+					const scheduleRow = db
+						.prepare('SELECT id, color FROM schedule WHERE id = ? AND account_id = ?')
+						.get(scheduleId, accountId) as { id: string; color: string | null } | undefined;
+					if (!scheduleRow) {
+						throw new Error(
+							`Invalid schedule_id "${scheduleId}" for this account (post index ${i}).`
+						);
+					}
+					resolvedScheduleId = scheduleRow.id;
+					if (scheduleRow.color) {
+						colorForPost = scheduleRow.color;
+					}
+					const slot = getNextFreeSlot(scheduleRow.id, undefined, accountId);
+					if (!slot) {
+						throw new Error(
+							`Schedule "${scheduleId}" has no available slots (post index ${i}).`
+						);
+					}
+					scheduledAt = slot;
+					status = 'scheduled';
+				} else if (scheduleSpecific) {
+					const dt = new Date(scheduleSpecific);
+					if (Number.isNaN(dt.getTime())) {
+						throw new Error(
+							`Invalid schedule_specific datetime "${scheduleSpecific}" (post index ${i}).`
+						);
+					}
+					// Store as ISO string; UI already expects ISO-like values for scheduled_at.
+					scheduledAt = dt.toISOString();
+					status = 'scheduled';
+				}
+
+				const importSourceIdForRow =
+					externalId && scheduleIds.length > 0
+						? `import-callback:${primaryWebhookId}:${externalId}:${resolvedScheduleId ?? 'no-schedule'}`
+						: externalId
+							? `import-callback:${primaryWebhookId}:${externalId}`
+							: null;
+
+				if (importSourceIdForRow) {
+					const exists = existingBySource.get(accountId, importSourceIdForRow) as
+						| { 1: number }
+						| undefined;
+					if (exists) continue;
+				}
+
+				const id = crypto.randomUUID();
+				insertPost.run(
+					id,
+					accountId,
+					primaryWebhookId,
+					resolvedScheduleId,
+					rawTitle,
+					content,
+					imageUrl,
+					colorForPost,
+					scheduledAt,
+					status,
+					importSourceIdForRow
+				);
+				createdIds.push(id);
+
+				setPostWebhooks(db, id, accountId, webhookIds);
+
+				const fields = post.fields;
+				if (fields && typeof fields === 'object' && !Array.isArray(fields)) {
+					for (const [key, value] of Object.entries(fields)) {
+						const fieldKey = key.trim();
+						if (!fieldKey) continue;
+						const fieldId = crypto.randomUUID();
+						const valString =
+							typeof value === 'string'
+								? value
+								: value == null
+									? ''
+									: JSON.stringify(value);
+						insertField.run(fieldId, id, fieldKey, 'json', valString);
+					}
 				}
 			}
 		}

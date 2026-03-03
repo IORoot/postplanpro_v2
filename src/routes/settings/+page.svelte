@@ -393,6 +393,9 @@
       "content": "Optional post body text.",
       "image_url": "https://example.com/image.jpg",
       "external_id": "external-123",
+      "colour": "#F4F4F0",
+      "schedule_ids": ["<schedule-id-1>", "<schedule-id-2>"],
+      "schedule_specific": "2025-01-01T09:00:00Z",
       "fields": { "instagram.caption": "Custom caption" }
     },
     {
@@ -422,10 +425,13 @@
 				<p class="mt-2 text-xs text-[var(--text-muted)]">
 					<code class="rounded bg-[var(--bg)] px-1 text-xs">external_id</code> is an optional stable ID from your system (e.g. a post or item ID); when you send the same value again for the same webhook, PostPlan skips creating a duplicate draft.
 				</p>
+				<p class="mt-1 text-xs text-[var(--text-muted)]">
+					<code class="rounded bg-[var(--bg)] px-1 text-xs">colour</code> (or <code class="rounded bg-[var(--bg)] px-1 text-xs">color</code>) is an optional hex colour for the post; if omitted or invalid, it defaults to <code class="rounded bg-[var(--bg)] px-1 text-xs">#F4F4F0</code>. <code class="rounded bg-[var(--bg)] px-1 text-xs">schedule_ids</code> is an optional array of schedule IDs – one post is created per schedule using the same content – and <code class="rounded bg-[var(--bg)] px-1 text-xs">schedule_specific</code> is an optional ISO datetime to schedule a single post at an exact time; if neither is set, the post is imported as an unscheduled draft.
+				</p>
 				<ul class="mt-2 list-disc list-inside space-y-0.5 text-xs">
 					<li><code>posts[].title</code> – required</li>
 					<li><code>posts[].webhook_id</code> or <code>webhook_ids</code></li>
-					<li><code>posts[].content</code>, <code>image_url</code>, <code>external_id</code>, <code>fields</code> – optional</li>
+					<li><code>posts[].content</code>, <code>image_url</code>, <code>external_id</code>, <code>colour</code>/<code>color</code>, <code>schedule_ids</code>, <code>schedule_specific</code>, <code>fields</code> – optional</li>
 				</ul>
 			</div>
 		</div>
