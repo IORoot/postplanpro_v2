@@ -1,4 +1,6 @@
 import { getDatabase } from '$lib/db/index.js';
+import { getUsageForMonth, currentMonthKey } from '$lib/usage.js';
+import { getTierLimits } from '$lib/tiers.js';
 import { sendResetPasswordEmail, signOut } from '../../auth.js';
 import { redirect, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -12,16 +14,21 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const db = getDatabase();
 
 	const user = db
-		.prepare('SELECT email, password_hash FROM user WHERE id = ?')
-		.get(userId) as { email: string | null; password_hash: string | null } | undefined;
+		.prepare('SELECT email, password_hash, tier FROM user WHERE id = ?')
+		.get(userId) as { email: string | null; password_hash: string | null; tier: string } | undefined;
 	if (!user) {
 		throw redirect(303, '/auth/login');
 	}
 
+	const tier = user.tier ?? 'free';
+	const limits = getTierLimits(tier);
+	const month = currentMonthKey();
+	const usage = getUsageForMonth(db, userId, month);
+	const postsTotal = usage.postsSent + usage.postsScheduled;
+
 	const oauthAccounts = db
 		.prepare('SELECT id, provider, provider_account_id, created_at FROM oauth_account WHERE user_id = ? ORDER BY provider')
 		.all(userId) as { id: string; provider: string; provider_account_id: string; created_at: string }[];
-
 	const providerLabels: Record<string, string> = {
 		google: 'Google',
 		github: 'GitHub',
@@ -32,6 +39,19 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	return {
 		email: user.email ?? null,
 		hasPassword: !!user.password_hash,
+		tier,
+		usage: {
+			postsSent: usage.postsSent,
+			postsScheduled: usage.postsScheduled,
+			postsTotal,
+			callbackInputs: usage.callbackInputs,
+			importOperations: usage.importOperations
+		},
+		limits: {
+			postsSentPerMonth: limits.postsSentPerMonth,
+			callbackInputsPerMonth: limits.callbackInputsPerMonth,
+			importOperationsPerMonth: limits.importOperationsPerMonth
+		},
 		oauthAccounts: oauthAccounts.map((o) => ({
 			id: o.id,
 			provider: o.provider,

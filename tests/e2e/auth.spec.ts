@@ -1,9 +1,20 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Auth', () => {
-	test('unauthenticated user is redirected to login', async ({ page }) => {
+	test('unauthenticated user is redirected to welcome', async ({ page }) => {
 		await page.goto('/');
-		await expect(page).toHaveURL(/\/auth\/login/);
+		await expect(page).toHaveURL(/\/welcome/);
+	});
+
+	test('welcome page has table of price tiers', async ({ page }) => {
+		await page.goto('/welcome');
+		await expect(page).toHaveURL('/welcome');
+		const table = page.getByRole('table');
+		await expect(table).toBeVisible();
+		// Plan names in first column (exact to avoid matching "Sign up free" etc.)
+		await expect(table.getByRole('cell', { name: 'Free', exact: true })).toBeVisible();
+		await expect(table.getByRole('cell', { name: 'Pro', exact: true })).toBeVisible();
+		await expect(table.getByRole('cell', { name: 'Enterprise', exact: true })).toBeVisible();
 	});
 
 	test('login page loads', async ({ page }) => {
@@ -12,10 +23,10 @@ test.describe('Auth', () => {
 		await expect(page.getByRole('heading', { name: /sign in|login/i })).toBeVisible();
 	});
 
-	test('protected paths redirect to login', async ({ page }) => {
+	test('protected paths redirect to welcome when unauthenticated', async ({ page }) => {
 		for (const path of ['/posts', '/calendar', '/schedules', '/settings', '/bulk-create']) {
 			await page.goto(path);
-			await expect(page).toHaveURL(/\/auth\/login/);
+			await expect(page).toHaveURL(/\/welcome/);
 		}
 	});
 });

@@ -8,13 +8,20 @@ export default defineConfig({
 	workers: process.env.CI ? 1 : undefined,
 	reporter: 'html',
 	use: {
-		baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173',
+		baseURL: (() => {
+			const port = process.env.CI ? '5175' : '5173';
+			return process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
+		})(),
 		trace: 'on-first-retry'
 	},
 	projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-	webServer: {
-		command: 'npm run dev',
-		url: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173',
-		reuseExistingServer: !process.env.CI
-	}
+	webServer: (() => {
+		const port = process.env.CI ? '5175' : '5173';
+		const url = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
+		return {
+			command: process.env.CI ? `npm run dev -- --port ${port}` : 'npm run dev',
+			url,
+			reuseExistingServer: !process.env.CI
+		};
+	})()
 });

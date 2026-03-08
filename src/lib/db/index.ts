@@ -84,6 +84,41 @@ function getDb(): Database.Database {
 		} catch {
 			// Column already exists
 		}
+		try {
+			db.exec("ALTER TABLE user ADD COLUMN tier TEXT NOT NULL DEFAULT 'free'");
+		} catch {
+			// Column already exists
+		}
+		try {
+			db.exec('ALTER TABLE user ADD COLUMN stripe_customer_id TEXT');
+		} catch {
+			// Column already exists
+		}
+		try {
+			db.exec('ALTER TABLE user ADD COLUMN stripe_subscription_id TEXT');
+		} catch {
+			// Column already exists
+		}
+		// Backfill tier once: when tier exists but some users have null/empty, set first user admin, rest free
+		try {
+			const userCols = db.prepare('PRAGMA table_info(user)').all() as { name: string }[];
+			if (userCols.some((c) => c.name === 'tier')) {
+				const needsBackfill = db
+					.prepare("SELECT 1 FROM user WHERE tier IS NULL OR tier = '' LIMIT 1")
+					.get() as { '1': number } | undefined;
+				if (needsBackfill) {
+					db.prepare("UPDATE user SET tier = 'free' WHERE tier IS NULL OR tier = ''").run();
+					const firstUser = db
+						.prepare('SELECT id FROM user ORDER BY created_at ASC LIMIT 1')
+						.get() as { id: string } | undefined;
+					if (firstUser) {
+						db.prepare("UPDATE user SET tier = 'admin' WHERE id = ?").run(firstUser.id);
+					}
+				}
+			}
+		} catch {
+			// Ignore
+		}
 		// Safety check after schema init.
 		const postCols = db
 			.prepare('PRAGMA table_info(post)')

@@ -12,8 +12,11 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
 	let sidebarCalendar: { year: number; month: number; markers: Record<string, number> } | null = null;
+	let userTier: string | null = null;
 	if (accountId) {
 		const db = getDatabase();
+		const tierRow = db.prepare('SELECT tier FROM user WHERE id = ?').get(accountId) as { tier: string } | undefined;
+		userTier = tierRow?.tier ?? null;
 		const rows = db
 			.prepare(
 				`SELECT substr(scheduled_at, 1, 10) as day, COUNT(*) as count
@@ -38,6 +41,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 
 	return {
 		session: await locals.auth(),
-		sidebarCalendar
+		sidebarCalendar,
+		userTier
 	};
 };

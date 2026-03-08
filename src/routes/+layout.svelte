@@ -21,12 +21,12 @@ import { page } from '$app/stores';
 </svelte:head>
 
 <div class="min-h-screen bg-[var(--bg)]">
-	{#if !$page.url.pathname.startsWith('/auth')}
+	{#if !$page.url.pathname.startsWith('/auth') && !$page.url.pathname.startsWith('/welcome') && $page.url.pathname !== '/blocked'}
 		<Sidebar />
 	{/if}
 
 	<!-- Mobile menu button -->
-	{#if !$page.url.pathname.startsWith('/auth')}
+	{#if !$page.url.pathname.startsWith('/auth') && !$page.url.pathname.startsWith('/welcome') && $page.url.pathname !== '/blocked'}
 		<button
 			type="button"
 			class="fixed left-4 top-4 z-30 flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow sm md:hidden"
@@ -40,14 +40,28 @@ import { page } from '$app/stores';
 	{/if}
 
 	<main
-		class="min-h-screen { $page.url.pathname.startsWith('/auth') ? 'bg-[var(--bg)]' : 'bg-[var(--sidebar-bg)] md:pl-[280px]' }"
+		class="min-h-screen { ($page.url.pathname.startsWith('/auth') || $page.url.pathname.startsWith('/welcome') || $page.url.pathname === '/blocked') ? 'bg-[var(--bg)]' : 'bg-[var(--sidebar-bg)] md:pl-[280px]' }"
 	>
-		<div class="{ $page.url.pathname.startsWith('/auth') ? 'mx-auto max-w-md px-4 pb-8 pt-10' : 'mx-2 pt-2 mb-4 md:mx-4 md:pt-4 md:mb-4 flex min-h-[calc(100vh-2rem)] flex-col md:min-h-[calc(100vh-3rem)]' }">
-			<div class="content-area flex flex-1 flex-col rounded-xl border border-[var(--sidebar-border)] bg-[var(--surface)]">
-				<div class="flex-1 px-4 pb-8 { $page.url.pathname.startsWith('/auth') ? 'pt-6' : 'pt-16 md:px-6 md:pt-6' }">
-					{@render children()}
+		{#if $page.url.pathname.startsWith('/welcome')}
+			<div class="w-full">
+				{@render children()}
+			</div>
+		{:else if $page.url.pathname.startsWith('/auth') || $page.url.pathname === '/blocked'}
+			<div class="mx-auto max-w-md px-4 pb-8 pt-10">
+				<div class="content-area flex flex-1 flex-col rounded-xl border border-[var(--sidebar-border)] bg-[var(--surface)]">
+					<div class="flex-1 px-4 pb-8 pt-6">
+						{@render children()}
+					</div>
 				</div>
 			</div>
-		</div>
+		{:else}
+			<div class="mx-2 pt-2 mb-4 md:mx-4 md:pt-4 md:mb-4 flex min-h-[calc(100vh-2rem)] flex-col md:min-h-[calc(100vh-3rem)]">
+				<div class="content-area flex flex-1 flex-col rounded-xl border border-[var(--sidebar-border)] bg-[var(--surface)]">
+					<div class="flex-1 px-4 pb-8 pt-16 md:px-6 md:pt-6">
+						{@render children()}
+					</div>
+				</div>
+			</div>
+		{/if}
 	</main>
 </div>

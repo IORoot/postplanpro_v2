@@ -215,4 +215,14 @@ CREATE TABLE IF NOT EXISTS post_stage (
   UNIQUE(post_id, stage)
 );
 CREATE INDEX IF NOT EXISTS idx_post_stage_post ON post_stage(post_id);
+
+-- Monthly usage per account (callback_inputs and import_operations; posts sent derived from post table)
+CREATE TABLE IF NOT EXISTS usage_month (
+  account_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  month TEXT NOT NULL,
+  callback_inputs INTEGER NOT NULL DEFAULT 0,
+  import_operations INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (account_id, month)
+);
+CREATE INDEX IF NOT EXISTS idx_usage_month_account ON usage_month(account_id);
 `;
