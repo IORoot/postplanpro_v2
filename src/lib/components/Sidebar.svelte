@@ -60,6 +60,15 @@
 		return `${y}-${m}-${d}`;
 	}
 
+	function isMiniToday(date: Date): boolean {
+		const t = new Date();
+		return (
+			date.getFullYear() === t.getFullYear() &&
+			date.getMonth() === t.getMonth() &&
+			date.getDate() === t.getDate()
+		);
+	}
+
 	function miniMonthGrid(): Array<{ date: Date; inMonth: boolean; hasPost: boolean; count: number }> {
 		const anchor = new Date(miniYear, miniMonth, 1);
 		const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
@@ -173,8 +182,9 @@
 					{#each miniMonthGrid() as cell}
 						<a
 							href={`/calendar?view=day&date=${localDateKey(cell.date)}`}
-							class="relative flex h-7 items-center justify-center rounded text-[11px] {cell.inMonth ? 'text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)]' : 'text-[var(--sidebar-text-muted)] opacity-50 hover:bg-[var(--sidebar-hover)]'}"
+							class="relative flex h-7 items-center justify-center rounded text-[11px] {cell.inMonth ? 'text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)]' : 'text-[var(--sidebar-text-muted)] opacity-50 hover:bg-[var(--sidebar-hover)]'} {isMiniToday(cell.date) ? 'sidebar-mini-calendar-today' : ''}"
 							title={cell.count > 0 ? `${cell.count} post(s)` : undefined}
+							aria-current={isMiniToday(cell.date) ? 'date' : undefined}
 							onclick={closeSidebar}
 						>
 							{cell.date.getDate()}

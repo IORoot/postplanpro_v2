@@ -176,3 +176,8 @@ body {
   background-color: var(--primary);
   color: white;
 }
+
+/* Sidebar mini calendar: subtle today outline (inset keeps cell size stable) */
+.sidebar-mini-calendar-today {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 45%, transparent);
+}

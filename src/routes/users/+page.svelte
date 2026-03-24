@@ -37,6 +37,9 @@
 {#if form?.updated}
 	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-success">User updated.</p>
 {/if}
+{#if form?.removed}
+	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-success">User removed and all their content deleted.</p>
+{/if}
 
 <div class="mt-6 overflow-x-auto">
 	<table class="w-full border-collapse border border-[var(--border)] rounded-lg overflow-hidden">
@@ -108,7 +111,7 @@
 					<td class="border border-[var(--border)] px-4 py-3 text-sm text-[var(--text-muted)]">
 						{user.usage.importOperations}
 					</td>
-					<td class="border border-[var(--border)] px-4 py-3">
+					<td class="border border-[var(--border)] px-4 py-3 flex flex-wrap items-center gap-2">
 						{#if editingId !== user.id}
 							<button
 								type="button"
@@ -117,6 +120,25 @@
 							>
 								Change tier
 							</button>
+							<form
+								method="POST"
+								action="?/removeUser"
+								use:enhance={({ cancel }) => {
+									if (!confirm(`Remove ${user.email ?? user.name ?? user.id}? This deletes the user and all their posts, schedules, webhooks, and other data.`)) {
+										cancel();
+									}
+									return () => invalidateAll();
+								}}
+								class="inline"
+							>
+								<input type="hidden" name="user_id" value={user.id} />
+								<button
+									type="submit"
+									class="rounded border border-red-500/50 bg-transparent px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+								>
+									Remove
+								</button>
+							</form>
 						{/if}
 					</td>
 				</tr>
