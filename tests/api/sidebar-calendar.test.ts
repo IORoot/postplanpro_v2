@@ -7,7 +7,7 @@ import { getDatabase } from '$lib/db/index.js';
 import { setTestDatabasePath, seedCallbackTestData, TEST_USER_ID } from '../helpers/testDb.js';
 
 beforeAll(() => {
-	setTestDatabasePath();
+	setTestDatabasePath('sidebar-calendar');
 	getDatabase();
 	seedCallbackTestData();
 });

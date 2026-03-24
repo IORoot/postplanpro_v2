@@ -6,12 +6,16 @@ import { schema } from './schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const dbPath = process.env.DATABASE_PATH ?? path.join(process.cwd(), 'data', 'postplan.db');
-
 let db: Database.Database | null = null;
+
+function resolveDbPath(): string {
+	const fromEnv = process.env.DATABASE_PATH?.trim();
+	return fromEnv && fromEnv.length > 0 ? fromEnv : path.join(process.cwd(), 'data', 'postplan.db');
+}
 
 function getDb(): Database.Database {
 	if (!db) {
+		const dbPath = resolveDbPath();
 		const dir = path.dirname(dbPath);
 		if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 		db = new Database(dbPath);
@@ -193,6 +197,14 @@ function getDb(): Database.Database {
 /** Use in server load/actions only. Returns the singleton DB instance. */
 export function getDatabase(): Database.Database {
 	return getDb();
+}
+
+/** Test-only: close singleton so a new DATABASE_PATH can open a fresh file. */
+export function closeDatabaseForTesting(): void {
+	if (db) {
+		db.close();
+		db = null;
+	}
 }
 
 export type WebhookConfig = {

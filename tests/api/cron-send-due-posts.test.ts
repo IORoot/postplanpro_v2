@@ -14,7 +14,7 @@ vi.mock('$env/dynamic/private', () => ({
 const { GET } = await import('../../src/routes/api/cron/send-due-posts/+server');
 
 beforeAll(() => {
-	setTestDatabasePath();
+	setTestDatabasePath('cron-send-due-posts');
 	getDatabase();
 	seedCallbackTestData();
 });

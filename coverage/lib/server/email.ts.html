@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/16</span>
+                <span class='fraction'>16/16</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">83.33% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/12</span>
+                <span class='fraction'>10/12</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/2</span>
+                <span class='fraction'>2/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/15</span>
+                <span class='fraction'>15/15</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -114,13 +114,13 @@
 <a name='L49'></a><a href='#L49'>49</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -129,31 +129,31 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -161,49 +161,49 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import nodemailer from 'nodemailer';
 &nbsp;
-function <span class="fstat-no" title="function not covered" >getSmtpConfig() {</span>
-	const host = <span class="cstat-no" title="statement not covered" >process.env.SMTP_HOST;</span>
-	const port = <span class="cstat-no" title="statement not covered" >Number(process.env.SMTP_PORT ?? '587');</span>
-	const user = <span class="cstat-no" title="statement not covered" >process.env.SMTP_USER;</span>
-	const pass = <span class="cstat-no" title="statement not covered" >process.env.SMTP_PASS;</span>
-	const from = <span class="cstat-no" title="statement not covered" >process.env.SMTP_FROM;</span>
-<span class="cstat-no" title="statement not covered" >	if (!host || !user || !pass || !from) <span class="cstat-no" title="statement not covered" >return null;</span></span>
-<span class="cstat-no" title="statement not covered" >	return { host, port, user, pass, from };</span>
+function getSmtpConfig() {
+	const host = process.env.SMTP_HOST;
+	const port = Number(process.env.SMTP_PORT ?? <span class="branch-1 cbranch-no" title="branch not covered" >'587')</span>;
+	const user = process.env.SMTP_USER;
+	const pass = process.env.SMTP_PASS;
+	const from = process.env.SMTP_FROM;
+	if (!host || !user || !pass || !from) return null;
+	return { host, port, user, pass, from };
 }
 &nbsp;
-export async function <span class="fstat-no" title="function not covered" >sendAuthEmail(i</span>nput: {
+export async function sendAuthEmail(input: {
 	to: string;
 	subject: string;
 	text: string;
 	html: string;
 }): Promise&lt;{ ok: true } | { ok: false; error: string }&gt; {
-	const smtp = <span class="cstat-no" title="statement not covered" >getSmtpConfig();</span>
-<span class="cstat-no" title="statement not covered" >	if (!smtp) {</span>
-<span class="cstat-no" title="statement not covered" >		return {</span>
+	const smtp = getSmtpConfig();
+	if (!smtp) {
+		return {
 			ok: false,
 			error:
 				'SMTP is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and SMTP_FROM.'
 		};
 	}
-<span class="cstat-no" title="statement not covered" >	try {</span>
-		const transporter = <span class="cstat-no" title="statement not covered" >nodemailer.createTransport({</span>
+	try {
+		const transporter = nodemailer.createTransport({
 			host: smtp.host,
 			port: smtp.port,
 			secure: smtp.port === 465,
 			auth: { user: smtp.user, pass: smtp.pass }
 		});
-<span class="cstat-no" title="statement not covered" >		await transporter.sendMail({</span>
+		await transporter.sendMail({
 			from: smtp.from,
 			to: input.to,
 			subject: input.subject,
 			text: input.text,
 			html: input.html
 		});
-<span class="cstat-no" title="statement not covered" >		return { ok: true };</span>
+		return { ok: true };
 	} catch (error) {
-<span class="cstat-no" title="statement not covered" >		return {</span>
+		return {
 			ok: false,
-			error: error instanceof Error ? error.message : 'Failed to send email.'
+			error: error instanceof Error ? error.message : <span class="branch-1 cbranch-no" title="branch not covered" >'Failed to send email.'</span>
 		};
 	}
 }
@@ -214,7 +214,7 @@ export async function <span class="fstat-no" title="function not covered" >sendA
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-01T08:31:49.691Z
+                at 2026-03-24T14:55:12.170Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

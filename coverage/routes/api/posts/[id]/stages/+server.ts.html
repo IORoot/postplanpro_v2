@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/10</span>
+                <span class='fraction'>10/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/4</span>
+                <span class='fraction'>4/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>1/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/8</span>
+                <span class='fraction'>8/8</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -87,41 +87,41 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { getDatabase } from '$lib/db/index.js';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 &nbsp;
-export const GET: RequestHandler = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >async ({</span> params, locals }) =&gt; {</span>
-	const accountId = <span class="cstat-no" title="statement not covered" >locals.userId;</span>
-<span class="cstat-no" title="statement not covered" >	if (!accountId) <span class="cstat-no" title="statement not covered" >return json({ error: 'Unauthorized' }, { status: 401 });</span></span>
+export const GET: RequestHandler = async ({ params, locals }) =&gt; {
+	const accountId = locals.userId;
+	if (!accountId) return json({ error: 'Unauthorized' }, { status: 401 });
 &nbsp;
-	const <span class="cstat-no" title="statement not covered" >db = getDatabase();</span>
-	const post = <span class="cstat-no" title="statement not covered" >db</span>
+	const db = getDatabase();
+	const post = db
 		.prepare('SELECT id FROM post WHERE id = ? AND account_id = ?')
 		.get(params.id, accountId) as { id: string } | undefined;
-<span class="cstat-no" title="statement not covered" >	if (!post) <span class="cstat-no" title="statement not covered" >return json({ error: 'Post not found' }, { status: 404 });</span></span>
+	if (!post) return json({ error: 'Post not found' }, { status: 404 });
 &nbsp;
-	const stages = <span class="cstat-no" title="statement not covered" >db</span>
+	const stages = db
 		.prepare('SELECT stage, status, completed_at FROM post_stage WHERE post_id = ? ORDER BY completed_at')
 		.all(params.id) as { stage: string; status: string; completed_at: string }[];
 &nbsp;
-<span class="cstat-no" title="statement not covered" >	return json({ stages });</span>
+	return json({ stages });
 };
 &nbsp;</pre></td></tr></table></pre>
 
@@ -130,7 +130,7 @@ export const GET: RequestHandler = <span class="cstat-no" title="statement not c
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-01T08:31:49.691Z
+                at 2026-03-24T14:55:12.170Z
             </div>
         <script src="../../../../../prettify.js"></script>
         <script>
