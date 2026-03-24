@@ -15,6 +15,9 @@ Thumbs.db
 # Data
 /data
 
+# Test SQLite files (Vitest / Playwright)
+.tmp
+
 # Env
 .env
 .env.*

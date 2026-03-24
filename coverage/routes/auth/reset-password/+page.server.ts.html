@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">93.75% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/16</span>
+                <span class='fraction'>15/16</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">64.28% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/14</span>
+                <span class='fraction'>9/14</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/2</span>
+                <span class='fraction'>2/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/14</span>
+                <span class='fraction'>14/14</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -91,48 +91,48 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { fail, redirect } from '@sveltejs/kit';
 import { resetPasswordWithToken } from '../../../auth.js';
 import type { Actions, PageServerLoad } from './$types';
 &nbsp;
-export const load: PageServerLoad = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >async ({</span> url }) =&gt; {</span>
-	const token = <span class="cstat-no" title="statement not covered" >url.searchParams.get('token') ?? '';</span>
-<span class="cstat-no" title="statement not covered" >	return { token };</span>
+export const load: PageServerLoad = async ({ url }) =&gt; {
+	const token = url.searchParams.get('token') ?? <span class="branch-1 cbranch-no" title="branch not covered" >'';</span>
+	return { token };
 };
 &nbsp;
-export const actions: Actions = <span class="cstat-no" title="statement not covered" >{</span>
-	reset: <span class="fstat-no" title="function not covered" >async ({</span> request }) =&gt; {
-		const data = <span class="cstat-no" title="statement not covered" >await request.formData();</span>
-		const token = <span class="cstat-no" title="statement not covered" >String(data.get('token') ?? '');</span>
-		const password = <span class="cstat-no" title="statement not covered" >String(data.get('password') ?? '');</span>
-		const confirmPassword = <span class="cstat-no" title="statement not covered" >String(data.get('confirmPassword') ?? '');</span>
-<span class="cstat-no" title="statement not covered" >		if (!token) <span class="cstat-no" title="statement not covered" >return fail(400, { error: 'Missing token.' });</span></span>
-<span class="cstat-no" title="statement not covered" >		if (password !== confirmPassword) {</span>
-<span class="cstat-no" title="statement not covered" >			return fail(400, { error: 'Passwords do not match.', token });</span>
+export const actions: Actions = {
+	reset: async ({ request }) =&gt; {
+		const data = await request.formData();
+		const token = String(data.get('token') ?? <span class="branch-1 cbranch-no" title="branch not covered" >'')</span>;
+		const password = String(data.get('password') ?? <span class="branch-1 cbranch-no" title="branch not covered" >'')</span>;
+		const confirmPassword = String(data.get('confirmPassword') ?? <span class="branch-1 cbranch-no" title="branch not covered" >'')</span>;
+		<span class="missing-if-branch" title="if path not taken" >I</span>if (!token) <span class="cstat-no" title="statement not covered" >return fail(400, { error: 'Missing token.' });</span>
+		if (password !== confirmPassword) {
+			return fail(400, { error: 'Passwords do not match.', token });
 		}
-		const <span class="cstat-no" title="statement not covered" >result = resetPasswordWithToken({ token, password });</span>
-<span class="cstat-no" title="statement not covered" >		if (!result.ok) <span class="cstat-no" title="statement not covered" >return fail(400, { error: result.error, token });</span></span>
-<span class="cstat-no" title="statement not covered" >		throw redirect(303, '/auth/login?passwordReset=1');</span>
+		const result = resetPasswordWithToken({ token, password });
+		if (!result.ok) return fail(400, { error: result.error, token });
+		throw redirect(303, '/auth/login?passwordReset=1');
 	}
 };
 &nbsp;</pre></td></tr></table></pre>
@@ -142,7 +142,7 @@ export const actions: Actions = <span class="cstat-no" title="statement not cove
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-01T08:31:49.691Z
+                at 2026-03-24T14:55:12.170Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

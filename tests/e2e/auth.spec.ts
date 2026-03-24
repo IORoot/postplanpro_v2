@@ -24,9 +24,29 @@ test.describe('Auth', () => {
 	});
 
 	test('protected paths redirect to welcome when unauthenticated', async ({ page }) => {
-		for (const path of ['/posts', '/calendar', '/schedules', '/settings', '/bulk-create']) {
+		for (const path of ['/posts', '/calendar', '/schedules', '/settings', '/bulk-create', '/reports', '/account']) {
 			await page.goto(path);
 			await expect(page).toHaveURL(/\/welcome/);
 		}
+	});
+
+	test('admin path redirects when unauthenticated', async ({ page }) => {
+		await page.goto('/users');
+		await expect(page).toHaveURL(/\/welcome/);
+	});
+});
+
+test.describe('Login UI', () => {
+	test('wrong password shows sign-in error', async ({ page }) => {
+		await page.goto('/auth/login');
+		await page.getByLabel(/email/i).fill('e2e@postplan.test');
+		await page.getByLabel(/^password$/i).fill('WrongPassword1!');
+		await page.getByRole('button', { name: 'Sign in with email' }).click();
+		await expect(page.getByText(/invalid email or password|not verified/i)).toBeVisible({ timeout: 15_000 });
+	});
+
+	test('OAuth section heading is visible', async ({ page }) => {
+		await page.goto('/auth/login');
+		await expect(page.getByRole('heading', { name: /social/i })).toBeVisible();
 	});
 });

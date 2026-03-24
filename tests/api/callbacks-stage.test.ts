@@ -15,7 +15,7 @@ import {
 } from '../helpers/testDb.js';
 
 beforeAll(() => {
-	setTestDatabasePath();
+	setTestDatabasePath('callbacks-stage');
 	getDatabase();
 	seedCallbackTestData();
 	seedPostForStage();

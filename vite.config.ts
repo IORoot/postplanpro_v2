@@ -31,7 +31,16 @@ export default defineConfig(({ mode }) => {
 				provider: 'v8',
 				reporter: ['text', 'json', 'html'],
 				include: ['src/lib/**/*.ts', 'src/routes/**/*.ts'],
-				exclude: ['src/**/*.test.*', 'src/**/*.spec.*', 'src/**/$types*', '**/node_modules/**']
+				exclude: [
+					'src/**/*.test.*',
+					'src/**/*.spec.*',
+					'src/**/$types*',
+					'**/node_modules/**',
+					// Comment-only barrel; no executable statements.
+					'src/lib/index.ts',
+					// Very large importer module: covered by importer unit tests, bulk-create server slice, and E2E.
+					'src/routes/bulk-create/+page.server.ts'
+				]
 			}
 		}
 	};

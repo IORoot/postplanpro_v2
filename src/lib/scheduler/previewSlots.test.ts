@@ -64,6 +64,41 @@ describe('previewSlots', () => {
 			const slots = previewSlotsForRule(rule, from, 7);
 			expect(slots.length).toBeGreaterThanOrEqual(1);
 		});
+
+		it('monthly rule produces slots', () => {
+			const from = new Date('2025-03-01T00:00:00Z');
+			const rule: PreviewRule = {
+				type: 'monthly',
+				config: { dayOfMonth: 10, time: '12:00' },
+				start_at: null,
+				end_at: null
+			};
+			const slots = previewSlotsForRule(rule, from, 60);
+			expect(slots.length).toBeGreaterThanOrEqual(1);
+		});
+
+		it('yearly rule produces slots', () => {
+			const from = new Date('2025-03-01T00:00:00Z');
+			const rule: PreviewRule = {
+				type: 'yearly',
+				config: { month: 7, dayOfMonth: 4, time: '09:30' },
+				start_at: null,
+				end_at: null
+			};
+			const slots = previewSlotsForRule(rule, from, 400);
+			expect(slots.length).toBeGreaterThanOrEqual(1);
+		});
+
+		it('unknown rule type yields no slots', () => {
+			const from = new Date('2025-03-01T00:00:00Z');
+			const rule: PreviewRule = {
+				type: 'unknown_type',
+				config: {},
+				start_at: null,
+				end_at: null
+			};
+			expect(previewSlotsForRule(rule, from, 7)).toHaveLength(0);
+		});
 	});
 
 	describe('previewSlotsForRules', () => {
