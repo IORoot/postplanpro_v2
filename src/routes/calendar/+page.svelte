@@ -682,8 +682,8 @@
 					<div class="mt-2 space-y-1">
 						{#each postsForDay(cell.date) as post (post.id)}
 							<div
-								class="rounded-lg px-2 py-2 cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
-								style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}
+								class="calendar-post-accent rounded-lg px-2 py-2 cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
+								style={`background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? '#ffffff'};`}
 								role="button"
 								tabindex="-1"
 								aria-label="Drag to reschedule"
@@ -814,8 +814,8 @@
 
 							{#each weekPostsForDay(d) as post (post.id)}
 								<div
-									class="absolute left-1 right-1 rounded-lg px-2 py-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
-									style={`top: ${weekPostTopPx(post.scheduled_at)}px; height: ${WEEK_POST_HEIGHT_PX}px; background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}
+									class="calendar-post-accent absolute left-1 right-1 rounded-lg px-2 py-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
+									style={`top: ${weekPostTopPx(post.scheduled_at)}px; height: ${WEEK_POST_HEIGHT_PX}px; background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? '#ffffff'};`}
 									role="button"
 									tabindex="-1"
 									aria-label="Drag to reschedule"
@@ -941,8 +941,8 @@
 						>
 							{#each postsAtHour(hour) as post (post.id)}
 								<div
-									class="min-w-0 max-w-sm flex-[1_1_240px] rounded-lg p-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
-									style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#e5e7eb'};`}
+									class="calendar-post-accent min-w-0 max-w-sm flex-[1_1_240px] rounded-lg p-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
+									style={`background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? 'var(--border)'};`}
 									role="button"
 									tabindex="-1"
 									aria-label="Drag to reschedule"
@@ -1029,8 +1029,8 @@
 							{#each postsToShow as post (post.id)}
 								<a
 									href={"/posts/" + post.id}
-									class="block truncate rounded-md px-2 py-1 text-xs text-[var(--text)] hover:underline cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
-									style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}
+									class="calendar-post-accent block truncate rounded-md px-2 py-1 text-xs text-[var(--text)] hover:underline cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
+									style={`background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? '#ffffff'};`}
 									draggable={true}
 									ondragstart={(e) => handleDragStart(e, post)}
 									ondragend={handleDragEnd}
@@ -1062,7 +1062,10 @@
 				{#each posts as post (post.id)}
 					{@const postDate = new Date(post.scheduled_at)}
 					{@const isPostToday = isToday(postDate)}
-					<div class="rounded-lg p-2 {isPostToday ? 'calendar-today' : ''}" style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}>
+					<div
+						class="calendar-post-accent rounded-lg p-2 {isPostToday ? 'calendar-today' : ''}"
+						style={`background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? '#ffffff'};`}
+					>
 						<div class="flex items-center gap-2">
 							{#if post.image_url}
 								<img src={post.image_url} alt={"Preview for " + post.title} class="h-8 w-8 rounded object-cover border border-[var(--border)]" loading="lazy" />

@@ -18,8 +18,10 @@
   --sidebar-text-muted: #b0b0a5;
   --sidebar-active-bg: #005f78; /* Primary */
   --sidebar-active-text: #f4f4f0;
-  --sidebar-active-gradient: linear-gradient(135deg, #005f78 0%, #007a94 50%, #005f78 100%);
-  --sidebar-hover: rgba(244, 244, 240, 0.06);
+	--sidebar-active-gradient: linear-gradient(135deg, #005f78 0%, #007a94 50%, #005f78 100%);
+	--sidebar-hover: rgba(244, 244, 240, 0.06);
+	/* Post markers on mini calendar: derived from primary + sidebar text (no off-palette accents) */
+	--sidebar-calendar-marker: color-mix(in srgb, var(--sidebar-active-bg) 68%, var(--sidebar-text));
 }
 
 .sidebar {
@@ -179,5 +181,24 @@ body {
 
 /* Sidebar mini calendar: subtle today outline (inset keeps cell size stable) */
 .sidebar-mini-calendar-today {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 45%, transparent);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+
+/* Calendar post chips: consistent accent width (color still comes from post.color inline) */
+.calendar-post-accent {
+	border-left-width: 3px;
+	border-left-style: solid;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html:focus-within {
+		scroll-behavior: auto;
+	}
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+	}
 }

@@ -189,7 +189,11 @@
 						>
 							{cell.date.getDate()}
 							{#if cell.hasPost}
-								<span class="absolute bottom-0.5 h-1.5 w-1.5 rounded-full bg-violet-300"></span>
+								<span
+									class="absolute bottom-0.5 h-1.5 w-1.5 rounded-full"
+									style="background-color: var(--sidebar-calendar-marker)"
+									aria-hidden="true"
+								></span>
 							{/if}
 						</a>
 					{/each}

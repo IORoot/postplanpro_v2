@@ -18,7 +18,9 @@
 
 <div class="space-y-8">
 	<!-- Workflow diagram -->
-	<div class="w-full overflow-hidden rounded-xl bg-[var(--surface)] px-40 py-12">
+	<div
+		class="w-full overflow-hidden rounded-xl bg-[var(--surface)] px-4 py-8 sm:px-8 sm:py-10 md:px-12 lg:px-16 xl:px-24 2xl:px-32"
+	>
 		<img
 			src="/workflow.svg"
 			alt="PostPlanPro workflow: import from various sources into Manager, Importer, Scheduler, Publisher; publish to APIs and integrations"
