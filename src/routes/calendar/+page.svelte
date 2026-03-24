@@ -922,31 +922,26 @@
 				{/each}
 			</div>
 		</div>
-		<div class="overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--surface)]">
-			<div
-				class="grid w-max min-w-full"
-				style="grid-template-columns: repeat(24, minmax(0, 250px));"
-			>
-				<!-- Hour header row -->
+		{#if dayViewPosts().length === 0}
+			<p class="mb-3 text-sm text-[var(--text-muted)]">No posts scheduled for this day.</p>
+		{/if}
+		<div class="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+			<div class="divide-y divide-[var(--border)]">
 				{#each weekHours as hour}
-					<div class="border-b border-r border-[var(--border)] bg-[var(--bg)] px-1 py-2 text-center text-xs font-medium text-[var(--text-muted)] last:border-r-0">
-						{formatHourLabel(hour)}
-					</div>
-				{/each}
-				<!-- One row per post: 24 cells, post placed in the column matching its scheduled hour -->
-				{#each dayViewPosts() as post (post.id)}
-					{@const postHour = new Date(post.scheduled_at).getHours()}
-					{#each weekHours as hour}
+					<div class="grid min-h-[72px] grid-cols-[72px_1fr] bg-[var(--bg)]">
+						<div class="flex items-start justify-end border-r border-[var(--border)] bg-[var(--surface)] px-2 py-3">
+							<span class="text-right text-xs font-medium text-[var(--text-muted)]">{formatHourLabel(hour)}</span>
+						</div>
 						<div
-							class="min-h-[72px] border-b border-r border-[var(--border)] p-1 last:border-r-0"
+							class="flex flex-wrap content-start gap-2 p-2"
 							role="group"
 							aria-label="Drop to reschedule"
 							ondragover={(e) => dayDragOver(e, hour)}
 							ondrop={(e) => dayDrop(e, hour)}
 						>
-							{#if hour === postHour}
+							{#each postsAtHour(hour) as post (post.id)}
 								<div
-									class="h-full rounded-lg p-2 shadow-sm cursor-grab active:cursor-grabbing min-w-0 {dragPostId === post.id ? 'opacity-50' : ''}"
+									class="min-w-0 max-w-sm flex-[1_1_240px] rounded-lg p-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
 									style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#e5e7eb'};`}
 									role="button"
 									tabindex="-1"
@@ -957,7 +952,7 @@
 								>
 									<div class="flex min-w-0 flex-col gap-1">
 										{#if post.image_url}
-											<img src={post.image_url} alt="" class="h-8 w-8 shrink-0 rounded object-cover border border-[var(--border)]" loading="lazy" />
+											<img src={post.image_url} alt="" class="h-8 w-8 shrink-0 rounded border border-[var(--border)] object-cover" loading="lazy" />
 										{/if}
 										<a href={"/posts/" + post.id} class="break-words text-sm font-medium text-[var(--text)] hover:underline" title={post.title}>{post.title}</a>
 										<p class="break-words text-[10px] text-[var(--text-muted)]">{formatTime(post.scheduled_at)} · {post.webhook_name}</p>
@@ -974,14 +969,11 @@
 										</div>
 									</div>
 								</div>
-							{/if}
+							{/each}
 						</div>
-					{/each}
+					</div>
 				{/each}
 			</div>
-			{#if dayViewPosts().length === 0}
-				<p class="p-4 text-sm text-[var(--text-muted)]">No posts scheduled for this day.</p>
-			{/if}
 		</div>
 	</div>
 {:else if view === 'year'}

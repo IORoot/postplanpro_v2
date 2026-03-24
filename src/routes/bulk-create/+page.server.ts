@@ -1,6 +1,14 @@
 import { getDatabase } from '$lib/db/index.js';
 import { setPostWebhooks } from '$lib/db/postWebhooks.js';
 import { generateSlots } from '$lib/scheduler/generateSlots.js';
+import {
+	currentMonthKey,
+	canRunImportOperation,
+	incrementUsageMonth,
+	getPostsSentAndScheduledForMonth,
+	monthKeyFromDate
+} from '$lib/usage.js';
+import { getTierLimits } from '$lib/tiers.js';
 import Parser from 'rss-parser';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -612,6 +620,12 @@ export const actions: Actions = {
 		}
 
 		const db = getDatabase();
+		const tierRow = db.prepare('SELECT tier FROM user WHERE id = ?').get(accountId) as { tier: string } | undefined;
+		const tier = tierRow?.tier ?? 'free';
+		const month = currentMonthKey();
+		const importCheck = canRunImportOperation(db, accountId, month, tier);
+		if (!importCheck.allowed) return fail(403, { error: importCheck.reason ?? 'Import limit exceeded for this month.' });
+
 		for (const wid of webhookIds) {
 			const webhook = db
 				.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
@@ -681,6 +695,8 @@ export const actions: Actions = {
 		}
 
 		// Optionally apply schedule to all created posts
+		const limits = getTierLimits(tier);
+		const postsPerMonthInBatch = new Map<string, number>();
 		if (scheduleId && createdIds.length > 0) {
 			const scheduleRow = db.prepare('SELECT color FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { color: string | null } | undefined;
 			const scheduleColor = scheduleRow?.color ?? null;
@@ -704,6 +720,19 @@ export const actions: Actions = {
 				const slot = slotDatetimes[i];
 				const status = importStatus === 'scheduled' && slot ? 'scheduled' : 'draft';
 				if (slot) {
+					if (limits.postsSentPerMonth != null) {
+						const slotMonth = monthKeyFromDate(slot);
+						if (slotMonth) {
+							const { sent, scheduled } = getPostsSentAndScheduledForMonth(db, accountId, slotMonth);
+							const batchInMonth = postsPerMonthInBatch.get(slotMonth) ?? 0;
+							if (sent + scheduled + batchInMonth + 1 > limits.postsSentPerMonth) {
+								return fail(403, {
+									error: `Post limit for ${slotMonth} (${limits.postsSentPerMonth}) would be exceeded.`
+								});
+							}
+							postsPerMonthInBatch.set(slotMonth, batchInMonth + 1);
+						}
+					}
 					setScheduleAndSlot.run(slot, scheduleId, status, scheduleColor, postId, accountId);
 				} else {
 					setScheduleOnly.run(scheduleId, scheduleColor, status, postId, accountId);
@@ -715,6 +744,7 @@ export const actions: Actions = {
 			}
 		}
 
+		incrementUsageMonth(db, accountId, month, { importOperations: 1 });
 		throw redirect(303, `/posts?imported=${createdIds.length}`);
 	},
 	importFromSquarespace: async ({ request, locals }) => {
@@ -773,6 +803,12 @@ export const actions: Actions = {
 		}
 
 		const db = getDatabase();
+		const tierRow = db.prepare('SELECT tier FROM user WHERE id = ?').get(accountId) as { tier: string } | undefined;
+		const tier = tierRow?.tier ?? 'free';
+		const month = currentMonthKey();
+		const importCheck = canRunImportOperation(db, accountId, month, tier);
+		if (!importCheck.allowed) return fail(403, { error: importCheck.reason ?? 'Import limit exceeded for this month.' });
+
 		for (const wid of webhookIds) {
 			const webhook = db
 				.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
@@ -831,6 +867,8 @@ export const actions: Actions = {
 			setPostWebhooks(db, postId, accountId, webhookIds);
 		}
 
+		const limitsSq = getTierLimits(tier);
+		const postsPerMonthSq = new Map<string, number>();
 		if (scheduleId && createdIds.length > 0) {
 			const scheduleRow = db.prepare('SELECT color FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { color: string | null } | undefined;
 			const scheduleColor = scheduleRow?.color ?? null;
@@ -854,6 +892,19 @@ export const actions: Actions = {
 				const slot = slotDatetimes[i];
 				const status = importStatus === 'scheduled' && slot ? 'scheduled' : 'draft';
 				if (slot) {
+					if (limitsSq.postsSentPerMonth != null) {
+						const slotMonth = monthKeyFromDate(slot);
+						if (slotMonth) {
+							const { sent, scheduled } = getPostsSentAndScheduledForMonth(db, accountId, slotMonth);
+							const batchInMonth = postsPerMonthSq.get(slotMonth) ?? 0;
+							if (sent + scheduled + batchInMonth + 1 > limitsSq.postsSentPerMonth) {
+								return fail(403, {
+									error: `Post limit for ${slotMonth} (${limitsSq.postsSentPerMonth}) would be exceeded.`
+								});
+							}
+							postsPerMonthSq.set(slotMonth, batchInMonth + 1);
+						}
+					}
 					setScheduleAndSlot.run(slot, scheduleId, status, scheduleColor, postId, accountId);
 				} else {
 					setScheduleOnly.run(scheduleId, scheduleColor, status, postId, accountId);
@@ -865,6 +916,7 @@ export const actions: Actions = {
 			}
 		}
 
+		incrementUsageMonth(db, accountId, month, { importOperations: 1 });
 		throw redirect(303, `/posts?imported=${createdIds.length}`);
 	},
 	discoverRss: async ({ request, locals }) => {
@@ -944,6 +996,12 @@ export const actions: Actions = {
 		}
 
 		const db = getDatabase();
+		const tierRowRss = db.prepare('SELECT tier FROM user WHERE id = ?').get(accountId) as { tier: string } | undefined;
+		const tierRss = tierRowRss?.tier ?? 'free';
+		const monthRss = currentMonthKey();
+		const importCheckRss = canRunImportOperation(db, accountId, monthRss, tierRss);
+		if (!importCheckRss.allowed) return fail(403, { error: importCheckRss.reason ?? 'Import limit exceeded for this month.' });
+
 		for (const wid of webhookIds) {
 			const webhook = db
 				.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
@@ -1004,6 +1062,8 @@ export const actions: Actions = {
 			setPostWebhooks(db, postId, accountId, webhookIds);
 		}
 
+		const limitsRss = getTierLimits(tierRss);
+		const postsPerMonthRss = new Map<string, number>();
 		if (scheduleId && createdIds.length > 0) {
 			const scheduleRow = db.prepare('SELECT color FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { color: string | null } | undefined;
 			const scheduleColor = scheduleRow?.color ?? null;
@@ -1027,6 +1087,19 @@ export const actions: Actions = {
 				const slot = slotDatetimes[i];
 				const status = importStatus === 'scheduled' && slot ? 'scheduled' : 'draft';
 				if (slot) {
+					if (limitsRss.postsSentPerMonth != null) {
+						const slotMonth = monthKeyFromDate(slot);
+						if (slotMonth) {
+							const { sent, scheduled } = getPostsSentAndScheduledForMonth(db, accountId, slotMonth);
+							const batchInMonth = postsPerMonthRss.get(slotMonth) ?? 0;
+							if (sent + scheduled + batchInMonth + 1 > limitsRss.postsSentPerMonth) {
+								return fail(403, {
+									error: `Post limit for ${slotMonth} (${limitsRss.postsSentPerMonth}) would be exceeded.`
+								});
+							}
+							postsPerMonthRss.set(slotMonth, batchInMonth + 1);
+						}
+					}
 					setScheduleAndSlot.run(slot, scheduleId, status, scheduleColor, postId, accountId);
 				} else {
 					setScheduleOnly.run(scheduleId, scheduleColor, status, postId, accountId);
@@ -1038,6 +1111,7 @@ export const actions: Actions = {
 			}
 		}
 
+		incrementUsageMonth(db, accountId, monthRss, { importOperations: 1 });
 		throw redirect(303, `/posts?imported=${createdIds.length}`);
 	},
 	importFromCsv: async ({ request, locals }) => {
@@ -1136,6 +1210,12 @@ export const actions: Actions = {
 		const slice = rows.slice(startIndex, endIndex);
 
 		const db = getDatabase();
+		const tierRowCsv = db.prepare('SELECT tier FROM user WHERE id = ?').get(accountId) as { tier: string } | undefined;
+		const tierCsv = tierRowCsv?.tier ?? 'free';
+		const monthCsv = currentMonthKey();
+		const importCheckCsv = canRunImportOperation(db, accountId, monthCsv, tierCsv);
+		if (!importCheckCsv.allowed) return fail(403, { error: importCheckCsv.reason ?? 'Import limit exceeded for this month.', action: 'importFromCsv' });
+
 		for (const wid of webhookIds) {
 			const webhook = db
 				.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
@@ -1203,6 +1283,8 @@ export const actions: Actions = {
 			setPostWebhooks(db, postId, accountId, webhookIds);
 		}
 
+		const limitsCsv = getTierLimits(tierCsv);
+		const postsPerMonthCsv = new Map<string, number>();
 		if (scheduleId && createdIds.length > 0) {
 			const scheduleRow = db.prepare('SELECT color FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { color: string | null } | undefined;
 			const scheduleColor = scheduleRow?.color ?? null;
@@ -1226,6 +1308,20 @@ export const actions: Actions = {
 				const slot = slotDatetimes[i];
 				const status = importStatus === 'scheduled' && slot ? 'scheduled' : 'draft';
 				if (slot) {
+					if (limitsCsv.postsSentPerMonth != null) {
+						const slotMonth = monthKeyFromDate(slot);
+						if (slotMonth) {
+							const { sent, scheduled } = getPostsSentAndScheduledForMonth(db, accountId, slotMonth);
+							const batchInMonth = postsPerMonthCsv.get(slotMonth) ?? 0;
+							if (sent + scheduled + batchInMonth + 1 > limitsCsv.postsSentPerMonth) {
+								return fail(403, {
+									error: `Post limit for ${slotMonth} (${limitsCsv.postsSentPerMonth}) would be exceeded.`,
+									action: 'importFromCsv'
+								});
+							}
+							postsPerMonthCsv.set(slotMonth, batchInMonth + 1);
+						}
+					}
 					setScheduleAndSlot.run(slot, scheduleId, status, scheduleColor, postId, accountId);
 				} else {
 					setScheduleOnly.run(scheduleId, scheduleColor, status, postId, accountId);
@@ -1237,6 +1333,7 @@ export const actions: Actions = {
 			}
 		}
 
+		incrementUsageMonth(db, accountId, monthCsv, { importOperations: 1 });
 		throw redirect(303, `/posts?imported=${createdIds.length}`);
 	}
 };

@@ -2,6 +2,14 @@ import { getDatabase } from '$lib/db/index.js';
 import { setPostWebhooks } from '$lib/db/postWebhooks.js';
 import { getNextFreeSlot } from '$lib/scheduler/generateSlots.js';
 import { DEFAULT_MANUAL_POST_COLOR, normalizePostColor } from '$lib/postColors.js';
+import {
+	currentMonthKey,
+	canUseCallbackImport,
+	incrementUsageMonth,
+	getPostsSentAndScheduledForMonth,
+	monthKeyFromDate
+} from '$lib/usage.js';
+import { getTierLimits } from '$lib/tiers.js';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
@@ -42,12 +50,13 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const db = getDatabase();
 	const user = db
-		.prepare('SELECT id FROM user WHERE callback_token = ?')
-		.get(token) as { id: string } | undefined;
+		.prepare('SELECT id, tier FROM user WHERE callback_token = ?')
+		.get(token) as { id: string; tier: string } | undefined;
 	if (!user) {
 		return json({ error: 'Invalid callback token.' }, { status: 401 });
 	}
 	const accountId = user.id;
+	const tier = user.tier ?? 'free';
 
 	let body: ImportPayload;
 	try {
@@ -58,6 +67,12 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	if (!Array.isArray(body.posts) || body.posts.length === 0) {
 		return json({ error: 'Body must include a non-empty "posts" array.' }, { status: 400 });
+	}
+
+	const month = currentMonthKey();
+	const limitCheck = canUseCallbackImport(db, accountId, month, tier, body.posts.length);
+	if (!limitCheck.allowed) {
+		return json({ error: limitCheck.reason ?? 'Usage limit exceeded for this month.' }, { status: 403 });
 	}
 
 	const posts: ImportPost[] = [];
@@ -114,6 +129,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	);
 
 	const createdIds: string[] = [];
+	const limits = getTierLimits(tier);
+	const postsPerMonthInBatch = new Map<string, number>();
 
 	const tx = db.transaction(() => {
 		for (let i = 0; i < posts.length; i++) {
@@ -227,6 +244,20 @@ export const POST: RequestHandler = async ({ request }) => {
 					if (exists) continue;
 				}
 
+				if (limits.postsSentPerMonth != null && scheduledAt) {
+					const month = monthKeyFromDate(scheduledAt);
+					if (month) {
+						const { sent, scheduled } = getPostsSentAndScheduledForMonth(db, accountId, month);
+						const batchInMonth = postsPerMonthInBatch.get(month) ?? 0;
+						if (sent + scheduled + batchInMonth + 1 > limits.postsSentPerMonth) {
+							throw new Error(
+								`Post limit for ${month} (${limits.postsSentPerMonth}) would be exceeded.`
+							);
+						}
+						postsPerMonthInBatch.set(month, batchInMonth + 1);
+					}
+				}
+
 				const id = crypto.randomUUID();
 				insertPost.run(
 					id,
@@ -270,6 +301,11 @@ export const POST: RequestHandler = async ({ request }) => {
 		const msg = e instanceof Error ? e.message : 'Failed to import posts.';
 		return json({ error: msg }, { status: 400 });
 	}
+
+	incrementUsageMonth(db, accountId, month, {
+		callbackInputs: createdIds.length,
+		importOperations: 1
+	});
 
 	return json({ ok: true, imported: createdIds.length, post_ids: createdIds });
 };

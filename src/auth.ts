@@ -180,14 +180,11 @@ function ensureOAuthUser(input: {
 	if (!userId) {
 		userId = crypto.randomUUID();
 		const email = input.email ? normalizeEmail(input.email) : null;
+		const userCount = db.prepare('SELECT COUNT(*) as n FROM user').get() as { n: number };
+		const tier = userCount.n === 0 ? 'admin' : 'free';
 		db.prepare(
-			"INSERT INTO user (id, email, name, image, password_hash, email_verified_at, created_at) VALUES (?, ?, ?, ?, NULL, datetime('now'), datetime('now'))"
-		).run(
-			userId,
-			email,
-			input.name ?? null,
-			input.image ?? null
-		);
+			"INSERT INTO user (id, email, name, image, password_hash, email_verified_at, created_at, tier) VALUES (?, ?, ?, ?, NULL, datetime('now'), datetime('now'), ?)"
+		).run(userId, email, input.name ?? null, input.image ?? null, tier);
 	} else {
 		db.prepare(
 			'UPDATE user SET name = COALESCE(?, name), image = COALESCE(?, image) WHERE id = ?'
@@ -219,9 +216,11 @@ export function registerWithEmailPassword(input: {
 
 	const userId = crypto.randomUUID();
 	const passwordHash = hashPassword(password);
+	const userCount = db.prepare('SELECT COUNT(*) as n FROM user').get() as { n: number };
+	const tier = userCount.n === 0 ? 'admin' : 'free';
 	db.prepare(
-		"INSERT INTO user (id, email, name, image, password_hash, email_verified_at, created_at) VALUES (?, ?, ?, NULL, ?, NULL, datetime('now'))"
-	).run(userId, email, input.name?.trim() || null, passwordHash);
+		"INSERT INTO user (id, email, name, image, password_hash, email_verified_at, created_at, tier) VALUES (?, ?, ?, NULL, ?, NULL, datetime('now'), ?)"
+	).run(userId, email, input.name?.trim() || null, passwordHash, tier);
 	return { ok: true, userId, email };
 }
 

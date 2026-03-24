@@ -2,6 +2,8 @@ import { getDatabase } from '$lib/db/index.js';
 import { setPostWebhooks } from '$lib/db/postWebhooks.js';
 import { normalizePostColor, DEFAULT_MANUAL_POST_COLOR } from '$lib/postColors.js';
 import { getNextFreeSlot } from '$lib/scheduler/generateSlots.js';
+import { canSchedulePostInMonth } from '$lib/usage.js';
+import { monthKeyFromDate } from '$lib/usage.js';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -87,6 +89,15 @@ export const actions: Actions = {
 				.get(schedule_id, accountId) as { id: string; color: string | null } | undefined;
 			if (!scheduleRow) return fail(400, { error: 'Invalid schedule' });
 			if (scheduleRow.color) color = scheduleRow.color;
+		}
+		const tierRow = db.prepare('SELECT tier FROM user WHERE id = ?').get(accountId) as { tier: string } | undefined;
+		const tier = tierRow?.tier ?? 'free';
+		if (scheduled_at) {
+			const month = monthKeyFromDate(scheduled_at);
+			if (month) {
+				const check = canSchedulePostInMonth(db, accountId, month, tier);
+				if (!check.allowed) return fail(403, { error: check.reason ?? 'Post limit exceeded for this month.' });
+			}
 		}
 		const id = crypto.randomUUID();
 		db.prepare(

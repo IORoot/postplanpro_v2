@@ -56,6 +56,9 @@
 		</div>
 
 		{#if authTab === 'signin'}
+			{#if form?.signinError}
+				<p class="rounded-lg px-3 py-2 text-sm alert-error">{form.signinError}</p>
+			{/if}
 			<form method="POST" action="?/signin" class="space-y-3">
 				<input type="hidden" name="providerId" value="credentials" />
 				<input type="hidden" name="options.redirectTo" value="/calendar" />

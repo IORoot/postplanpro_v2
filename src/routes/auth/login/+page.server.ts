@@ -1,4 +1,5 @@
 import { fail } from '@sveltejs/kit';
+import { CredentialsSignin } from '@auth/sveltekit';
 import {
 	enabledProviders,
 	registerWithEmailPassword,
@@ -19,7 +20,18 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 };
 
 export const actions: Actions = {
-	signin: signIn,
+	signin: async (event) => {
+		try {
+			return await signIn(event);
+		} catch (e) {
+			if (e instanceof CredentialsSignin) {
+				return fail(401, {
+					signinError: 'Invalid email or password, or your email is not verified yet. Check your inbox for the verification link.'
+				});
+			}
+			throw e;
+		}
+	},
 	signout: signOut,
 	register: async ({ request, url }) => {
 		const data = await request.formData();

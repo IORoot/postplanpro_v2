@@ -55,12 +55,88 @@
 {/if}
 
 <div class="mt-6 space-y-8">
+	<!-- Plan & usage -->
+	<section class="content-card rounded-xl p-6 shadow-sm">
+		<h2 class="text-base font-semibold text-[var(--text)]">Plan & usage</h2>
+		<p class="mt-1 text-sm text-[var(--text-muted)]">Your current plan and usage for this month.</p>
+		<dl class="mt-4 space-y-2">
+			<div class="flex justify-between gap-4">
+				<dt class="text-sm text-[var(--text-muted)]">Plan</dt>
+				<dd class="text-sm font-medium text-[var(--text)] capitalize">{data.tier}</dd>
+			</div>
+			<div class="flex justify-between gap-4">
+				<dt class="text-sm text-[var(--text-muted)]">Posts (sent + scheduled) this month</dt>
+				<dd class="text-sm text-[var(--text)]">
+					{data.usage.postsTotal}
+					{#if data.limits.postsSentPerMonth != null}
+						/ {data.limits.postsSentPerMonth}
+					{:else}
+						<span class="text-[var(--text-muted)]">(Unlimited)</span>
+					{/if}
+				</dd>
+			</div>
+			<div class="flex justify-between gap-4">
+				<dt class="text-sm text-[var(--text-muted)]">Callback inputs this month</dt>
+				<dd class="text-sm text-[var(--text)]">
+					{data.usage.callbackInputs}
+					{#if data.limits.callbackInputsPerMonth != null}
+						/ {data.limits.callbackInputsPerMonth}
+					{:else}
+						<span class="text-[var(--text-muted)]">(Unlimited)</span>
+					{/if}
+				</dd>
+			</div>
+			<div class="flex justify-between gap-4">
+				<dt class="text-sm text-[var(--text-muted)]">Imports this month</dt>
+				<dd class="text-sm text-[var(--text)]">
+					{data.usage.importOperations}
+					{#if data.limits.importOperationsPerMonth != null}
+						/ {data.limits.importOperationsPerMonth}
+					{:else}
+						<span class="text-[var(--text-muted)]">(Unlimited)</span>
+					{/if}
+				</dd>
+			</div>
+		</dl>
+	</section>
+
+	<!-- Billing & upgrade -->
+	<section class="content-card rounded-xl p-6 shadow-sm">
+		<h2 class="text-base font-semibold text-[var(--text)]">Billing</h2>
+		<p class="mt-1 text-sm text-[var(--text-muted)]">Manage your subscription and plan.</p>
+		{#if data.tier === 'admin'}
+			<p class="mt-4 text-sm text-[var(--text-muted)]">You have full access as an admin. Plan limits do not apply.</p>
+		{:else if data.tier === 'pro'}
+			<p class="mt-4 text-sm text-[var(--text)]">Pro – £5/month</p>
+			<p class="mt-2 text-sm text-[var(--text-muted)]">Manage your subscription or cancel your plan.</p>
+			<a
+				href="/api/stripe/portal"
+				class="mt-3 inline-block rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]"
+			>
+				Manage subscription
+			</a>
+		{:else if data.tier === 'enterprise'}
+			<p class="mt-4 text-sm text-[var(--text)]">Enterprise – contact for billing.</p>
+		{:else}
+			<p class="mt-4 text-sm text-[var(--text-muted)]">You're on the Free plan. Upgrade for more posts, callback inputs, and imports.</p>
+			<div class="mt-3 flex flex-wrap gap-3">
+				<a
+					href="/api/stripe/checkout"
+					class="rounded-lg border border-[var(--primary)] bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 min-h-[44px]"
+				>
+					Upgrade to Pro (£5/month)
+				</a>
+				<span class="text-sm text-[var(--text-muted)]">or contact us for Enterprise.</span>
+			</div>
+		{/if}
+	</section>
+
 	<!-- Log out -->
 	<section class="content-card rounded-xl p-6 shadow-sm">
 		<h2 class="text-base font-semibold text-[var(--text)]">Log out</h2>
 		<p class="mt-1 text-sm text-[var(--text-muted)]">Sign out of PostPlan on this device.</p>
 		<form method="POST" action="/auth/login?/signout" class="mt-4">
-			<input type="hidden" name="options.redirectTo" value="/auth/login" />
+			<input type="hidden" name="options.redirectTo" value="/welcome" />
 			<button
 				type="submit"
 				class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]"
