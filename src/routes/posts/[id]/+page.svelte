@@ -146,10 +146,10 @@
 			if (result.success) {
 				invalidateAll();
 			} else {
-				sendError = result.error ?? 'Send failed';
+				sendError = result.error ?? "We couldn't send this post to your webhook. Check the webhook URL and try again.";
 			}
 		} catch (e) {
-			sendError = e instanceof Error ? e.message : 'Request failed';
+			sendError = e instanceof Error ? e.message : "We couldn't reach the server. Check your connection and try again.";
 		} finally {
 			sending = false;
 		}
@@ -297,7 +297,7 @@
 								bind:value={fieldRows[i].value}
 								class="flex-1 min-w-[120px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]"
 							/>
-							<button type="button" onclick={() => removeField(i)} class="rounded border border-red-400 px-2 py-1 text-sm text-red-800 dark:border-red-500 dark:text-red-200 min-h-[44px]">Remove</button>
+							<button type="button" onclick={() => removeField(i)} class="btn-danger-outline min-h-[44px] rounded border px-2 py-1 text-sm">Remove</button>
 						</div>
 					{/each}
 				</div>

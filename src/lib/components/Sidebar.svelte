@@ -41,6 +41,7 @@
 	let miniMonth = $state(sidebarCalendarSeed?.month ?? new Date().getMonth());
 	let miniMarkers = $state<Record<string, number>>(sidebarCalendarSeed?.markers ?? {});
 	let miniLoading = $state(false);
+	let miniLoadError = $state<string | null>(null);
 
 	$effect(() => {
 		const seed = $page.data.sidebarCalendar as
@@ -69,7 +70,7 @@
 		);
 	}
 
-	function miniMonthGrid(): Array<{ date: Date; inMonth: boolean; hasPost: boolean; count: number }> {
+	const miniMonthCells = $derived.by(() => {
 		const anchor = new Date(miniYear, miniMonth, 1);
 		const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
 		const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
@@ -88,13 +89,17 @@
 				count
 			};
 		});
-	}
+	});
 
 	async function loadMiniMonth(year: number, month: number) {
 		miniLoading = true;
+		miniLoadError = null;
 		try {
 			const res = await fetch(`/api/sidebar-calendar?year=${year}&month=${month}`);
-			if (!res.ok) return;
+			if (!res.ok) {
+				miniLoadError = `Couldn't load this month (${res.status}).`;
+				return;
+			}
 			const payload = (await res.json()) as {
 				year: number;
 				month: number;
@@ -103,6 +108,8 @@
 			miniYear = payload.year;
 			miniMonth = payload.month;
 			miniMarkers = payload.markers;
+		} catch {
+			miniLoadError = "Can't reach the server. Check your connection and try again.";
 		} finally {
 			miniLoading = false;
 		}
@@ -134,7 +141,7 @@
 		<!-- Header: logo + collapse -->
 		<div class="flex h-24 items-center justify-between border-b border-[var(--sidebar-border)] px-8 ">
 			<a href="/" class="flex items-center gap-2 font-semibold text-[var(--sidebar-text)] w-full">
-				<img src="/logo_text.svg" alt="PostPlan" class="h-32 w-auto mx-auto" />
+				<img src="/logo_text.svg" alt="PostPlan" class="mx-auto h-10 w-auto max-w-[200px] object-contain" />
 			</a>
 			<button
 				type="button"
@@ -154,7 +161,7 @@
 					<button
 						type="button"
 						onclick={() => moveMiniMonth(-1)}
-						class="inline-flex h-7 w-7 items-center justify-center rounded text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)]"
+						class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)] touch-manipulation md:h-7 md:min-h-[1.75rem] md:min-w-[1.75rem] md:w-7"
 						aria-label="Previous month"
 					>
 						←
@@ -165,7 +172,7 @@
 					<button
 						type="button"
 						onclick={() => moveMiniMonth(1)}
-						class="inline-flex h-7 w-7 items-center justify-center rounded text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)]"
+						class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)] touch-manipulation md:h-7 md:min-h-[1.75rem] md:min-w-[1.75rem] md:w-7"
 						aria-label="Next month"
 					>
 						→
@@ -179,11 +186,11 @@
 					{/each}
 				</div>
 				<div class="grid grid-cols-7 gap-1">
-					{#each miniMonthGrid() as cell}
+					{#each miniMonthCells as cell}
 						<a
 							href={`/calendar?view=day&date=${localDateKey(cell.date)}`}
 							class="relative flex h-7 items-center justify-center rounded text-[11px] {cell.inMonth ? 'text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)]' : 'text-[var(--sidebar-text-muted)] opacity-50 hover:bg-[var(--sidebar-hover)]'} {isMiniToday(cell.date) ? 'sidebar-mini-calendar-today' : ''}"
-							title={cell.count > 0 ? `${cell.count} post(s)` : undefined}
+							title={cell.count > 0 ? (cell.count === 1 ? '1 post this day' : `${cell.count} posts this day`) : undefined}
 							aria-current={isMiniToday(cell.date) ? 'date' : undefined}
 							onclick={closeSidebar}
 						>
@@ -199,7 +206,18 @@
 					{/each}
 				</div>
 				{#if miniLoading}
-					<p class="mt-1 px-1 text-[10px] text-[var(--sidebar-text-muted)]">Loading…</p>
+					<p class="mt-1 px-1 text-[10px] text-[var(--sidebar-text-muted)]">Updating month…</p>
+				{:else if miniLoadError}
+					<div class="mt-1 space-y-1 px-1">
+						<p class="text-[10px] text-[var(--sidebar-text-muted)]">{miniLoadError}</p>
+						<button
+							type="button"
+							class="text-[10px] font-medium text-[var(--sidebar-text)] underline hover:opacity-90"
+							onclick={() => loadMiniMonth(miniYear, miniMonth)}
+						>
+							Try again
+						</button>
+					</div>
 				{/if}
 			</div>
 			<p class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-[var(--sidebar-text-muted)]">Main menu</p>

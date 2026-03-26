@@ -9,14 +9,17 @@
 	let bulkActionError = $state<string | null>(null);
 	let searchQuery = $state('');
 	let copiedId = $state<string | null>(null);
+	let copyFailedId = $state<string | null>(null);
 
 	async function copyPostId(id: string) {
+		copyFailedId = null;
 		try {
 			await navigator.clipboard.writeText(id);
 			copiedId = id;
 			setTimeout(() => (copiedId = null), 2000);
 		} catch {
-			// ignore
+			copyFailedId = id;
+			setTimeout(() => (copyFailedId = null), 4000);
 		}
 	}
 
@@ -61,10 +64,10 @@
 			if (result.success) {
 				invalidateAll();
 			} else {
-				sendError = result.error ?? 'Send failed';
+				sendError = result.error ?? "We couldn't send this post to your webhook. Check the webhook URL and try again.";
 			}
 		} catch (e) {
-			sendError = e instanceof Error ? e.message : 'Request failed';
+			sendError = e instanceof Error ? e.message : "We couldn't reach the server. Check your connection and try again.";
 		} finally {
 			sendingId = null;
 		}
@@ -77,7 +80,7 @@
 
 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 	<h1 class="text-2xl font-bold text-[var(--text)]">Posts</h1>
-	<a href="/posts/new" class="rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm min-h-[44px] inline-flex items-center justify-center w-fit">+ New post</a>
+	<a href="/posts/new" class="rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm min-h-[44px] inline-flex items-center justify-center w-fit">New post</a>
 </div>
 
 <!-- Filters -->
@@ -108,13 +111,19 @@
 		id="posts-search"
 		type="search"
 		aria-label="Search posts"
-		placeholder="Search posts by title, webhook, content, status…"
+		placeholder="Search by title, webhook, content, or status"
 		bind:value={searchQuery}
 		class="w-full max-w-md rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] min-h-[44px] shadow-sm"
 		autocomplete="off"
 	/>
 	{#if searchQuery.trim()}
-		<p class="mt-1 text-xs text-[var(--text-muted)]">{filteredPosts.length} of {data.posts.length} post{data.posts.length === 1 ? '' : 's'}</p>
+		<p class="mt-1 text-xs text-[var(--text-muted)]">
+			{filteredPosts.length} of {data.posts.length}
+			{data.posts.length === 1 ? 'post' : 'posts'}
+			{#if filteredPosts.length !== data.posts.length}
+				<span class="text-[var(--text-muted)]"> matching your search</span>
+			{/if}
+		</p>
 	{/if}
 </div>
 
@@ -125,10 +134,10 @@
 {#if someSelected}
 	<div class="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm">
 		<span class="text-sm font-medium text-[var(--text)]">{selectedIds.size} selected</span>
-		<button type="button" class="text-sm text-[var(--text-muted)] hover:underline" onclick={clearSelection}>Clear</button>
-		<form method="post" action="?/bulkDelete" use:enhance={({ cancel }) => { if (!confirm('Permanently delete the selected posts?')) cancel(); bulkActionError = null; return async ({ result }) => { if (result.type === 'success') { clearSelection(); await invalidateAll(); } else if (result.type === 'failure' && result.data && typeof (result.data as { error?: string }).error === 'string') bulkActionError = (result.data as { error: string }).error; }; }} class="inline-flex items-center gap-2">
+		<button type="button" class="text-sm text-[var(--text-muted)] hover:underline" onclick={clearSelection}>Clear selection</button>
+		<form method="post" action="?/bulkDelete" use:enhance={({ cancel }) => { const n = selectedIds.size; if (!confirm(`Delete ${n} post${n === 1 ? '' : 's'} permanently? You can't undo this.`)) cancel(); bulkActionError = null; return async ({ result }) => { if (result.type === 'success') { clearSelection(); await invalidateAll(); } else if (result.type === 'failure' && result.data && typeof (result.data as { error?: string }).error === 'string') bulkActionError = (result.data as { error: string }).error; }; }} class="inline-flex items-center gap-2">
 			{#each [...selectedIds] as id}<input type="hidden" name="ids" value={id} />{/each}
-			<button type="submit" class="rounded-lg border border-red-400 px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-50 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/30">Delete</button>
+			<button type="submit" class="rounded-lg btn-danger-outline px-3 py-2 text-sm font-medium">Delete</button>
 		</form>
 		<form method="post" action="?/bulkUpdateSchedule" use:enhance={() => { bulkActionError = null; return async ({ result }) => { if (result.type === 'success') { clearSelection(); await invalidateAll(); } else if (result.type === 'failure' && result.data && typeof (result.data as { error?: string }).error === 'string') bulkActionError = (result.data as { error: string }).error; }; }} class="inline-flex items-center gap-2">
 			{#each [...selectedIds] as id}<input type="hidden" name="ids" value={id} />{/each}
@@ -151,24 +160,24 @@
 			<button type="submit" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)]">Change webhook</button>
 		</form>
 	</div>
-	{#if bulkActionError}<p class="mt-2 text-sm text-red-600 dark:text-red-400">{bulkActionError}</p>{/if}
+	{#if bulkActionError}<p class="alert-error mt-2 rounded-lg px-3 py-2 text-sm">{bulkActionError}</p>{/if}
 {/if}
 
 <!-- List as cards -->
 <div class="mt-6 space-y-4">
 	{#if data.posts.length === 0}
 		<div class="content-card rounded-xl p-6 text-center">
-			<p class="text-[var(--text-muted)]">No posts yet. <a href="/posts/new" class="font-medium text-[var(--primary)] hover:underline">Create one</a>.</p>
+			<p class="text-[var(--text-muted)]">You don't have any posts yet. <a href="/posts/new" class="font-medium text-[var(--primary)] hover:underline">Create a post</a> to get started.</p>
 		</div>
 	{:else if filteredPosts.length === 0}
 		<div class="content-card rounded-xl p-6 text-center">
-			<p class="text-[var(--text-muted)]">No posts match your search.{#if searchQuery.trim()} <button type="button" class="font-medium text-[var(--primary)] hover:underline" onclick={() => (searchQuery = '')}>Clear search</button>{/if}</p>
+			<p class="text-[var(--text-muted)]">Nothing matches your search.{#if searchQuery.trim()} <button type="button" class="font-medium text-[var(--primary)] hover:underline" onclick={() => (searchQuery = '')}>Clear search</button>{/if}</p>
 		</div>
 	{:else}
 		<div class="flex items-center gap-3 pb-2">
 			<label class="flex items-center gap-2 text-sm text-[var(--text-muted)] cursor-pointer">
 				<input type="checkbox" checked={allSelected} onchange={toggleAll} class="rounded border-[var(--border)]" />
-				Select all
+				Select all in this list
 			</label>
 		</div>
 		{#each filteredPosts as post}
@@ -179,43 +188,50 @@
 			>
 				<div class="flex flex-wrap items-start justify-between gap-4">
 					<div class="min-w-0 flex flex-1 items-start gap-3">
-						<label class="flex items-center shrink-0 cursor-pointer" title="Select for bulk action">
+						<label class="flex items-center shrink-0 cursor-pointer" title="Select for bulk actions">
 							<input type="checkbox" checked={selectedIds.has(post.id)} onchange={() => toggleSelection(post.id)} class="rounded border-[var(--border)]" />
 						</label>
 						{#if post.image_url}
 							<img src={post.image_url} alt={"Preview for " + post.title} class="h-14 w-14 rounded object-cover border border-[var(--border)]" loading="lazy" />
 						{/if}
 						<div class="min-w-0 flex-1">
-						<a href="/posts/{post.id}" class="font-semibold text-[var(--primary)] hover:underline">{post.title}</a>
-							<div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--text-muted)]">
-							<span>{post.webhook_name}</span>
-							<span>{post.scheduled_at ? new Date(post.scheduled_at).toLocaleString() : '—'}</span>
-							<span class="rounded px-2 py-0.5 text-xs font-medium {statusClass}">{post.status}</span>
+							<a
+								href="/posts/{post.id}"
+								class="block min-w-0 overflow-wrap-anywhere font-semibold text-[var(--primary)] hover:underline sm:truncate"
+								title={post.title}>{post.title}</a>
+							<div class="mt-1 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--text-muted)]">
+								<span
+									class="min-w-0 max-w-full break-words sm:max-w-[min(100%,20rem)] sm:truncate"
+									title={post.webhook_name ?? ''}>{post.webhook_name}</span>
+								<span class="min-w-0 shrink-0">{post.scheduled_at ? new Date(post.scheduled_at).toLocaleString() : '—'}</span>
+								<span class="rounded px-2 py-0.5 text-xs font-medium {statusClass}">{post.status}</span>
+							</div>
 						</div>
-					</div>
 					</div>
 					<div class="flex flex-wrap items-center gap-2">
 						<button
 							type="button"
 							onclick={() => copyPostId(post.id)}
 							class="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--text)] border border-[var(--border)] rounded px-2 py-1.5 hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
-							title="Copy post ID"
+							title={copyFailedId === post.id
+								? "Your browser blocked clipboard access. Copy the ID manually or allow clipboard permissions for this site."
+								: 'Copy post ID to clipboard'}
 						>
-							{copiedId === post.id ? 'Copied!' : post.id}
+							{copyFailedId === post.id ? "Can't copy" : copiedId === post.id ? 'Copied' : post.id}
 						</button>
 						<button
 							type="button"
 							disabled={sendingId === post.id}
 							onclick={() => sendNow(post.id)}
 							class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)] disabled:opacity-50 min-h-[44px]"
-							title="Send post JSON to target now"
+							title="Send this post's payload to its webhook now (does not wait for the scheduled time)"
 						>
 							{sendingId === post.id ? 'Sending…' : 'Send'}
 						</button>
 						<a href="/posts/{post.id}" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center">Edit</a>
-						<form method="POST" action="?/deletePost" use:enhance={({ cancel }) => { if (!confirm('Permanently delete this post?')) cancel(); return () => invalidateAll(); }} class="inline">
+						<form method="POST" action="?/deletePost" use:enhance={({ cancel }) => { if (!confirm("Delete this post permanently? You can't undo this.")) cancel(); return () => invalidateAll(); }} class="inline">
 							<input type="hidden" name="id" value={post.id} />
-							<button type="submit" class="rounded-lg border border-red-400 px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-50 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/30 min-h-[44px]">Delete</button>
+							<button type="submit" class="btn-danger-outline min-h-[44px] rounded-lg px-3 py-2 text-sm font-medium">Delete</button>
 						</form>
 					</div>
 				</div>

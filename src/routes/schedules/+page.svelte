@@ -57,9 +57,9 @@
 							{copiedId === schedule.id ? 'Copied!' : schedule.id}
 						</button>
 						<a href="/schedules/{schedule.id}" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center justify-center shadow-sm">Edit</a>
-						<form method="POST" action="?/deleteSchedule" use:enhance={({ cancel }) => { if (!confirm('Delete this schedule? Posts using it will be unassigned.')) cancel(); return () => invalidateAll(); }} class="inline">
+						<form method="POST" action="?/deleteSchedule" use:enhance={({ cancel }) => { if (!confirm('Delete this schedule? Posts that use it will no longer be tied to these rules (they stay as posts).')) cancel(); return () => invalidateAll(); }} class="inline">
 							<input type="hidden" name="id" value={schedule.id} />
-							<button type="submit" class="rounded-lg border border-red-400 px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-50 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/30 min-h-[44px]">Delete</button>
+							<button type="submit" class="btn-danger-outline min-h-[44px] rounded-lg px-3 py-2 text-sm font-medium">Delete</button>
 						</form>
 					</div>
 				</div>

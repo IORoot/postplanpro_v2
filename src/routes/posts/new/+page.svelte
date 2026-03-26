@@ -128,7 +128,7 @@
 						<option value="json">json</option>
 					</select>
 					<input type="text" name="field_value_{i}" bind:value={fieldRows[i].value} placeholder="Value" class="flex-1 min-w-[120px] rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]" />
-					<button type="button" onclick={() => removeField(i)} class="rounded-lg border border-red-400 px-3 py-2 text-sm text-red-700 dark:border-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 min-h-[44px] transition-colors">Remove</button>
+					<button type="button" onclick={() => removeField(i)} class="btn-danger-outline min-h-[44px] rounded-lg px-3 py-2 text-sm transition-colors">Remove</button>
 				</div>
 			{/each}
 		</div>

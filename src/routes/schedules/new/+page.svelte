@@ -215,7 +215,7 @@ function setCronPart(ruleIndex: number, partIndex: number, value: string) {
 							<option value="interval" selected={rule.type === 'interval'}>Interval</option>
 							<option value="once" selected={rule.type === 'once'}>Once</option>
 						</select>
-							<button type="button" onclick={() => removeRule(i)} class="rounded border border-red-400 px-2 py-1 text-sm text-red-800 dark:border-red-500 dark:text-red-200 min-h-[44px]">Remove</button>
+							<button type="button" onclick={() => removeRule(i)} class="btn-danger-outline min-h-[44px] rounded border px-2 py-1 text-sm">Remove</button>
 						</div>
 						<div class="shrink-0">
 							<RulePreviewCalendar
@@ -487,7 +487,7 @@ function setCronPart(ruleIndex: number, partIndex: number, value: string) {
 					<input type="text" name="field_value_{idx}" placeholder="Value" class="flex-1 min-w-[120px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]" />
 					<button
 						type="button"
-						class="rounded border border-red-400 px-2 py-1 text-xs text-red-800 dark:border-red-500 dark:text-red-200 min-h-[32px]"
+						class="btn-danger-outline min-h-[32px] rounded border px-2 py-1 text-xs"
 						onclick={() => removeField(idx)}
 					>
 						Remove

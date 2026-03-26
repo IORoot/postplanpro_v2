@@ -26,7 +26,7 @@
 	<nav class="flex shrink-0 flex-col gap-1 lg:w-52" aria-label="Report types">
 		<a
 			href="/reports"
-			class="flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors {data.reportType === 'logs'
+			class="flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors touch-manipulation {data.reportType === 'logs'
 				? 'bg-[var(--primary)]/15 text-[var(--primary)]'
 				: 'text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]'}"
 		>
@@ -37,7 +37,7 @@
 		</a>
 		<a
 			href="/reports?report=callback-stages"
-			class="flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors {data.reportType === 'callback-stages'
+			class="flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors touch-manipulation {data.reportType === 'callback-stages'
 				? 'bg-[var(--primary)]/15 text-[var(--primary)]'
 				: 'text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]'}"
 		>
@@ -53,18 +53,23 @@
 			<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<h1 class="text-2xl font-bold text-[var(--text)]">Request / Response</h1>
-					<p class="mt-1 text-sm text-[var(--text-muted)]">Every sent post: request JSON and response from the target.</p>
+					<p class="mt-1 text-sm text-[var(--text-muted)]">
+						For each send: the JSON we posted to your webhook and the response we got back—useful when a send fails or returns an error.
+					</p>
 				</div>
 				{#if data.reports.length > 0}
-					<form method="POST" action="?/clearLogs" use:enhance={({ cancel }) => { if (!confirm('Remove all send logs from the database?')) cancel(); return () => invalidateAll(); }} class="inline">
-						<button type="submit" class="rounded-lg border border-red-400 px-4 py-2.5 text-sm font-medium text-red-800 hover:bg-red-50 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/30 min-h-[44px]">Clear logs</button>
+					<form method="POST" action="?/clearLogs" use:enhance={({ cancel }) => { if (!confirm('Clear all send logs? You will lose this request/response history. This cannot be undone.')) cancel(); return () => invalidateAll(); }} class="inline">
+						<button type="submit" class="btn-danger-outline min-h-[44px] rounded-lg px-4 py-2.5 text-sm font-medium">Clear logs</button>
 					</form>
 				{/if}
 			</div>
 
 			{#if data.reports.length === 0}
 				<div class="content-card rounded-xl p-6 text-center">
-					<p class="text-[var(--text-muted)]">No sent posts yet. Send a post from the Posts page or wait for a scheduled send.</p>
+					<p class="text-[var(--text-muted)]">
+						No send history yet. When a post is sent to a webhook, the request and response will show up here. Use
+						<span class="font-medium text-[var(--text)]">Send now</span> on the Posts page, or wait for a scheduled send.
+					</p>
 				</div>
 			{:else}
 				{#each data.reports as report}
@@ -72,7 +77,10 @@
 						<div class="border-b border-[var(--border)] bg-[var(--surface-hover)] px-4 py-3">
 							<div class="flex flex-wrap items-center justify-between gap-2">
 								<div class="min-w-0">
-									<a href="/posts/{report.post_id}" class="font-semibold text-[var(--primary)] hover:underline">{report.post_title}</a>
+									<a
+										href="/posts/{report.post_id}"
+										class="block min-w-0 overflow-wrap-anywhere font-semibold text-[var(--primary)] hover:underline sm:truncate"
+										title={report.post_title}>{report.post_title}</a>
 									<p class="text-sm text-[var(--text-muted)]">
 										{report.webhook_name} · {formatDate(report.sent_at)}
 									</p>
@@ -86,9 +94,9 @@
 									{#if report.response_status != null}
 										<span class="rounded bg-[var(--surface)] px-2 py-1 text-xs font-mono text-[var(--text-muted)]">{report.response_status}</span>
 									{/if}
-									<form method="POST" action="?/deleteReport" use:enhance={({ cancel }) => { if (!confirm('Remove this report from the log?')) cancel(); return () => invalidateAll(); }} class="inline">
+									<form method="POST" action="?/deleteReport" use:enhance={({ cancel }) => { if (!confirm('Remove this log entry? The post itself stays; only this history row is deleted.')) cancel(); return () => invalidateAll(); }} class="inline">
 										<input type="hidden" name="id" value={report.id} />
-										<button type="submit" class="rounded border border-red-400 px-2 py-1 text-xs font-medium text-red-800 hover:bg-red-50 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/30 min-h-[36px]">Remove</button>
+										<button type="submit" class="btn-danger-outline min-h-[36px] rounded border px-2 py-1 text-xs font-medium">Remove</button>
 									</form>
 								</div>
 							</div>
