@@ -18,18 +18,50 @@
   --sidebar-text-muted: #b0b0a5;
   --sidebar-active-bg: #005f78; /* Primary */
   --sidebar-active-text: #f4f4f0;
-  --sidebar-active-gradient: linear-gradient(135deg, #005f78 0%, #007a94 50%, #005f78 100%);
-  --sidebar-hover: rgba(244, 244, 240, 0.06);
+	--sidebar-active-gradient: linear-gradient(135deg, #005f78 0%, #007a94 50%, #005f78 100%);
+	--sidebar-hover: rgba(244, 244, 240, 0.06);
+	/* Post markers on mini calendar: derived from primary + sidebar text (no off-palette accents) */
+	--sidebar-calendar-marker: color-mix(in srgb, var(--sidebar-active-bg) 68%, var(--sidebar-text));
 }
 
 .sidebar {
   background-color: var(--sidebar-bg);
 }
 
+.sidebar .nav-item {
+  transition:
+    background-color var(--motion-snappy) var(--ease-out-quart),
+    color var(--motion-snappy) var(--ease-out-quart);
+}
+
+.sidebar .pressable-row {
+  transition:
+    background-color var(--motion-snappy) var(--ease-out-quart),
+    color var(--motion-snappy) var(--ease-out-quart),
+    transform var(--motion-instant) var(--ease-out-quart);
+}
+.sidebar .pressable-row:active {
+  transform: scale(0.99);
+}
+
 /* Active sidebar nav item: subtle gradient */
 .sidebar .sidebar-nav-item-active {
   background: var(--sidebar-active-gradient);
   color: var(--sidebar-active-text);
+}
+
+/* Inactive nav: teal-tinted hover (replaces flat gray wash) */
+.sidebar a.sidebar-nav-idle:hover,
+.sidebar a.sidebar-nav-idle:focus-visible {
+  background-color: color-mix(in srgb, var(--sidebar-active-bg) 16%, var(--sidebar-bg));
+}
+
+.sidebar-mini-cal {
+  border-color: color-mix(in srgb, var(--sidebar-active-bg) 28%, var(--sidebar-border));
+}
+
+.main-content-shell {
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, var(--sidebar-border));
 }
 
 :root {
@@ -42,6 +74,18 @@
   --primary: #005f78;
   --primary-hover: #007394;
   --primary-gradient: linear-gradient(135deg, #005f78 0%, #007a94 50%, #005f78 100%);
+  --danger-border: #f87171;
+  --danger-text: #991b1b;
+  --danger-bg-hover: #fef2f2;
+  /* Primary tints — wayfinding & warmth without new hues */
+  --primary-soft: color-mix(in srgb, var(--primary) 11%, var(--surface));
+  --primary-soft-hover: color-mix(in srgb, var(--primary) 18%, var(--surface-hover));
+  --primary-border-soft: color-mix(in srgb, var(--primary) 24%, var(--border));
+  /* Motion (durations collapsed via prefers-reduced-motion below) */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --motion-instant: 120ms;
+  --motion-snappy: 200ms;
+  --motion-panel: 280ms;
 }
 
 .dark {
@@ -54,25 +98,160 @@
   --primary: #005f78;
   --primary-hover: #007394;
   --primary-gradient: linear-gradient(135deg, #005f78 0%, #007a94 50%, #005f78 100%);
+  --danger-border: #ef4444;
+  --danger-text: #fecaca;
+  --danger-bg-hover: rgba(127, 29, 29, 0.35);
+  --primary-soft: color-mix(in srgb, var(--primary) 22%, var(--surface));
+  --primary-soft-hover: color-mix(in srgb, var(--primary) 30%, var(--surface-hover));
+  --primary-border-soft: color-mix(in srgb, var(--primary) 38%, var(--border));
 }
 
 /* Primary buttons: subtle gradient */
 .btn-primary {
   background: var(--primary-gradient);
   color: white;
+  transition:
+    filter var(--motion-instant) var(--ease-out-quart),
+    transform var(--motion-instant) var(--ease-out-quart);
 }
 .btn-primary:hover:not(:disabled) {
   filter: brightness(1.08);
+}
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
 }
 .btn-primary:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
+/* Destructive outline (aligned with alert-error palette, theme-aware) */
+.btn-danger-outline {
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
+  background-color: transparent;
+  transition:
+    background-color var(--motion-snappy) var(--ease-out-quart),
+    color var(--motion-snappy) var(--ease-out-quart),
+    border-color var(--motion-snappy) var(--ease-out-quart);
+}
+.btn-danger-outline:hover:not(:disabled) {
+  background-color: var(--danger-bg-hover);
+}
+
+/* Touch-friendly button sizing — pair with .btn-primary, .btn-danger-outline, etc. */
+.btn-touch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  width: fit-content;
+}
+.btn-touch.w-full {
+  width: 100%;
+}
+
+/* Major sections on list/detail pages: consistent rhythm (4px-scale-friendly gaps) */
+.page-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+@media (min-width: 768px) {
+  .page-stack {
+    gap: 2rem;
+  }
+}
+@media (min-width: 1024px) {
+  .page-stack {
+    gap: 2.5rem;
+  }
+}
+
+/* Page chrome: use with PageSectionHeading or standalone */
+.page-title {
+  font-size: 1.5rem;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.page-lead {
+  margin-top: 0.375rem;
+  max-width: 65ch;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+/* In-app section titles: primary accent bar for scanability */
+.heading-accent {
+  border-left: 3px solid var(--primary);
+  padding-left: 0.75rem;
+}
+
+/* User-generated / untrusted text: wrap long tokens & CJK without blowing layouts */
+.overflow-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 body {
   background-color: var(--bg);
   color: var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Modular type roles (dense app UI — fixed rem scale) */
+.type-empty-body {
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.type-caption {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+@keyframes empty-state-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.empty-state-in {
+  animation: empty-state-in var(--motion-panel) var(--ease-out-quart) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .empty-state-in {
+    animation: none;
+  }
+}
+
+/* Keyboard focus: consistent ring (mouse clicks skip ring via :focus-visible) */
+:where(a, button, input:not([type='hidden']), textarea, select, summary):focus-visible {
+  outline: 2px solid var(--primary-hover);
+  outline-offset: 2px;
+  transition: outline-offset var(--motion-instant) var(--ease-out-quart);
 }
 
 /* Content cards: white, rounded, shadow, optional left accent */
@@ -124,6 +303,13 @@ body {
   background-color: #064e3b;
   color: #a7f3d0;
   border-color: #047857;
+}
+
+/* Info / tip — same hue family as primary (not generic “product blue”) */
+.alert-info {
+  background-color: var(--primary-soft);
+  color: var(--text);
+  border: 1px solid var(--primary-border-soft);
 }
 
 .status-draft {
@@ -179,5 +365,24 @@ body {
 
 /* Sidebar mini calendar: subtle today outline (inset keeps cell size stable) */
 .sidebar-mini-calendar-today {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 45%, transparent);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+
+/* Calendar post chips: consistent accent width (color still comes from post.color inline) */
+.calendar-post-accent {
+	border-left-width: 3px;
+	border-left-style: solid;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html:focus-within {
+		scroll-behavior: auto;
+	}
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+	}
 }

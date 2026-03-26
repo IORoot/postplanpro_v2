@@ -1,4 +1,6 @@
 <script lang="ts">
+	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
+
 	let { data, form } = $props();
 	let authTab = $state<'signin' | 'register' | 'forgot'>('signin');
 </script>
@@ -9,12 +11,10 @@
 
 <div class="mx-auto max-w-md">
 	<div class="content-card rounded-xl p-6 shadow-sm space-y-6">
-		<div>
-			<h1 class="text-2xl font-bold text-[var(--text)]">Sign in</h1>
-			<p class="mt-1 text-sm text-[var(--text-muted)]">
-				Use email/password or a social account to access PostPlan.
-			</p>
-		</div>
+		<PageSectionHeading
+			title="Sign in"
+			description="Use email/password or a social account to access PostPlan."
+		/>
 		{#if data.verified}
 			<p class="rounded-lg px-3 py-2 text-sm alert-success">
 				Email verified. You can now sign in.
@@ -82,12 +82,7 @@
 						class="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
 					/>
 				</div>
-				<button
-					type="submit"
-					class="w-full rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white min-h-[44px]"
-				>
-					Sign in with email
-				</button>
+				<button type="submit" class="btn-primary btn-touch w-full text-white">Sign in with email</button>
 			</form>
 		{:else if authTab === 'forgot'}
 			<div class="border-t border-[var(--border)] pt-4">

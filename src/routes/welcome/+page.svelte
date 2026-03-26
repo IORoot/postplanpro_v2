@@ -13,8 +13,8 @@
 		<h1 class="text-4xl font-bold tracking-tight text-[var(--text)] sm:text-5xl lg:text-6xl" style="letter-spacing: -0.03em; line-height: 1.1;">
 			Schedule posts.<br />Send to webhooks.
 		</h1>
-		<p class="mx-auto mt-6 max-w-2xl text-lg text-[var(--text-muted)]" style="line-height: 1.6;">
-			Plan content in a calendar, use schedules and bulk import, and fire posts when they're due. Connect Make.com, Zapier, or any HTTP endpoint.
+		<p class="mx-auto mt-6 max-w-[52ch] text-pretty text-lg leading-relaxed text-[var(--text-muted)]">
+			Plan content in a calendar, use schedules and bulk import, and fire posts when they’re due. Connect Make.com, Zapier, or any HTTP endpoint.
 		</p>
 		<div class="mt-10 flex flex-wrap items-center justify-center gap-4">
 			<a href="/auth/login" class="btn-primary inline-flex rounded-lg px-6 py-3 text-base font-semibold text-white">

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 
@@ -28,8 +29,10 @@
 	<title>Users – PostPlan</title>
 </svelte:head>
 
-<h1 class="text-2xl font-bold text-[var(--text)]">Users</h1>
-<p class="mt-1 text-sm text-[var(--text-muted)]">Manage all users (admin only). Change tier to adjust limits.</p>
+<PageSectionHeading
+	title="Users"
+	description="Manage all users (admin only). Change tier to adjust limits."
+/>
 
 {#if form?.error}
 	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-error">{form.error}</p>
@@ -41,7 +44,7 @@
 	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-success">User removed and all their content deleted.</p>
 {/if}
 
-<div class="mt-6 overflow-x-auto">
+<div class="overflow-x-auto">
 	<table class="w-full border-collapse border border-[var(--border)] rounded-lg overflow-hidden">
 		<thead>
 			<tr class="bg-[var(--sidebar-bg)]">

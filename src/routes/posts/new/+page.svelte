@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { enhance } from '$app/forms';
 	import { DEFAULT_MANUAL_POST_COLOR, TAILWIND_POST_COLORS, normalizePostColor } from '$lib/postColors';
 
@@ -37,9 +38,9 @@
 	<title>New post – PostPlan</title>
 </svelte:head>
 
-<h1 class="text-2xl font-bold text-[var(--text)]">New post</h1>
+<PageSectionHeading title="New post" />
 
-<form method="POST" action="?/create" use:enhance class="mt-6 max-w-2xl space-y-6">
+<form method="POST" action="?/create" use:enhance class="max-w-2xl space-y-6">
 	{#if form?.error}
 		<div class="content-card rounded-xl border border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/30 p-4 shadow-sm">
 			<p class="text-sm text-red-700 dark:text-red-300">{form.error}</p>
@@ -128,7 +129,7 @@
 						<option value="json">json</option>
 					</select>
 					<input type="text" name="field_value_{i}" bind:value={fieldRows[i].value} placeholder="Value" class="flex-1 min-w-[120px] rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-h-[44px]" />
-					<button type="button" onclick={() => removeField(i)} class="rounded-lg border border-red-400 px-3 py-2 text-sm text-red-700 dark:border-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 min-h-[44px] transition-colors">Remove</button>
+					<button type="button" onclick={() => removeField(i)} class="btn-danger-outline min-h-[44px] rounded-lg px-3 py-2 text-sm transition-colors">Remove</button>
 				</div>
 			{/each}
 		</div>
@@ -196,7 +197,7 @@
 
 	<!-- Actions -->
 	<div class="flex flex-wrap gap-2 pt-2">
-		<button type="submit" class="rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm min-h-[44px]">Create post</button>
+		<button type="submit" class="btn-primary btn-touch text-white shadow-sm">Create post</button>
 		<a href="/posts" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center transition-colors">Cancel</a>
 	</div>
 </form>

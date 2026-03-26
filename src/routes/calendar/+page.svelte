@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
@@ -58,17 +59,17 @@
 			const result = (await res.json()) as SendNowResult;
 			const responseText = trimResponse(result.responseBody);
 			if (result.success) {
-				sendSuccess = `Post sent successfully (HTTP ${result.responseStatus ?? 200})${
+				sendSuccess = `Sent to webhook (HTTP ${result.responseStatus ?? 200})${
 					responseText ? `: ${responseText}` : ''
 				}`;
 				invalidateAll();
 			} else {
-				sendError = `${result.error ?? 'Send failed'}${
-					responseText ? ` | Response: ${responseText}` : ''
+				sendError = `${result.error ?? "We couldn't send this post to your webhook."}${
+					responseText ? ` · Response: ${responseText}` : ''
 				}`;
 			}
 		} catch (err) {
-			sendError = err instanceof Error ? err.message : 'Request failed';
+			sendError = err instanceof Error ? err.message : "We couldn't reach the server. Check your connection and try again.";
 		} finally {
 			sendingId = null;
 		}
@@ -96,15 +97,34 @@
 		}
 		return byDate;
 	});
-	const postsByMonth = $derived.by(() => {
-		const byMonth = new Map<number, CalendarPost[]>();
+	/** Year-scoped month buckets for month-year strip + year view only (avoids extra work on other views). */
+	const postsByYearMonth = $derived.by(() => {
+		const map = new Map<string, CalendarPost[]>();
+		if (view !== 'month' && view !== 'year') return map;
 		for (const post of posts) {
-			const month = new Date(post.scheduled_at).getMonth();
-			const monthList = byMonth.get(month) ?? [];
-			monthList.push(post);
-			byMonth.set(month, monthList);
+			const d = new Date(post.scheduled_at);
+			const key = `${d.getFullYear()}-${d.getMonth()}`;
+			const list = map.get(key) ?? [];
+			list.push(post);
+			map.set(key, list);
 		}
-		return byMonth;
+		return map;
+	});
+
+	const emptyMonthAnchors: Date[] = [];
+	const yearMonthAnchors = $derived.by(() => {
+		if (view !== 'year' && view !== 'schedule') return emptyMonthAnchors;
+		return Array.from({ length: 12 }, (_, i) => new Date(anchor.getFullYear(), i, 1));
+	});
+
+	const scheduleMiniMonthGrids = $derived.by(() => {
+		if (view !== 'schedule') return null;
+		const y = anchor.getFullYear();
+		const grids = new Map<number, Array<{ date: Date; inMonth: boolean }>>();
+		for (let m = 0; m < 12; m++) {
+			grids.set(m, buildMiniMonthGrid(new Date(y, m, 1)));
+		}
+		return grids;
 	});
 
 	function localDateKey(date: Date): string {
@@ -224,11 +244,7 @@
 		return days;
 	}
 
-	function yearMonths(): Date[] {
-		return Array.from({ length: 12 }, (_, i) => new Date(anchor.getFullYear(), i, 1));
-	}
-
-	function miniMonthGrid(anchorMonth: Date): Array<{ date: Date; inMonth: boolean }> {
+	function buildMiniMonthGrid(anchorMonth: Date): Array<{ date: Date; inMonth: boolean }> {
 		const monthStart = new Date(anchorMonth.getFullYear(), anchorMonth.getMonth(), 1);
 		const monthEnd = new Date(anchorMonth.getFullYear(), anchorMonth.getMonth() + 1, 0);
 		const offsetToMonday = (monthStart.getDay() + 6) % 7;
@@ -248,24 +264,8 @@
 		return postsByDate.get(localDateKey(date)) ?? [];
 	}
 
-	function postsForMonth(month: number): CalendarPost[] {
-		return postsByMonth.get(month) ?? [];
-	}
-
-	function postCountForMonthInYear(year: number, monthIndex: number): number {
-		return posts.filter((p) => {
-			const d = new Date(p.scheduled_at);
-			return d.getFullYear() === year && d.getMonth() === monthIndex;
-		}).length;
-	}
-
-	function groupedAgenda(): Array<{ date: string; posts: CalendarPost[] }> {
-		return [...postsByDate.entries()]
-			.sort(([a], [b]) => a.localeCompare(b))
-			.map(([date, dayPosts]) => ({
-				date,
-				posts: [...dayPosts].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
-			}));
+	function postsForYearMonth(year: number, monthIndex: number): CalendarPost[] {
+		return postsByYearMonth.get(`${year}-${monthIndex}`) ?? [];
 	}
 
 	function formatTime(iso: string) {
@@ -560,13 +560,12 @@
 	<title>Calendar – PostPlan</title>
 </svelte:head>
 
-<h1 class="text-2xl font-bold text-[var(--text)]">Calendar</h1>
-<p class="mt-1 text-sm text-[var(--text-muted)]">Modern multi-view calendar for scheduled posts.</p>
+<PageSectionHeading title="Calendar" description="Modern multi-view calendar for scheduled posts." />
 {#if sendError}
-	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-error">{sendError}</p>
+	<p class="rounded-lg px-3 py-2 text-sm alert-error">{sendError}</p>
 {/if}
 {#if sendSuccess}
-	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-success">{sendSuccess}</p>
+	<p class="rounded-lg px-3 py-2 text-sm alert-success">{sendSuccess}</p>
 {/if}
 
 {#if dragPostId && dragPreviewText != null && dragPreviewPos}
@@ -579,13 +578,15 @@
 	</div>
 {/if}
 
-<div class="content-card mt-6 rounded-xl p-4 md:p-5" data-sveltekit-preload-data="tap">
+<div class="content-card mt-0 rounded-xl p-4 md:p-5" data-sveltekit-preload-data="tap">
 	<div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-		<div class="inline-flex rounded-xl bg-[var(--surface)] p-1">
+		<div
+			class="-mx-1 flex max-w-full gap-1 overflow-x-auto overflow-y-hidden rounded-xl bg-[var(--surface)] p-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:pb-1 [&::-webkit-scrollbar]:hidden"
+		>
 			{#each viewButtons as v}
 				<a
 					href={hrefFor(v.id, anchor)}
-					class="rounded-lg px-3 py-2 text-xs font-medium min-h-[36px] inline-flex items-center {view === v.id
+					class="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-lg px-3 py-2 text-xs font-medium touch-manipulation md:min-h-[36px] {view === v.id
 						? 'btn-primary text-white'
 						: 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
 				>
@@ -594,13 +595,26 @@
 			{/each}
 		</div>
 		{#if showDateControls}
-			<div class="flex items-center gap-2">
-				<a href={hrefFor(view, withOffset(anchor, view, -1))} class="rounded-lg bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]">←</a>
-				<div class="rounded-lg bg-[var(--surface)] px-3 py-2 text-sm font-semibold text-[var(--text)] min-w-[210px] text-center">
-					{rangeLabel()}
+			<div class="flex w-full min-w-0 flex-wrap items-center justify-center gap-2 sm:flex-nowrap md:w-auto md:justify-end">
+				<a
+					href={hrefFor(view, withOffset(anchor, view, -1))}
+					class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] touch-manipulation"
+					aria-label="Previous range"
+				>←</a>
+				<div
+					class="min-w-0 max-w-full flex-1 rounded-lg bg-[var(--surface)] px-2 py-2 text-center text-sm font-semibold text-[var(--text)] sm:min-w-[12rem] sm:flex-none sm:px-3 md:min-w-[210px]"
+				>
+					<span class="inline-block break-words">{rangeLabel()}</span>
 				</div>
-				<a href={hrefFor(view, withOffset(anchor, view, 1))} class="rounded-lg bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]">→</a>
-				<a href={hrefFor(view, new Date())} class="rounded-lg bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]">Today</a>
+				<a
+					href={hrefFor(view, withOffset(anchor, view, 1))}
+					class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] touch-manipulation"
+					aria-label="Next range"
+				>→</a>
+				<a
+					href={hrefFor(view, new Date())}
+					class="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] touch-manipulation"
+					>Today</a>
 			</div>
 		{/if}
 	</div>
@@ -635,7 +649,7 @@
 			<div class="grid w-full grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-12">
 				{#each Array.from({ length: 12 }, (_, i) => i) as monthIndex}
 					{@const isActiveMonth = anchor.getMonth() === monthIndex}
-					{@const monthPostCount = postCountForMonthInYear(anchor.getFullYear(), monthIndex)}
+					{@const monthPostCount = postsForYearMonth(anchor.getFullYear(), monthIndex).length}
 					{@const isCurrentMonth = new Date().getMonth() === monthIndex && new Date().getFullYear() === anchor.getFullYear()}
 					<a
 						href={hrefFor('month', new Date(anchor.getFullYear(), monthIndex, 1))}
@@ -670,7 +684,7 @@
 		<div class="grid grid-cols-7">
 			{#each monthGridDays() as cell}
 				<div
-					class="min-h-[130px] border-r border-b border-[var(--border)] p-2 last:border-r-0 {isToday(cell.date) ? 'calendar-today' : ''}"
+					class="min-h-[88px] border-r border-b border-[var(--border)] p-1.5 last:border-r-0 sm:min-h-[130px] sm:p-2 {isToday(cell.date) ? 'calendar-today' : ''}"
 					role="group"
 					aria-label="Drop to reschedule"
 					ondragover={(e) => monthDragOver(e, cell.date)}
@@ -682,8 +696,8 @@
 					<div class="mt-2 space-y-1">
 						{#each postsForDay(cell.date) as post (post.id)}
 							<div
-								class="rounded-lg px-2 py-2 cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
-								style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}
+								class="calendar-post-accent rounded-lg px-2 py-2 cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
+								style={`background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? '#ffffff'};`}
 								role="button"
 								tabindex="-1"
 								aria-label="Drag to reschedule"
@@ -705,7 +719,7 @@
 										type="button"
 										disabled={sendingId === post.id}
 										onclick={(e) => sendNow(post.id, e)}
-										class="rounded px-1.5 py-0.5 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
+										class="min-h-[36px] min-w-[44px] touch-manipulation rounded px-2 py-1 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)] disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5"
 									>
 										{sendingId === post.id ? '…' : 'Send'}
 									</button>
@@ -814,8 +828,8 @@
 
 							{#each weekPostsForDay(d) as post (post.id)}
 								<div
-									class="absolute left-1 right-1 rounded-lg px-2 py-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
-									style={`top: ${weekPostTopPx(post.scheduled_at)}px; height: ${WEEK_POST_HEIGHT_PX}px; background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}
+									class="calendar-post-accent absolute left-1 right-1 rounded-lg px-2 py-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
+									style={`top: ${weekPostTopPx(post.scheduled_at)}px; height: ${WEEK_POST_HEIGHT_PX}px; background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? '#ffffff'};`}
 									role="button"
 									tabindex="-1"
 									aria-label="Drag to reschedule"
@@ -941,8 +955,8 @@
 						>
 							{#each postsAtHour(hour) as post (post.id)}
 								<div
-									class="min-w-0 max-w-sm flex-[1_1_240px] rounded-lg p-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
-									style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#e5e7eb'};`}
+									class="calendar-post-accent min-w-0 max-w-sm flex-[1_1_240px] rounded-lg p-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
+									style={`background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? 'var(--border)'};`}
 									role="button"
 									tabindex="-1"
 									aria-label="Drag to reschedule"
@@ -1005,13 +1019,9 @@
 		</div>
 		<div class="overflow-hidden rounded-xl border border-[var(--border)]">
 			<div class="grid grid-cols-1 gap-px bg-[var(--border)] md:grid-cols-2 xl:grid-cols-3">
-				{#each yearMonths() as monthDate}
+				{#each yearMonthAnchors as monthDate}
 					{@const monthIndex = monthDate.getMonth()}
-					{@const monthPosts = posts.filter(
-						(p) =>
-							new Date(p.scheduled_at).getFullYear() === anchor.getFullYear() &&
-							new Date(p.scheduled_at).getMonth() === monthIndex
-					)}
+					{@const monthPosts = postsForYearMonth(anchor.getFullYear(), monthIndex)}
 					{@const isCurrentMonth = new Date().getMonth() === monthIndex && new Date().getFullYear() === anchor.getFullYear()}
 					{@const yearMonth = yearMonthKey(anchor.getFullYear(), monthIndex)}
 					{@const isExpanded = expandedYearMonths.has(yearMonth)}
@@ -1024,13 +1034,16 @@
 						ondrop={(e) => yearDrop(e, monthIndex)}
 					>
 						<p class="text-sm font-semibold text-[var(--text)]">{monthNames[monthIndex]}</p>
-						<p class="mt-1 text-xs text-[var(--text-muted)]">{monthPosts.length} post(s)</p>
+						<p class="mt-1 text-xs text-[var(--text-muted)]">
+							{monthPosts.length} {monthPosts.length === 1 ? 'post' : 'posts'}
+						</p>
 						<div class="mt-2 space-y-1">
 							{#each postsToShow as post (post.id)}
 								<a
 									href={"/posts/" + post.id}
-									class="block truncate rounded-md px-2 py-1 text-xs text-[var(--text)] hover:underline cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
-									style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}
+									class="calendar-post-accent block min-w-0 cursor-grab truncate rounded-md px-2 py-1 text-xs text-[var(--text)] hover:underline active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
+									style={`background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? '#ffffff'};`}
+									title={`${new Date(post.scheduled_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })} · ${post.title}`}
 									draggable={true}
 									ondragstart={(e) => handleDragStart(e, post)}
 									ondragend={handleDragEnd}
@@ -1056,13 +1069,20 @@
 {:else if view === 'agenda'}
 	<div class="content-card mt-4 rounded-xl p-4">
 		{#if posts.length === 0}
-			<p class="text-sm text-[var(--text-muted)]">No scheduled posts yet.</p>
+			<p class="text-sm text-[var(--text-muted)]">
+				No posts in this date range. Adjust the range above, or go to
+				<a href="/posts" class="font-medium text-[var(--primary)] hover:underline">Posts</a>
+				to schedule one.
+			</p>
 		{:else}
 			<div class="space-y-2">
 				{#each posts as post (post.id)}
 					{@const postDate = new Date(post.scheduled_at)}
 					{@const isPostToday = isToday(postDate)}
-					<div class="rounded-lg p-2 {isPostToday ? 'calendar-today' : ''}" style={`background-color: ${post.color ?? '#ffffff'}; border-left: 3px solid ${post.color ?? '#ffffff'};`}>
+					<div
+						class="calendar-post-accent rounded-lg p-2 {isPostToday ? 'calendar-today' : ''}"
+						style={`background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? '#ffffff'};`}
+					>
 						<div class="flex items-center gap-2">
 							{#if post.image_url}
 								<img src={post.image_url} alt={"Preview for " + post.title} class="h-8 w-8 rounded object-cover border border-[var(--border)]" loading="lazy" />
@@ -1070,7 +1090,12 @@
 							<a href={"/posts/" + post.id} class="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text)] hover:underline">
 								{new Date(post.scheduled_at).toLocaleString()} · {post.title}
 							</a>
-							<button type="button" class="rounded px-2 py-1 text-xs font-medium text-[var(--primary)]" disabled={sendingId === post.id} onclick={(e) => sendNow(post.id, e)}>
+							<button
+								type="button"
+								class="rounded px-2 py-1 text-xs font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
+								disabled={sendingId === post.id}
+								onclick={(e) => sendNow(post.id, e)}
+							>
 								{sendingId === post.id ? '…' : 'Send'}
 							</button>
 						</div>
@@ -1082,7 +1107,7 @@
 {:else if view === 'schedule'}
 	<div class="content-card mt-4 rounded-xl p-4">
 		<div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-			{#each yearMonths() as monthDate}
+			{#each yearMonthAnchors as monthDate}
 				<div class="rounded-xl bg-[var(--surface)] p-3">
 					<p class="mb-2 text-sm font-semibold text-[var(--text)]">{monthNames[monthDate.getMonth()]}</p>
 					<div class="mb-1 grid grid-cols-7 gap-1">
@@ -1091,7 +1116,7 @@
 						{/each}
 					</div>
 					<div class="grid grid-cols-7 gap-1">
-						{#each miniMonthGrid(monthDate) as cell}
+						{#each scheduleMiniMonthGrids?.get(monthDate.getMonth()) ?? [] as cell}
 							{@const dayPosts = postsForDay(cell.date)}
 							<div class="relative h-8 rounded bg-[var(--bg)]/60 px-1 pt-1 {cell.inMonth ? '' : 'opacity-35'} {isToday(cell.date) ? 'calendar-today' : ''}">
 								<div class="text-[10px] leading-none text-[var(--text-muted)]">{cell.date.getDate()}</div>

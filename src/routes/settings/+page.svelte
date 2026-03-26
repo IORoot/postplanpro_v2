@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 
@@ -73,10 +74,12 @@
 	<title>Settings – PostPlan</title>
 </svelte:head>
 
-<h1 class="text-2xl font-bold text-[var(--text)]">Settings</h1>
-<p class="mt-1 text-sm text-[var(--text-muted)]">Configure outputs, inputs, templates, and global variables.</p>
+<PageSectionHeading
+	title="Settings"
+	description="Configure outputs, inputs, templates, and global variables."
+/>
 
-<div class="mt-6 settings-layout">
+<div class="settings-layout">
 	<aside class="settings-sidebar">
 		<nav class="settings-nav">
 			<a href="/settings?section=outputs" class="settings-nav-link {currentSection === 'outputs' ? 'settings-nav-link-active' : ''}">
@@ -158,7 +161,7 @@
 								<div class="flex flex-wrap gap-2">
 									<input type="text" bind:value={editingHeaders[i].key} placeholder="Header name" class="rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-w-[140px]" />
 									<input type="text" bind:value={editingHeaders[i].value} placeholder="Value" class="flex-1 min-w-[120px] rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)]" />
-									<button type="button" onclick={() => editingHeaders = editingHeaders.filter((_, j) => j !== i)} class="rounded border border-red-400 px-2 py-1 text-sm text-red-800 dark:border-red-500 dark:text-red-200 min-h-[44px]">Remove</button>
+									<button type="button" onclick={() => editingHeaders = editingHeaders.filter((_, j) => j !== i)} class="btn-danger-outline min-h-[44px] rounded border px-2 py-1 text-sm">Remove</button>
 								</div>
 							{/each}
 						</div>
@@ -190,7 +193,7 @@
 						<button type="button" onclick={() => openEditWebhook(webhook)} class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] min-w-[44px]">Edit</button>
 						<form method="POST" action="?/deleteWebhook" use:enhance={({ cancel }) => { if (!confirm('Delete this webhook? Posts using it will need another webhook.')) cancel(); return () => invalidateAll(); }} class="inline">
 							<input type="hidden" name="id" value={webhook.id} />
-							<button type="submit" class="rounded-lg border border-red-400 px-3 py-2 text-sm text-red-800 hover:bg-red-100 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/40 min-h-[44px] min-w-[44px]">Delete</button>
+							<button type="submit" class="btn-danger-outline min-h-[44px] min-w-[44px] rounded-lg px-3 py-2 text-sm">Delete</button>
 						</form>
 					</div>
 				</div>
@@ -230,7 +233,7 @@
 							<div class="flex flex-wrap gap-2">
 								<input type="text" bind:value={newWebhookHeaders[i].key} placeholder="Header name" class="rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)] min-w-[140px]" />
 								<input type="text" bind:value={newWebhookHeaders[i].value} placeholder="Value" class="flex-1 min-w-[120px] rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)]" />
-								<button type="button" onclick={() => newWebhookHeaders = newWebhookHeaders.filter((_, j) => j !== i)} class="rounded border border-red-400 px-2 py-1 text-sm text-red-800 dark:border-red-500 dark:text-red-200 min-h-[44px]">Remove</button>
+								<button type="button" onclick={() => newWebhookHeaders = newWebhookHeaders.filter((_, j) => j !== i)} class="btn-danger-outline min-h-[44px] rounded border px-2 py-1 text-sm">Remove</button>
 							</div>
 						{/each}
 					</div>
@@ -558,7 +561,7 @@
 									<option value="json">json</option>
 								</select>
 								<input type="text" bind:value={editingTemplateFields[i].value} placeholder="Value (JSON for json type)" class="flex-1 min-w-[200px] rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)]" />
-								<button type="button" onclick={() => editingTemplateFields = editingTemplateFields.filter((_, j) => j !== i)} class="rounded border border-red-400 px-2 py-1 text-sm text-red-800 dark:border-red-500 dark:text-red-200 min-h-[44px]">Remove</button>
+								<button type="button" onclick={() => editingTemplateFields = editingTemplateFields.filter((_, j) => j !== i)} class="btn-danger-outline min-h-[44px] rounded border px-2 py-1 text-sm">Remove</button>
 							</div>
 						{/each}
 					</div>
@@ -580,7 +583,7 @@
 								<button type="button" onclick={() => openEditTemplate(t)} class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] min-w-[44px]">Edit</button>
 								<form method="POST" action="?/deleteTemplate" use:enhance={({ cancel }) => { if (!confirm('Delete this template? This cannot be undone.')) cancel(); return () => invalidateAll(); }} class="inline">
 									<input type="hidden" name="id" value={t.id} />
-									<button type="submit" class="rounded-lg border border-red-400 px-3 py-2 text-sm text-red-800 hover:bg-red-100 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/40 min-h-[44px] min-w-[44px]">Delete</button>
+									<button type="submit" class="btn-danger-outline min-h-[44px] min-w-[44px] rounded-lg px-3 py-2 text-sm">Delete</button>
 								</form>
 							{/if}
 						</div>
@@ -620,7 +623,7 @@
 								<option value="json">json</option>
 							</select>
 							<input type="text" bind:value={newTemplateFields[i].value} placeholder="Value (JSON for json type)" class="flex-1 min-w-[200px] rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-[var(--text)]" />
-							<button type="button" onclick={() => newTemplateFields = newTemplateFields.filter((_, j) => j !== i)} class="rounded border border-red-400 px-2 py-1 text-sm text-red-800 dark:border-red-500 dark:text-red-200 min-h-[44px]">Remove</button>
+							<button type="button" onclick={() => newTemplateFields = newTemplateFields.filter((_, j) => j !== i)} class="btn-danger-outline min-h-[44px] rounded border px-2 py-1 text-sm">Remove</button>
 						</div>
 					{/each}
 				</div>
@@ -690,9 +693,9 @@
 					</div>
 					<div class="flex gap-2">
 						<button type="button" onclick={() => (editingGlobalId = g.id)} class="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] min-w-[44px]">Edit</button>
-						<form method="POST" action="?/deleteGlobal" use:enhance={({ cancel }) => { if (!confirm('Delete this global variable?')) cancel(); return () => invalidateAll(); }} class="inline">
+						<form method="POST" action="?/deleteGlobal" use:enhance={({ cancel }) => { if (!confirm(`Delete global variable "${g.key}"? Templates or payloads that use it may show wrong values until you update them.`)) cancel(); return () => invalidateAll(); }} class="inline">
 							<input type="hidden" name="id" value={g.id} />
-							<button type="submit" class="rounded-lg border border-red-400 px-3 py-2 text-sm text-red-800 hover:bg-red-100 dark:border-red-500 dark:text-red-200 dark:hover:bg-red-900/40 min-h-[44px] min-w-[44px]">Delete</button>
+							<button type="submit" class="btn-danger-outline min-h-[44px] min-w-[44px] rounded-lg px-3 py-2 text-sm">Delete</button>
 						</form>
 					</div>
 				</div>
@@ -788,12 +791,12 @@
 	}
 	.settings-nav-link:hover {
 		color: var(--text);
-		border-color: var(--border);
-		background: var(--surface);
+		border-color: var(--primary-border-soft);
+		background: var(--primary-soft);
 	}
 	.settings-nav-link-active {
-		color: var(--text);
-		border-color: var(--border);
-		background: var(--surface);
+		color: var(--primary);
+		border-color: var(--primary-border-soft);
+		background: var(--primary-soft);
 	}
 </style>
