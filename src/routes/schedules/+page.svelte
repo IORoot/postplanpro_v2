@@ -1,4 +1,6 @@
 <script lang="ts">
+	import EmptyState from '$lib/components/EmptyState.svelte';
+	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 
@@ -20,17 +22,24 @@
 	<title>Schedules – PostPlan</title>
 </svelte:head>
 
-<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-	<h1 class="text-2xl font-bold text-[var(--text)]">Schedules</h1>
-	<a href="/schedules/new" class="rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm min-h-[44px] inline-flex items-center justify-center w-fit">+ New schedule</a>
-</div>
-<p class="mt-1 text-sm text-[var(--text-muted)]">Create schedules with time slots, then apply them to posts to set when they send.</p>
+<PageSectionHeading
+	title="Schedules"
+	description="Create schedules with time slots, then apply them to posts to set when they send."
+	describeBelow={true}
+>
+	{#snippet trail()}
+		<a href="/schedules/new" class="btn-primary btn-touch text-white shadow-sm">New schedule</a>
+	{/snippet}
+</PageSectionHeading>
 
-<div class="mt-6 space-y-4">
+<div class="flex flex-col gap-5">
 	{#if data.schedules.length === 0}
-		<div class="content-card rounded-xl p-6 text-center">
-			<p class="text-[var(--text-muted)]">No schedules yet. <a href="/schedules/new" class="font-medium text-[var(--primary)] hover:underline">Create one</a>.</p>
-		</div>
+		<EmptyState title="No schedules yet">
+			<p>
+				Schedules hold rules (or fixed slots) that decide when posts fire.
+				<a href="/schedules/new" class="font-medium text-[var(--primary)] hover:underline">Create a schedule</a>, then apply it from a post or the schedule’s edit page.
+			</p>
+		</EmptyState>
 	{:else}
 		{#each data.schedules as schedule}
 			<div

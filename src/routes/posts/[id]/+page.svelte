@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { DEFAULT_POST_COLOR, TAILWIND_POST_COLORS, normalizePostColor } from '$lib/postColors';
@@ -160,17 +161,18 @@
 	<title>Edit: {data.post.title} – PostPlan</title>
 </svelte:head>
 
-<div class="flex flex-wrap items-start justify-between gap-2">
-	<h1 class="text-2xl font-bold text-[var(--text)]">Edit post</h1>
-	<button
-		type="button"
-		onclick={copyPostId}
-		class="rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-xs font-mono text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
-		title="Copy post ID"
-	>
-		{copyFeedback ? 'Copied!' : data.post.id}
-	</button>
-</div>
+<PageSectionHeading title="Edit post">
+	{#snippet trail()}
+		<button
+			type="button"
+			onclick={copyPostId}
+			class="rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-xs font-mono text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text)] cursor-pointer"
+			title="Copy post ID"
+		>
+			{copyFeedback ? 'Copied!' : data.post.id}
+		</button>
+	{/snippet}
+</PageSectionHeading>
 <p class="mt-1 flex items-center gap-2">
 	<span
 		class="rounded px-2 py-1 text-xs font-medium capitalize {data.post.status === 'draft'
@@ -193,7 +195,7 @@
 	{/if}
 </p>
 
-<form method="POST" action="?/update" use:enhance class="mt-6">
+<form method="POST" action="?/update" use:enhance>
 	{#if form?.error}
 		<p class="mb-4 rounded-lg px-3 py-2 text-sm alert-error">{form.error}</p>
 	{/if}
@@ -371,7 +373,7 @@
 
 			<!-- Actions -->
 			<div class="flex flex-wrap gap-2">
-				<button type="submit" class="rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm min-h-[44px]">Save</button>
+				<button type="submit" class="btn-primary btn-touch text-white shadow-sm">Save</button>
 				<button
 					type="button"
 					disabled={sending}

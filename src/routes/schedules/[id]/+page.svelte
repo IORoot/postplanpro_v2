@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { ruleColor } from '$lib/calendarColors.js';
@@ -178,21 +179,22 @@
 				<input type="hidden" name="rules_json" value={rules.length > 0 ? rulesJson() : ''} />
 
 
-				<div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-					<h1 class="text-2xl font-bold text-[var(--text)]">Edit schedule</h1>
-					<button
-						type="button"
-						onclick={copyScheduleId}
-						class="font-mono text-xs text-[var(--text-muted)] hover:text-[var(--text)] border border-[var(--border)] rounded px-2 py-1.5 hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
-						title="Copy schedule ID"
-					>
-						{#if copyFeedback}
-							Copied!
-						{:else}
-							{data.schedule.id}
-						{/if}
-					</button>
-				</div>
+				<PageSectionHeading title="Edit schedule">
+					{#snippet trail()}
+						<button
+							type="button"
+							onclick={copyScheduleId}
+							class="cursor-pointer rounded border border-[var(--border)] px-2 py-1.5 font-mono text-xs text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
+							title="Copy schedule ID"
+						>
+							{#if copyFeedback}
+								Copied!
+							{:else}
+								{data.schedule.id}
+							{/if}
+						</button>
+					{/snippet}
+				</PageSectionHeading>
 
 				<div class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
 					<div class="min-w-0">
@@ -585,7 +587,7 @@
 	</section>
 
 				<div class="flex gap-2 pt-6">
-					<button type="submit" class="rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm min-h-[44px]">Save schedule</button>
+					<button type="submit" class="btn-primary btn-touch text-white shadow-sm">Save schedule</button>
 					<a href="/schedules" class="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center">Cancel</a>
 				</div>
 			</form>

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
+
 	let { data, form } = $props();
 </script>
 
@@ -8,10 +10,7 @@
 
 <div class="mx-auto max-w-md">
 	<div class="content-card rounded-xl p-6 shadow-sm">
-		<h1 class="text-2xl font-bold text-[var(--text)]">Reset password</h1>
-		<p class="mt-1 text-sm text-[var(--text-muted)]">
-			Set a new password for your account.
-		</p>
+		<PageSectionHeading title="Reset password" description="Set a new password for your account." />
 		{#if !data.token}
 			<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-error">
 				Missing reset token.
@@ -44,12 +43,7 @@
 						class="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
 					/>
 				</div>
-				<button
-					type="submit"
-					class="w-full rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white min-h-[44px]"
-				>
-					Update password
-				</button>
+				<button type="submit" class="btn-primary btn-touch w-full text-white">Update password</button>
 			</form>
 		{/if}
 	</div>

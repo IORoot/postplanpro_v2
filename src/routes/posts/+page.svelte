@@ -1,4 +1,6 @@
 <script lang="ts">
+	import EmptyState from '$lib/components/EmptyState.svelte';
+	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 
@@ -78,13 +80,16 @@
 	<title>Posts – PostPlan</title>
 </svelte:head>
 
-<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-	<h1 class="text-2xl font-bold text-[var(--text)]">Posts</h1>
-	<a href="/posts/new" class="rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm min-h-[44px] inline-flex items-center justify-center w-fit">New post</a>
-</div>
+<PageSectionHeading title="Posts">
+	{#snippet trail()}
+		<a href="/posts/new" class="btn-primary btn-touch text-white shadow-sm">New post</a>
+	{/snippet}
+</PageSectionHeading>
 
-<!-- Filters -->
-<form method="get" action="/posts" class="mt-4 flex flex-wrap gap-2">
+<div class="page-stack">
+<!-- Toolbar: filters + search grouped tightly -->
+<div class="flex flex-col gap-3">
+<form method="get" action="/posts" class="flex flex-wrap gap-2">
 	<select name="status" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] min-h-[44px] shadow-sm">
 		<option value="">All statuses</option>
 		<option value="draft" selected={data.filters.status === 'draft'}>Draft</option>
@@ -105,8 +110,7 @@
 	</select>
 	<button type="submit" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] shadow-sm">Filter</button>
 </form>
-
-<div class="mt-3">
+<div>
 	<input
 		id="posts-search"
 		type="search"
@@ -126,13 +130,14 @@
 		</p>
 	{/if}
 </div>
+</div>
 
 {#if sendError}
-	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-error">{sendError}</p>
+	<p class="rounded-lg px-3 py-2 text-sm alert-error">{sendError}</p>
 {/if}
 
 {#if someSelected}
-	<div class="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm">
+	<div class="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm">
 		<span class="text-sm font-medium text-[var(--text)]">{selectedIds.size} selected</span>
 		<button type="button" class="text-sm text-[var(--text-muted)] hover:underline" onclick={clearSelection}>Clear selection</button>
 		<form method="post" action="?/bulkDelete" use:enhance={({ cancel }) => { const n = selectedIds.size; if (!confirm(`Delete ${n} post${n === 1 ? '' : 's'} permanently? You can't undo this.`)) cancel(); bulkActionError = null; return async ({ result }) => { if (result.type === 'success') { clearSelection(); await invalidateAll(); } else if (result.type === 'failure' && result.data && typeof (result.data as { error?: string }).error === 'string') bulkActionError = (result.data as { error: string }).error; }; }} class="inline-flex items-center gap-2">
@@ -164,15 +169,29 @@
 {/if}
 
 <!-- List as cards -->
-<div class="mt-6 space-y-4">
+<div class="flex flex-col gap-4">
 	{#if data.posts.length === 0}
-		<div class="content-card rounded-xl p-6 text-center">
-			<p class="text-[var(--text-muted)]">You don't have any posts yet. <a href="/posts/new" class="font-medium text-[var(--primary)] hover:underline">Create a post</a> to get started.</p>
-		</div>
+		<EmptyState title="No posts yet" titleId="posts-empty-list">
+			<p>
+				Add a webhook in Settings, then
+				<a href="/posts/new" class="font-medium text-[var(--primary)] hover:underline">create a post</a>
+				or
+				<a href="/bulk-create" class="font-medium text-[var(--primary)] hover:underline">import</a>
+				— attach a schedule when you’re ready to send on a timer.
+			</p>
+		</EmptyState>
 	{:else if filteredPosts.length === 0}
-		<div class="content-card rounded-xl p-6 text-center">
-			<p class="text-[var(--text-muted)]">Nothing matches your search.{#if searchQuery.trim()} <button type="button" class="font-medium text-[var(--primary)] hover:underline" onclick={() => (searchQuery = '')}>Clear search</button>{/if}</p>
-		</div>
+		<EmptyState title="No matches" titleId="posts-empty-search">
+			<p>
+				Try another term, or adjust filters above.
+				{#if searchQuery.trim()}
+					<button
+						type="button"
+						class="font-medium text-[var(--primary)] hover:underline"
+						onclick={() => (searchQuery = '')}>Clear search</button>
+				{/if}
+			</p>
+		</EmptyState>
 	{:else}
 		<div class="flex items-center gap-3 pb-2">
 			<label class="flex items-center gap-2 text-sm text-[var(--text-muted)] cursor-pointer">
@@ -238,4 +257,5 @@
 			</div>
 		{/each}
 	{/if}
+</div>
 </div>

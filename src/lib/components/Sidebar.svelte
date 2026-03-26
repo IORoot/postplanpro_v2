@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { fade } from 'svelte/transition';
 	import { theme, toggleTheme } from '$lib/stores/theme.js';
 	import { sidebarOpen, closeSidebar } from '$lib/stores/sidebar.js';
 	import { page } from '$app/stores';
@@ -128,12 +129,13 @@
 		type="button"
 		class="fixed inset-0 z-40 bg-black/50 md:hidden"
 		aria-label="Close menu"
+		transition:fade={{ duration: 180 }}
 		onclick={closeSidebar}
 	></button>
 {/if}
 
 <aside
-	class="sidebar fixed left-0 top-0 z-50 h-full w-[280px] -translate-x-full transition-transform duration-200 ease-out md:translate-x-0"
+	class="sidebar fixed left-0 top-0 z-50 h-full w-[280px] -translate-x-full transition-transform md:translate-x-0 [transition-duration:var(--motion-panel)] [transition-timing-function:var(--ease-out-quart)]"
 	class:translate-x-0={$sidebarOpen}
 	aria-label="Main navigation"
 >
@@ -156,7 +158,7 @@
 		</div>
 		<!-- Main menu -->
 		<nav class="flex-1 overflow-y-auto p-3">
-			<div class="mb-4 rounded-lg border border-[var(--sidebar-border)] bg-black/10 p-2">
+			<div class="sidebar-mini-cal mb-4 rounded-lg border bg-black/10 p-2">
 				<div class="mb-2 flex items-center justify-between px-1">
 					<button
 						type="button"
@@ -227,9 +229,9 @@
 					<li>
 						<a
 							href={item.href}
-							class="nav-item flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {isActive
+							class="nav-item flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium {isActive
 								? 'sidebar-nav-item-active'
-								: 'text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)]'}"
+								: 'sidebar-nav-idle text-[var(--sidebar-text-muted)] hover:text-[var(--sidebar-text)]'}"
 							onclick={closeSidebar}
 						>
 							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -246,7 +248,7 @@
 				<div class="px-3">
 					<a
 						href="/account"
-						class="flex items-center gap-2 rounded-lg py-1 pr-2 -ml-2 pl-2 hover:bg-[var(--sidebar-hover)] transition-colors"
+						class="flex items-center gap-2 rounded-lg py-1 pr-2 -ml-2 pl-2 transition-[background-color,color] [transition-duration:var(--motion-snappy)] [transition-timing-function:var(--ease-out-quart)] hover:bg-[var(--sidebar-hover)]"
 					>
 						{#if $page.data.session.user?.image}
 							<img
@@ -272,7 +274,7 @@
 					<input type="hidden" name="options.redirectTo" value="/auth/login" />
 					<button
 						type="submit"
-						class="flex w-full items-center gap-3 rounded-r-lg px-3 py-2.5 text-sm font-medium text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)] min-h-[44px]"
+						class="pressable-row flex w-full min-h-[44px] items-center gap-3 rounded-r-lg px-3 py-2.5 text-sm font-medium text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)]"
 					>
 						Sign out
 					</button>
@@ -280,7 +282,7 @@
 			{/if}
 			<button
 				type="button"
-				class="flex w-full items-center gap-3 rounded-r-lg px-3 py-2.5 text-sm font-medium text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)] min-h-[44px]"
+				class="pressable-row flex w-full min-h-[44px] items-center gap-3 rounded-r-lg px-3 py-2.5 text-sm font-medium text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)]"
 				onclick={toggleTheme}
 				aria-label="Toggle theme"
 			>

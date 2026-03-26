@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 
@@ -73,10 +74,12 @@
 	<title>Settings – PostPlan</title>
 </svelte:head>
 
-<h1 class="text-2xl font-bold text-[var(--text)]">Settings</h1>
-<p class="mt-1 text-sm text-[var(--text-muted)]">Configure outputs, inputs, templates, and global variables.</p>
+<PageSectionHeading
+	title="Settings"
+	description="Configure outputs, inputs, templates, and global variables."
+/>
 
-<div class="mt-6 settings-layout">
+<div class="settings-layout">
 	<aside class="settings-sidebar">
 		<nav class="settings-nav">
 			<a href="/settings?section=outputs" class="settings-nav-link {currentSection === 'outputs' ? 'settings-nav-link-active' : ''}">
@@ -788,12 +791,12 @@
 	}
 	.settings-nav-link:hover {
 		color: var(--text);
-		border-color: var(--border);
-		background: var(--surface);
+		border-color: var(--primary-border-soft);
+		background: var(--primary-soft);
 	}
 	.settings-nav-link-active {
-		color: var(--text);
-		border-color: var(--border);
-		background: var(--surface);
+		color: var(--primary);
+		border-color: var(--primary-border-soft);
+		background: var(--primary-soft);
 	}
 </style>

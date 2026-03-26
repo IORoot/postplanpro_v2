@@ -9,7 +9,7 @@
 <div class="content-card mx-auto max-w-lg rounded-xl p-8 text-center">
 	<p class="text-sm font-medium text-[var(--text-muted)]">Error {$page.status}</p>
 	<h1 class="mt-2 text-xl font-bold text-[var(--text)]">We couldn’t load this page</h1>
-	<p class="mt-3 overflow-wrap-anywhere text-sm text-[var(--text-muted)]">
+	<p class="mx-auto mt-3 max-w-md overflow-wrap-anywhere text-sm leading-relaxed text-[var(--text-muted)]">
 		{$page.error?.message ??
 			'Something unexpected happened. Use the buttons below to go back or return to your dashboard.'}
 	</p>
@@ -21,11 +21,6 @@
 		>
 			Previous page
 		</button>
-		<a
-			href="/"
-			class="btn-primary inline-flex min-h-[44px] items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium text-white"
-		>
-			Dashboard
-		</a>
+		<a href="/" class="btn-primary btn-touch text-white">Dashboard</a>
 	</div>
 </div>

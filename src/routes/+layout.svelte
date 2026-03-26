@@ -29,7 +29,7 @@ import { page } from '$app/stores';
 	{#if !$page.url.pathname.startsWith('/auth') && !$page.url.pathname.startsWith('/welcome') && $page.url.pathname !== '/blocked'}
 		<button
 			type="button"
-			class="fixed z-30 flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow md:hidden"
+			class="fixed z-30 flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow transition-[transform,background-color] [transition-duration:var(--motion-instant)] [transition-timing-function:var(--ease-out-quart)] hover:bg-[var(--surface-hover)] active:scale-95 md:hidden"
 			style="left: max(1rem, env(safe-area-inset-left, 0px)); top: max(1rem, env(safe-area-inset-top, 0px));"
 			aria-label="Open menu"
 			onclick={toggleSidebar}
@@ -57,7 +57,7 @@ import { page } from '$app/stores';
 			</div>
 		{:else}
 			<div class="mx-2 mb-4 flex min-h-[calc(100vh-2rem)] max-w-full min-w-0 flex-col pt-2 md:mx-4 md:mb-4 md:min-h-[calc(100vh-3rem)] md:pt-4">
-				<div class="content-area flex min-w-0 flex-1 flex-col rounded-xl border border-[var(--sidebar-border)] bg-[var(--surface)]">
+				<div class="main-content-shell content-area flex min-w-0 flex-1 flex-col rounded-xl bg-[var(--surface)]">
 					<div
 						class="min-w-0 flex-1 px-4 pt-16 pb-[max(2rem,env(safe-area-inset-bottom,0px))] md:px-6 md:pt-6 md:pb-8"
 					>

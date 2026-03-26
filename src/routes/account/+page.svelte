@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 
@@ -10,11 +11,13 @@
 	<title>Account – PostPlan</title>
 </svelte:head>
 
-<h1 class="text-2xl font-bold text-[var(--text)]">Account</h1>
-<p class="mt-1 text-sm text-[var(--text-muted)]">Manage your account, sign-in methods, and security.</p>
+<PageSectionHeading
+	title="Account"
+	description="Manage your account, sign-in methods, and security."
+/>
 
 {#if data.session?.user}
-	<div class="mt-6 content-card rounded-xl p-6 shadow-sm border border-[var(--border)]">
+	<div class="content-card rounded-xl border border-[var(--border)] p-6 shadow-sm">
 		<div class="flex flex-wrap items-center gap-4">
 			{#if data.session.user.image}
 				<img
@@ -54,7 +57,7 @@
 	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-success">OAuth account disconnected.</p>
 {/if}
 
-<div class="mt-6 space-y-8">
+<div class="mt-8 space-y-8">
 	<!-- Plan & usage -->
 	<section class="content-card rounded-xl p-6 shadow-sm">
 		<h2 class="text-base font-semibold text-[var(--text)]">Plan & usage</h2>

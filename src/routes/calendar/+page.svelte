@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
@@ -559,13 +560,12 @@
 	<title>Calendar – PostPlan</title>
 </svelte:head>
 
-<h1 class="text-2xl font-bold text-[var(--text)]">Calendar</h1>
-<p class="mt-1 text-sm text-[var(--text-muted)]">Modern multi-view calendar for scheduled posts.</p>
+<PageSectionHeading title="Calendar" description="Modern multi-view calendar for scheduled posts." />
 {#if sendError}
-	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-error">{sendError}</p>
+	<p class="rounded-lg px-3 py-2 text-sm alert-error">{sendError}</p>
 {/if}
 {#if sendSuccess}
-	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-success">{sendSuccess}</p>
+	<p class="rounded-lg px-3 py-2 text-sm alert-success">{sendSuccess}</p>
 {/if}
 
 {#if dragPostId && dragPreviewText != null && dragPreviewPos}
@@ -578,7 +578,7 @@
 	</div>
 {/if}
 
-<div class="content-card mt-6 rounded-xl p-4 md:p-5" data-sveltekit-preload-data="tap">
+<div class="content-card mt-0 rounded-xl p-4 md:p-5" data-sveltekit-preload-data="tap">
 	<div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 		<div
 			class="-mx-1 flex max-w-full gap-1 overflow-x-auto overflow-y-hidden rounded-xl bg-[var(--surface)] p-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:pb-1 [&::-webkit-scrollbar]:hidden"

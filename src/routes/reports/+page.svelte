@@ -1,4 +1,6 @@
 <script lang="ts">
+	import EmptyState from '$lib/components/EmptyState.svelte';
+	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 
@@ -28,7 +30,7 @@
 			href="/reports"
 			class="flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors touch-manipulation {data.reportType === 'logs'
 				? 'bg-[var(--primary)]/15 text-[var(--primary)]'
-				: 'text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]'}"
+				: 'text-[var(--text-muted)] hover:bg-[var(--primary-soft)] hover:text-[var(--text)]'}"
 		>
 			<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H5.25a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H5.25a1.125 1.125 0 00-1.125 1.125v7.5c0 .621.504 1.125 1.125 1.125h7.5a1.125 1.125 0 001.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25z" />
@@ -39,7 +41,7 @@
 			href="/reports?report=callback-stages"
 			class="flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors touch-manipulation {data.reportType === 'callback-stages'
 				? 'bg-[var(--primary)]/15 text-[var(--primary)]'
-				: 'text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]'}"
+				: 'text-[var(--text-muted)] hover:bg-[var(--primary-soft)] hover:text-[var(--text)]'}"
 		>
 			<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
 				<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -48,29 +50,29 @@
 		</a>
 	</nav>
 
-	<main class="min-w-0 flex-1 space-y-4">
+	<main class="min-w-0 flex-1 space-y-6">
 		{#if data.reportType === 'logs'}
-			<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-				<div>
-					<h1 class="text-2xl font-bold text-[var(--text)]">Request / Response</h1>
-					<p class="mt-1 text-sm text-[var(--text-muted)]">
-						For each send: the JSON we posted to your webhook and the response we got back—useful when a send fails or returns an error.
-					</p>
-				</div>
-				{#if data.reports.length > 0}
-					<form method="POST" action="?/clearLogs" use:enhance={({ cancel }) => { if (!confirm('Clear all send logs? You will lose this request/response history. This cannot be undone.')) cancel(); return () => invalidateAll(); }} class="inline">
-						<button type="submit" class="btn-danger-outline min-h-[44px] rounded-lg px-4 py-2.5 text-sm font-medium">Clear logs</button>
-					</form>
-				{/if}
-			</div>
+			<PageSectionHeading
+				title="Request / Response"
+				description="For each send: the JSON we posted to your webhook and the response we got back—useful when a send fails or returns an error."
+			>
+				{#snippet trail()}
+					{#if data.reports.length > 0}
+						<form method="POST" action="?/clearLogs" use:enhance={({ cancel }) => { if (!confirm('Clear all send logs? You will lose this request/response history. This cannot be undone.')) cancel(); return () => invalidateAll(); }} class="inline">
+							<button type="submit" class="btn-danger-outline btn-touch">Clear logs</button>
+						</form>
+					{/if}
+				{/snippet}
+			</PageSectionHeading>
 
 			{#if data.reports.length === 0}
-				<div class="content-card rounded-xl p-6 text-center">
-					<p class="text-[var(--text-muted)]">
-						No send history yet. When a post is sent to a webhook, the request and response will show up here. Use
-						<span class="font-medium text-[var(--text)]">Send now</span> on the Posts page, or wait for a scheduled send.
+				<EmptyState title="No send history yet">
+					<p>
+						Each delivery logs the JSON we POSTed and what came back—handy when debugging webhooks or Make.com scenarios. Trigger a
+						<span class="font-medium text-[var(--text)]">Send now</span> from
+						<a href="/posts" class="font-medium text-[var(--primary)] hover:underline">Posts</a>, or wait for the next scheduled run.
 					</p>
-				</div>
+				</EmptyState>
 			{:else}
 				{#each data.reports as report}
 					<div class="content-card content-card-accent rounded-xl overflow-hidden shadow-sm">
@@ -131,10 +133,10 @@
 			{/if}
 		{:else}
 			<!-- Callback stages report -->
-			<div>
-				<h1 class="text-2xl font-bold text-[var(--text)]">Callback stages</h1>
-				<p class="mt-1 text-sm text-[var(--text-muted)]">All post callback stages reported by Make.com (stage_passed / stage_failed).</p>
-			</div>
+			<PageSectionHeading
+				title="Callback stages"
+				description="All post callback stages reported by Make.com (stage_passed / stage_failed)."
+			/>
 
 			<form method="GET" action="/reports" class="content-card rounded-xl border border-[var(--border)] p-4">
 				<input type="hidden" name="report" value="callback-stages" />
@@ -175,7 +177,7 @@
 						</select>
 					</div>
 					<div class="flex items-end gap-2">
-						<button type="submit" class="rounded-lg btn-primary px-4 py-2.5 text-sm font-medium text-white min-h-[44px]">Apply filters</button>
+						<button type="submit" class="btn-primary btn-touch text-white">Apply filters</button>
 						<a href="/reports?report=callback-stages" class="rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center">Reset</a>
 					</div>
 				</div>

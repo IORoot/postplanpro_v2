@@ -22,8 +22,8 @@
 	<title>Import – PostPlan</title>
 </svelte:head>
 
-<h1 class="text-2xl font-bold text-[var(--text)]">Import</h1>
-<p class="mt-1 text-sm text-[var(--text-muted)]">
+<h1 class="page-title mb-6">Import</h1>
+<p class="page-lead">
 	{#if selectedSource === 'wordpress'}
 		Import posts from a WordPress site's REST API. Discover post types, map fields, then import.
 	{:else if selectedSource === 'squarespace'}
