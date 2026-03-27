@@ -1,16 +1,20 @@
-# Optional repo variable ZAP_TARGET: base URL for push/schedule runs.
-# workflow_dispatch input zap_target overrides ZAP_TARGET when set.
+# OWASP ZAP Baseline against this app.
+#
+# Default (no ZAP_TARGET / no zap_target input): npm ci → build → run adapter-node on 127.0.0.1:4178 →
+# ZAP via Docker with --network host so the scanner can reach the runner's localhost.
+#
+# Optional: set repo variable ZAP_TARGET or workflow_dispatch input zap_target to scan a deployed URL
+# instead (skips build/start; uses zaproxy/action-baseline).
+#
+# Runs only when you trigger it: Actions → OWASP ZAP Baseline → Run workflow.
 
 name: OWASP ZAP Baseline
 
 on:
-  # push:
-  #   branches: [main, master]
-  pull_request:
   workflow_dispatch:
     inputs:
       zap_target:
-        description: 'ZAP baseline target URL (overrides ZAP_TARGET repo variable when set)'
+        description: 'Optional: scan this URL instead of building the app (overrides ZAP_TARGET).'
         required: false
         type: string
   schedule:
@@ -27,14 +31,99 @@ jobs:
   zap-baseline:
     name: OWASP ZAP Baseline
     runs-on: ubuntu-latest
-    if: >-
-      vars.ZAP_TARGET != '' ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.zap_target != '')
     steps:
-      - name: ZAP Baseline scan
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native addons (better-sqlite3)
+        run: npm run rebuild:native
+
+      - name: Resolve ZAP target
+        id: zap
+        run: |
+          EXT='${{ github.event.inputs.zap_target }}'
+          VAR='${{ vars.ZAP_TARGET }}'
+          if [ -n "$EXT" ]; then
+            echo "mode=external" >> "$GITHUB_OUTPUT"
+            echo "url=$EXT" >> "$GITHUB_OUTPUT"
+          elif [ -n "$VAR" ]; then
+            echo "mode=external" >> "$GITHUB_OUTPUT"
+            echo "url=$VAR" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=local" >> "$GITHUB_OUTPUT"
+            echo "url=http://127.0.0.1:4178" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build application (local target)
+        if: steps.zap.outputs.mode == 'local'
+        run: npm run build
+
+      - name: Start production server (local target)
+        if: steps.zap.outputs.mode == 'local'
+        run: |
+          mkdir -p .tmp
+          PORT=4178 HOST=127.0.0.1 \
+            DATABASE_PATH="$GITHUB_WORKSPACE/.tmp/zap-dast.db" \
+            AUTH_SECRET="zap-dast-ci-secret-at-least-32-characters-long-xx" \
+            APP_BASE_URL="http://127.0.0.1:4178" \
+            AUTH_TRUST_HOST=true \
+            NODE_ENV=production \
+            nohup node build > .tmp/zap-app.log 2>&1 &
+          echo $! > .tmp/zap-app.pid
+          for i in $(seq 1 90); do
+            if curl -sf "http://127.0.0.1:4178/welcome" > /dev/null; then
+              echo "Server ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "--- app log ---"
+          cat .tmp/zap-app.log || true
+          exit 1
+
+      - name: ZAP Baseline scan (local — Docker host network)
+        id: zap_local
+        if: steps.zap.outputs.mode == 'local'
+        continue-on-error: true
+        run: |
+          docker run --rm --network host \
+            -v "$GITHUB_WORKSPACE:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t "${{ steps.zap.outputs.url }}" \
+            -r /zap/wrk/zap-report.html \
+            -J /zap/wrk/zap-report.json \
+            -I
+
+      - name: ZAP Baseline scan (external URL)
+        if: steps.zap.outputs.mode == 'external'
         uses: zaproxy/action-baseline@v0.15.0
         with:
-          target: ${{ github.event.inputs.zap_target || vars.ZAP_TARGET }}
+          target: ${{ steps.zap.outputs.url }}
           fail_action: false
           allow_issue_writing: false
           artifact_name: zap_scan
+
+      - name: Upload ZAP report (local)
+        if: always() && steps.zap.outputs.mode == 'local'
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap_scan
+          path: |
+            zap-report.html
+            zap-report.json
+          if-no-files-found: ignore
+
+      - name: Stop production server (local)
+        if: always() && steps.zap.outputs.mode == 'local'
+        run: |
+          if [ -f .tmp/zap-app.pid ]; then
+            kill "$(cat .tmp/zap-app.pid)" 2>/dev/null || true
+          fi
