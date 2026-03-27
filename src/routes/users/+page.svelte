@@ -47,13 +47,13 @@
 <div class="overflow-x-auto">
 	<table class="w-full border-collapse border border-[var(--border)] rounded-lg overflow-hidden">
 		<thead>
-			<tr class="bg-[var(--sidebar-bg)]">
-				<th class="border border-[var(--border)] px-4 py-3 text-left text-sm font-semibold text-[var(--text)]">Email / Name</th>
-				<th class="border border-[var(--border)] px-4 py-3 text-left text-sm font-semibold text-[var(--text)]">Tier</th>
-				<th class="border border-[var(--border)] px-4 py-3 text-left text-sm font-semibold text-[var(--text)]">Posts this month</th>
-				<th class="border border-[var(--border)] px-4 py-3 text-left text-sm font-semibold text-[var(--text)]">Callback inputs</th>
-				<th class="border border-[var(--border)] px-4 py-3 text-left text-sm font-semibold text-[var(--text)]">Imports</th>
-				<th class="border border-[var(--border)] px-4 py-3 text-left text-sm font-semibold text-[var(--text)]">Actions</th>
+			<tr class="bg-[var(--sidebar-bg)] text-[var(--sidebar-text)]">
+				<th class="border border-[var(--sidebar-border)] px-4 py-3 text-left text-sm font-semibold">Email / Name</th>
+				<th class="border border-[var(--sidebar-border)] px-4 py-3 text-left text-sm font-semibold">Tier</th>
+				<th class="border border-[var(--sidebar-border)] px-4 py-3 text-left text-sm font-semibold">Posts this month</th>
+				<th class="border border-[var(--sidebar-border)] px-4 py-3 text-left text-sm font-semibold">Callback inputs</th>
+				<th class="border border-[var(--sidebar-border)] px-4 py-3 text-left text-sm font-semibold">Imports</th>
+				<th class="border border-[var(--sidebar-border)] px-4 py-3 text-left text-sm font-semibold">Actions</th>
 			</tr>
 		</thead>
 		<tbody>
