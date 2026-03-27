@@ -1,0 +1,40 @@
+# Optional repo variable ZAP_TARGET: base URL for push/schedule runs.
+# workflow_dispatch input zap_target overrides ZAP_TARGET when set.
+
+name: OWASP ZAP Baseline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      zap_target:
+        description: 'ZAP baseline target URL (overrides ZAP_TARGET repo variable when set)'
+        required: false
+        type: string
+  schedule:
+    - cron: '57 5 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zap-baseline-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zap-baseline:
+    name: OWASP ZAP Baseline
+    runs-on: ubuntu-latest
+    if: >-
+      vars.ZAP_TARGET != '' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.zap_target != '')
+    steps:
+      - name: ZAP Baseline scan
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: ${{ github.event.inputs.zap_target || vars.ZAP_TARGET }}
+          fail_action: false
+          allow_issue_writing: false
+          artifact_name: zap_scan

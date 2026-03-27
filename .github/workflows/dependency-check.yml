@@ -1,0 +1,71 @@
+# Optional secret NVD_API_KEY: https://github.com/jeremylong/DependencyCheck#nvd
+
+name: OWASP Dependency-Check
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '47 5 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: dependency-check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  owasp-dependency-check:
+    name: OWASP Dependency-Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run OWASP Dependency-Check (Docker)
+        run: |
+          mkdir -p dependency-check-report
+          EXTRA_ARGS=()
+          if [ -n "${NVD_API_KEY:-}" ]; then
+            EXTRA_ARGS+=(--nvdApiKey "$NVD_API_KEY")
+          fi
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/src:rw" \
+            owasp/dependency-check:11.1.0 \
+            --scan /src \
+            --project "postplanpro-v2" \
+            --format HTML \
+            --format JSON \
+            --format SARIF \
+            --out /src/dependency-check-report \
+            --nodePackageSkipDevDependencies false \
+            --exclude "**/node_modules/**" \
+            "${EXTRA_ARGS[@]}"
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+
+      - name: Find Dependency-Check SARIF
+        id: depcheck_sarif
+        if: always()
+        run: |
+          path=$(find dependency-check-report -maxdepth 1 -name '*.sarif' -print -quit)
+          echo "path=${path}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Dependency-Check SARIF to code scanning
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && steps.depcheck_sarif.outputs.path != ''
+        continue-on-error: true
+        with:
+          sarif_file: ${{ steps.depcheck_sarif.outputs.path }}
+          category: dependency-check
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-report
+          path: dependency-check-report/
+          if-no-files-found: ignore
