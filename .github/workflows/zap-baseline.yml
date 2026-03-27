@@ -93,8 +93,11 @@ jobs:
         if: steps.zap.outputs.mode == 'local'
         continue-on-error: true
         run: |
+          # ZAP runs as non-root; mounting the whole repo often yields PermissionError on /zap/wrk/zap.yaml.
+          mkdir -p zap-wrk
+          chmod 777 zap-wrk
           docker run --rm --network host \
-            -v "$GITHUB_WORKSPACE:/zap/wrk:rw" \
+            -v "$GITHUB_WORKSPACE/zap-wrk:/zap/wrk:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
             -t "${{ steps.zap.outputs.url }}" \
@@ -117,8 +120,8 @@ jobs:
         with:
           name: zap_scan
           path: |
-            zap-report.html
-            zap-report.json
+            zap-wrk/zap-report.html
+            zap-wrk/zap-report.json
           if-no-files-found: ignore
 
       - name: Stop production server (local)

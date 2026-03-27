@@ -18,6 +18,9 @@ Thumbs.db
 # Test SQLite files (Vitest / Playwright)
 .tmp
 
+# ZAP Baseline (local / CI writable mount)
+zap-wrk/
+
 # Env
 .env
 .env.*
