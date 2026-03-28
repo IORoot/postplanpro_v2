@@ -1,4 +1,4 @@
-name: SemGrep
+name: 🚥 Test - SemGrep
 
 on:
   workflow_dispatch: {}

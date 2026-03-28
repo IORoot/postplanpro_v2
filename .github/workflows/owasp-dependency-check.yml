@@ -7,7 +7,7 @@
 # The dependency-check-data/ directory is cached between runs so the NVD database is not
 # re-downloaded from scratch every time (first run or cache miss can still take a long time).
 
-name: OWASP Dependency-Check
+name: 🚥 Test - OWASP Dependency-Check
 
 on:
   workflow_dispatch: {}

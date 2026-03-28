@@ -1,4 +1,4 @@
-name: Trivy
+name: 🚥 Test - Trivy
 
 on:
   workflow_dispatch: {}

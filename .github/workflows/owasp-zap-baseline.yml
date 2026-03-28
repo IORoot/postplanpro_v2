@@ -11,7 +11,7 @@
 # Optional repo secret ZAP_DAST_AUTH_SECRET (32+ chars): used as AUTH_SECRET for the local scan server.
 # If unset, a one-off value is generated with openssl (nothing secret-like is committed).
 
-name: OWASP ZAP Baseline
+name: 🚥 Test - OWASP ZAP Baseline
 
 on:
   workflow_dispatch:

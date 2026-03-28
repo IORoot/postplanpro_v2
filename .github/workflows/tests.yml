@@ -1,4 +1,4 @@
-name: Unit & e2e Tests
+name: 🚥 Test - Unit & e2e 
 
 on:
   workflow_dispatch: {}
