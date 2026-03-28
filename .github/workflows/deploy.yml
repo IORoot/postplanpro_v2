@@ -1,0 +1,48 @@
+# Deploy to a self-hosted runner with Docker Compose.
+#
+# Runner labels: add a custom label `postplanpro` to this repo’s runner
+# (Settings → Actions → Runners → your runner → Labels), or change `runs-on` below to match your labels.
+#
+# Repository secret (required):
+#   ENV_BASE_64 — entire `.env` file, Base64-encoded (no line breaks in the secret value is safest).
+#   Encode examples:
+#     macOS:  base64 -i .env | tr -d '\n'
+#     Linux:  base64 -w0 .env
+#
+# GitHub repository secrets are capped in size (~48KB); keep `.env` under that when encoded.
+#
+# Put everything the app and Compose need in that file (AUTH_SECRET, APP_BASE_URL, AUTH_TRUST_HOST,
+# HOST_PORT_BINDING, OAuth, Stripe, SMTP, etc.). Compose substitutes ${VAR} from this `.env` in the project directory.
+#
+# nginx-proxy-manager: forward to the host port you set in `.env` (e.g. HOST_PORT_BINDING=3001); container port is 3000.
+
+name: Deploy
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Docker Compose on self-hosted
+    runs-on: [self-hosted, postplanpro]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Write .env from secret and deploy
+        env:
+          ENV_BASE_64: ${{ secrets.ENV_BASE_64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          : "${ENV_BASE_64:?Set repository secret ENV_BASE_64 (base64-encoded .env)}"
+          printf '%s' "$ENV_BASE_64" | base64 -d > .env
+          test -s .env || { echo "Decoded .env is empty; check ENV_BASE_64 encoding." >&2; exit 1; }
+          docker compose up -d --build --remove-orphans

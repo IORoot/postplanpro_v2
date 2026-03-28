@@ -1,0 +1,26 @@
+services:
+  app:
+    build: .
+    image: postplanpro-v2:local
+    # Full host side of the mapping, e.g. 3000 or 127.0.0.1:3001 (lock to localhost for a reverse proxy on the host)
+    ports:
+      - "${HOST_PORT_BINDING:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3000"
+      DATABASE_PATH: /data/postplan.db
+      # Required in production (see src/auth.ts)
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env or the environment}
+      AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
+      # Public URL of the app (OAuth, Stripe redirects, cron base URL)
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - postplan_data:/data
+    restart: unless-stopped
+
+volumes:
+  postplan_data:
