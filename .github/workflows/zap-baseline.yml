@@ -1,6 +1,6 @@
 # OWASP ZAP Baseline against this app.
 #
-# Default (no ZAP_TARGET / no zap_target input): npm ci → build → run adapter-node on 127.0.0.1:4178 →
+# Default (no ZAP_TARGET / no zap_target input): bun install → build → run production server on 127.0.0.1:4178 →
 # ZAP via Docker with --network host so the scanner can reach the runner's localhost.
 #
 # Optional: set repo variable ZAP_TARGET or workflow_dispatch input zap_target to scan a deployed URL
@@ -34,16 +34,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: '22'
-          cache: npm
+          bun-version: '1.3.11'
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Rebuild native addons (better-sqlite3)
-        run: npm run rebuild:native
+        run: bun run rebuild:native
 
       - name: Resolve ZAP target
         id: zap
@@ -63,7 +62,7 @@ jobs:
 
       - name: Build application (local target)
         if: steps.zap.outputs.mode == 'local'
-        run: npm run build
+        run: bun run build
 
       - name: Start production server (local target)
         if: steps.zap.outputs.mode == 'local'
@@ -75,7 +74,7 @@ jobs:
             APP_BASE_URL="http://127.0.0.1:4178" \
             AUTH_TRUST_HOST=true \
             NODE_ENV=production \
-            nohup node build > .tmp/zap-app.log 2>&1 &
+            nohup bun ./build > .tmp/zap-app.log 2>&1 &
           echo $! > .tmp/zap-app.pid
           for i in $(seq 1 90); do
             if curl -sf "http://127.0.0.1:4178/welcome" > /dev/null; then

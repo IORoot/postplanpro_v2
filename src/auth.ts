@@ -9,6 +9,28 @@ import Facebook from '@auth/sveltekit/providers/facebook';
 import GitHub from '@auth/sveltekit/providers/github';
 import Google from '@auth/sveltekit/providers/google';
 import { sendAuthEmail } from '$lib/server/email.js';
+import { AuthError, CredentialsSignin } from '@auth/core/errors';
+
+/** Same shape as @auth/core’s default logger.error (so other auth errors still look familiar). */
+function logAuthJsError(error: Error): void {
+	const red = '\x1b[31m';
+	const reset = '\x1b[0m';
+	const name = error instanceof AuthError ? error.type : error.name;
+	console.error(`${red}[auth][error]${reset} ${name}: ${error.message}`);
+	const cause =
+		error instanceof AuthError && error.cause && typeof error.cause === 'object' && 'err' in error.cause
+			? (error.cause as { err?: unknown } & Record<string, unknown>)
+			: undefined;
+	if (cause?.err instanceof Error) {
+		const { err, ...data } = cause as { err: Error; [key: string]: unknown };
+		console.error(`${red}[auth][cause]${reset}:`, err.stack);
+		if (Object.keys(data).length) {
+			console.error(`${red}[auth][details]${reset}:`, JSON.stringify(data, null, 2));
+		}
+	} else if (error.stack) {
+		console.error(error.stack.replace(/.*/, '').substring(1));
+	}
+}
 
 type ProviderMeta = { id: string; label: string };
 
@@ -296,11 +318,24 @@ const credentialsProvider = Credentials({
 	}
 });
 
+const suppressCredentialsSigninLog =
+	env.SUPPRESS_AUTH_CREDENTIALS_ERROR_LOG === '1' || env.SUPPRESS_AUTH_CREDENTIALS_ERROR_LOG === 'true';
+
 export const { handle, signIn, signOut } = SvelteKitAuth({
 	trustHost,
 	secret: authSecret,
 	session: { strategy: 'jwt' },
 	providers: [credentialsProvider, ...configuredProviders.map((p) => p.provider)],
+	...(suppressCredentialsSigninLog
+		? {
+				logger: {
+					error(error: Error) {
+						if (error instanceof CredentialsSignin) return;
+						logAuthJsError(error);
+					}
+				}
+			}
+		: {}),
 	callbacks: {
 		async signIn({ user, account }) {
 			if (!account?.provider) return false;

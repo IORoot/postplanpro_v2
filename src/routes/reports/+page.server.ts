@@ -56,7 +56,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const orderDirParam = url.searchParams.get('orderDir');
 
 	if (reportType === 'callback-stages') {
-		callbackOrderBy = CALLBACK_ORDER_COLS.includes(orderByParam as CallbackOrderCol) ? orderByParam : 'date';
+		callbackOrderBy =
+			orderByParam && CALLBACK_ORDER_COLS.includes(orderByParam as CallbackOrderCol) ? orderByParam : 'date';
 		callbackOrderDir = orderDirParam === 'asc' ? 'asc' : 'desc';
 
 		const baseSql = `

@@ -15,7 +15,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (!sig) {
 		return json({ error: 'Missing stripe-signature' }, { status: 400 });
 	}
-	const stripe = new Stripe(secretKey, { apiVersion: '2025-04-30.basil' });
+	const stripe = new Stripe(secretKey, { apiVersion: '2026-02-25.clover' });
 	let event: Stripe.Event;
 	try {
 		event = stripe.webhooks.constructEvent(body, sig, webhookSecret);

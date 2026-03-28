@@ -22,7 +22,7 @@ test.describe('Authenticated (seeded E2E user)', () => {
 		await signInWithEmail(page);
 		await page.goto('/posts');
 		await expect(page).toHaveURL(/\/posts/);
-		await expect(page.getByRole('heading', { name: /posts/i })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Posts', exact: true })).toBeVisible();
 	});
 
 	test('bulk-create is reachable when logged in', async ({ page }) => {

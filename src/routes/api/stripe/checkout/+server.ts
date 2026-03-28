@@ -22,7 +22,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 		throw redirect(303, '/auth/login');
 	}
 	const origin = env.APP_BASE_URL || 'http://localhost:5173';
-	const stripe = new Stripe(secretKey, { apiVersion: '2025-04-30.basil' });
+	const stripe = new Stripe(secretKey, { apiVersion: '2026-02-25.clover' });
 	const params: Stripe.Checkout.SessionCreateParams = {
 		mode: 'subscription',
 		line_items: [{ price: priceId, quantity: 1 }],
