@@ -16,7 +16,7 @@
 #
 # nginx-proxy-manager: forward to the host port you set in `.env` (e.g. HOST_PORT_BINDING=3001); container port is 3000.
 
-name: Deploy
+name: 🚀 Deploy
 
 on:
   workflow_dispatch: {}
