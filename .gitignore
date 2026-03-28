@@ -21,6 +21,10 @@ Thumbs.db
 # ZAP Baseline (local / CI writable mount)
 zap-wrk/
 
+# OWASP Dependency-Check (CI cache + reports)
+dependency-check-data/
+dependency-check-report/
+
 # Env
 .env
 .env.*

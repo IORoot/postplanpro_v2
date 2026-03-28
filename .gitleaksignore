@@ -1,0 +1,4 @@
+# Fingerprints from historical commits (fixed in tree). Remove after history rewrite if desired.
+459a823e81c7363a3755151d77d7ac05ec6fd4bc:.github/workflows/zap-baseline.yml:generic-api-key:74
+db69ed9ac3130ee9e9103d683fab1d49e88a7be9:src/routes/settings/+page.svelte:curl-auth-header:360
+db69ed9ac3130ee9e9103d683fab1d49e88a7be9:src/routes/settings/+page.svelte:curl-auth-header:426

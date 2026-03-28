@@ -7,6 +7,9 @@
 # instead (skips build/start; uses zaproxy/action-baseline).
 #
 # Runs only when you trigger it: Actions → OWASP ZAP Baseline → Run workflow.
+#
+# Optional repo secret ZAP_DAST_AUTH_SECRET (32+ chars): used as AUTH_SECRET for the local scan server.
+# If unset, a one-off value is generated with openssl (nothing secret-like is committed).
 
 name: OWASP ZAP Baseline
 
@@ -31,6 +34,8 @@ jobs:
   zap-baseline:
     name: OWASP ZAP Baseline
     runs-on: ubuntu-latest
+    env:
+      ZAP_DAST_AUTH_SECRET: ${{ secrets.ZAP_DAST_AUTH_SECRET }}
     steps:
       - uses: actions/checkout@v4
 
@@ -68,9 +73,14 @@ jobs:
         if: steps.zap.outputs.mode == 'local'
         run: |
           mkdir -p .tmp
+          if [ -n "$ZAP_DAST_AUTH_SECRET" ]; then
+            AUTH_SECRET_VAL="$ZAP_DAST_AUTH_SECRET"
+          else
+            AUTH_SECRET_VAL="$(openssl rand -hex 32)"
+          fi
           PORT=4178 HOST=127.0.0.1 \
             DATABASE_PATH="$GITHUB_WORKSPACE/.tmp/zap-dast.db" \
-            AUTH_SECRET="zap-dast-ci-secret-at-least-32-characters-long-xx" \
+            AUTH_SECRET="$AUTH_SECRET_VAL" \
             APP_BASE_URL="http://127.0.0.1:4178" \
             AUTH_TRUST_HOST=true \
             NODE_ENV=production \

@@ -17,18 +17,34 @@ jobs:
   trivy:
     name: Trivy (filesystem)
     runs-on: ubuntu-latest
+    env:
+      # Pin release; bump when you want a newer scanner (see https://github.com/aquasecurity/trivy/releases)
+      TRIVY_VERSION: '0.69.3'
     steps:
       - uses: actions/checkout@v4
 
-      - uses: aquasecurity/trivy-action@v0.34.0
-        with:
-          scan-type: fs
-          scan-ref: .
-          severity: CRITICAL,HIGH,MEDIUM
-          ignore-unfixed: true
-          format: sarif
-          output: trivy-results.sarif
-          exit-code: '0'
+      # Install from GitHub releases instead of aquasecurity/setup-trivy (avoids composite install.sh failures on some runners).
+      - name: Install Trivy
+        run: |
+          set -eux
+          case "${RUNNER_ARCH}" in
+            X64) suffix=Linux-64bit ;;
+            ARM64) suffix=Linux-ARM64 ;;
+            *) echo "Unsupported RUNNER_ARCH=${RUNNER_ARCH}"; exit 1 ;;
+          esac
+          curl -sSfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_${suffix}.tar.gz" \
+            | sudo tar -xzf - -C /usr/local/bin trivy
+          trivy --version
+
+      - name: Run Trivy fs scan
+        run: |
+          trivy fs \
+            --severity CRITICAL,HIGH,MEDIUM \
+            --ignore-unfixed \
+            --format sarif \
+            --exit-code 0 \
+            --output trivy-results.sarif \
+            .
 
       - name: Upload Trivy SARIF to code scanning
         uses: github/codeql-action/upload-sarif@v4

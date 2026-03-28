@@ -421,7 +421,7 @@
 						>Copy</button>
 						<pre class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code>{`curl -X POST "${data.importCallbackUrl ?? 'https://your-app.com/api/callbacks/import'}" \\
   -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer YOUR_CALLBACK_TOKEN" \\
+  -H "X-Callback-Token: YOUR_CALLBACK_TOKEN" \\
   -d '{"posts":[{"title":"My post title","webhook_id":"<webhook-id>","content":"Optional post body."}]}'`}</code></pre>
 					</div>
 				{/if}
@@ -516,7 +516,7 @@
 						>Copy</button>
 						<pre class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code>{`curl -X POST "${data.callbackUrl ?? 'https://your-app.com/api/callbacks/stage'}" \\
   -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer YOUR_CALLBACK_TOKEN" \\
+  -H "X-Callback-Token: YOUR_CALLBACK_TOKEN" \\
   -d '{"post_id":"uuid-of-the-post","stage":"instagram_published"}'`}</code></pre>
 					</div>
 				{/if}
