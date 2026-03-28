@@ -5,9 +5,11 @@ import { defineConfig, loadEnv } from 'vite';
 
 // Node.js 25+ enables experimental Web Storage globally. Without `--localstorage-file`, each Vitest
 // worker logs a warning and can shadow jsdom's localStorage. Prefer jsdom for tests.
+// GitHub Actions (and similar) disallow `--no-webstorage` in NODE_OPTIONS, so skip there.
 {
+	const inCi = Boolean(process.env.CI || process.env.GITHUB_ACTIONS);
 	const cur = process.env.NODE_OPTIONS ?? '';
-	if (!/\b--no-webstorage\b/.test(cur)) {
+	if (!inCi && !/\b--no-webstorage\b/.test(cur)) {
 		process.env.NODE_OPTIONS = `${cur} --no-webstorage`.trim();
 	}
 }
