@@ -1,7 +1,6 @@
 name: Trivy
 
 on:
-  pull_request:
   workflow_dispatch: {}
   schedule:
     - cron: '37 5 * * 1'
