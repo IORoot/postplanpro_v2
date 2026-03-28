@@ -7,11 +7,14 @@ RUN apt-get update \
 	&& apt-get install -y --no-install-recommends python3 make g++ \
 	&& rm -rf /var/lib/apt/lists/*
 
+# Install without lifecycle scripts first (prepare needs svelte.config.js, which is not copied yet).
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile --ignore-scripts
 
 COPY . .
-RUN bun run build \
+# Full install: svelte-kit sync + native addons (better-sqlite3), then build and drop devDependencies.
+RUN bun install --frozen-lockfile \
+	&& bun run build \
 	&& bun install --frozen-lockfile --production
 
 FROM oven/bun:1.3 AS runner

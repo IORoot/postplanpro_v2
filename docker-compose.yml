@@ -1,7 +1,9 @@
 services:
   app:
+    # Local: omit DEPLOY_IMAGE (defaults to postplanpro-v2:local) and use `docker compose up --build`.
+    # CI deploy: set DEPLOY_IMAGE=ghcr.io/owner/repo:sha in `.env` and use pull + `up --no-build` on the server.
+    image: ${DEPLOY_IMAGE:-postplanpro-v2:local}
     build: .
-    image: postplanpro-v2:local
     # Full host side of the mapping, e.g. 3000 or 127.0.0.1:3001 (lock to localhost for a reverse proxy on the host)
     ports:
       - "${HOST_PORT_BINDING:-3000}:3000"
