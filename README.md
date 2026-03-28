@@ -2,7 +2,9 @@
 
 Plan and send JSON payloads to webhooks on a schedule. Create posts, attach schedules, import from WordPress, and send at the right time.
 
-This repo uses [Bun](https://bun.sh) for installs and scripts (`bun install`, `bun run …`).
+This repo uses [Bun](https://bun.sh) only for installs and scripts (`bun install`, `bun run …`, `bunx …`). You do not need the Node.js runtime installed for development, tests, or running the production build (`bun ./build` after `bun run build`).
+
+The dependency `@sveltejs/adapter-node` is SvelteKit’s standard self-hosted server bundle; the name reflects Node compatibility, but this project runs that output with Bun.
 
 ## Developing
 
@@ -40,19 +42,19 @@ If you're seeing this, you've probably already done this step. Congrats!
 
 ```sh
 # create a new project
-npx sv create my-app
+bunx sv create my-app
 ```
 
 To recreate this project with the same configuration:
 
 ```sh
 # recreate this project
-npx sv create --template minimal --types ts --no-install .
+bunx sv create --template minimal --types ts --no-install .
 ```
 
 ## Developing
 
-Once you've created a project and installed dependencies with `bun install` (or `npm install`, `pnpm install`, or `yarn`), start a development server:
+After `bun install`, start a development server:
 
 ```sh
 bun run dev

@@ -1,6 +1,6 @@
 # OWASP ZAP Baseline against this app.
 #
-# Default (no ZAP_TARGET / no zap_target input): bun install → build → run adapter-node on 127.0.0.1:4178 →
+# Default (no ZAP_TARGET / no zap_target input): bun install → build → run production server on 127.0.0.1:4178 →
 # ZAP via Docker with --network host so the scanner can reach the runner's localhost.
 #
 # Optional: set repo variable ZAP_TARGET or workflow_dispatch input zap_target to scan a deployed URL
