@@ -96,13 +96,15 @@ jobs:
           # ZAP runs as non-root; mounting the whole repo often yields PermissionError on /zap/wrk/zap.yaml.
           mkdir -p zap-wrk
           chmod 777 zap-wrk
+          # Use basenames for -r/-J: the Automation Framework resolves them under /zap/wrk, and
+          # absolute paths like /zap/wrk/foo.html become /zap/wrk/zap/wrk/foo.html (NoSuchFileException).
           docker run --rm --network host \
             -v "$GITHUB_WORKSPACE/zap-wrk:/zap/wrk:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
             -t "${{ steps.zap.outputs.url }}" \
-            -r /zap/wrk/zap-report.html \
-            -J /zap/wrk/zap-report.json \
+            -r zap-report.html \
+            -J zap-report.json \
             -I
 
       - name: ZAP Baseline scan (external URL)
