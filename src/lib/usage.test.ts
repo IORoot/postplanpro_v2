@@ -11,8 +11,7 @@ import {
 	incrementUsageMonth,
 	canSchedulePostInMonth,
 	canRunImportOperation,
-	canBulkCreate,
-	getPostsSentAndScheduledForMonth
+	canBulkCreate
 } from './usage.js';
 import { setTestDatabasePath, seedCallbackTestData, TEST_USER_ID } from '../../tests/helpers/testDb.js';
 import { getDatabase } from '$lib/db/index.js';

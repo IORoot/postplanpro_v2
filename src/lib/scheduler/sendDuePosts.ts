@@ -22,7 +22,7 @@ function injectCallbackPayload(
 	postId: string,
 	accountId: string
 ): Record<string, unknown> {
-	const out = { ...body, id: postId };
+	const out: Record<string, unknown> = { ...body, id: postId };
 	const baseUrl = env.APP_BASE_URL?.trim();
 	if (!baseUrl) return out;
 	if (isLocalhostBaseUrl(baseUrl)) return out;
