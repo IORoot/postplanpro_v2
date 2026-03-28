@@ -1,7 +1,8 @@
 # Deploy to a self-hosted runner with Docker Compose.
 #
-# Runner labels: add a custom label `postplanpro` to this repo’s runner
-# (Settings → Actions → Runners → your runner → Labels), or change `runs-on` below to match your labels.
+# Runner labels: `runs-on` must match your runner’s labels (Settings → Actions → Runners).
+# Default self-hosted Linux x64 labels are: self-hosted, Linux, X64. Add a custom label if you need
+# to target one machine when several self-hosted runners share this repo.
 #
 # Repository secret (required):
 #   ENV_BASE_64 — entire `.env` file, Base64-encoded (no line breaks in the secret value is safest).
@@ -31,7 +32,7 @@ concurrency:
 jobs:
   deploy:
     name: Docker Compose on self-hosted
-    runs-on: [self-hosted, postplanpro]
+    runs-on: [self-hosted, Linux, X64]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
