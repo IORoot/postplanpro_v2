@@ -29,7 +29,9 @@ export default defineConfig({
 			DATABASE_PATH: PLAYWRIGHT_E2E_DB,
 			AUTH_SECRET: PLAYWRIGHT_AUTH_SECRET,
 			APP_BASE_URL: baseURL,
-			AUTH_TRUST_HOST: 'true'
+			AUTH_TRUST_HOST: 'true',
+			// auth.spec.ts intentionally triggers failed credential sign-in; avoid scary server logs.
+			SUPPRESS_AUTH_CREDENTIALS_ERROR_LOG: '1'
 		}
 	}
 });

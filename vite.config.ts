@@ -3,6 +3,15 @@ import tailwindcss from '@tailwindcss/vite';
 import { svelteTesting } from '@testing-library/svelte/vite';
 import { defineConfig, loadEnv } from 'vite';
 
+// Node.js 25+ enables experimental Web Storage globally. Without `--localstorage-file`, each Vitest
+// worker logs a warning and can shadow jsdom's localStorage. Prefer jsdom for tests.
+{
+	const cur = process.env.NODE_OPTIONS ?? '';
+	if (!/\b--no-webstorage\b/.test(cur)) {
+		process.env.NODE_OPTIONS = `${cur} --no-webstorage`.trim();
+	}
+}
+
 export default defineConfig(({ mode }) => {
 	const env = loadEnv(mode, process.cwd(), '');
 	const baseUrl = env.APP_BASE_URL?.trim();
