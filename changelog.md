@@ -82,5 +82,6 @@
 - Implement sidebar calendar functionality with month navigation, enhance layout for sidebar width, and update server-side data loading for calendar markers. (c2546c2)
 - Remove .env.example file, update package dependencies including @auth/sveltekit and nodemailer, enhance database schema for user authentication, and implement account-based data handling in various routes and components. (c9a9953)
 
+## 0.0.1
 
-Release notes are prepended here by `scripts/bump-version.sh` when you bump the version.
+- Inital.
