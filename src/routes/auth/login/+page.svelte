@@ -15,6 +15,9 @@
 			title="Sign in"
 			description="Use email/password or a social account to access PostPlan."
 		/>
+		{#if data.authError}
+			<p class="rounded-lg px-3 py-2 text-sm alert-error">{data.authError}</p>
+		{/if}
 		{#if data.verified}
 			<p class="rounded-lg px-3 py-2 text-sm alert-success">
 				Email verified. You can now sign in.

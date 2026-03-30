@@ -189,7 +189,7 @@
 							<input type="hidden" name="oauth_id" value={oauth.id} />
 							<button
 								type="submit"
-								disabled={!data.canDisconnectOAuth && data.oauthAccounts.length <= 1}
+								disabled={!oauth.canDisconnect}
 								class="rounded border border-red-500/60 bg-transparent px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed dark:text-red-400"
 							>
 								Disconnect
@@ -201,6 +201,11 @@
 		{/if}
 		{#if !data.canDisconnectOAuth && data.oauthAccounts.length > 0}
 			<p class="mt-2 text-xs text-[var(--text-muted)]">Set a password first (via reset link above) to disconnect your last sign-in method.</p>
+		{/if}
+		{#if data.oauthAccounts.some((o) => o.provider === 'credentials')}
+			<p class="mt-2 text-xs text-[var(--text-muted)]">
+				Email and password is your primary sign-in method and cannot be disconnected. Use password reset to change your password.
+			</p>
 		{/if}
 	</section>
 

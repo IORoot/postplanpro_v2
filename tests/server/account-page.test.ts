@@ -84,6 +84,22 @@ describe('account/+page.server actions', () => {
 		expect(row).toBeUndefined();
 	});
 
+	it('disconnectOAuth rejects credentials provider', async () => {
+		const db = getDatabase();
+		db.prepare(
+			'INSERT OR REPLACE INTO oauth_account (id, user_id, provider, provider_account_id) VALUES (?, ?, ?, ?)'
+		).run('oa-cred', TEST_USER_ID, 'credentials', TEST_USER_ID);
+		const res = await actions.disconnectOAuth?.({
+			request: formRequest('http://test', { oauth_id: 'oa-cred' }),
+			locals: mockRequestEvent({ userId: TEST_USER_ID }, 'http://test').locals,
+			...({} as never)
+		} as Parameters<NonNullable<typeof actions.disconnectOAuth>>[0]);
+		expect(res).toMatchObject({ status: 400 });
+		expect(
+			getDatabase().prepare('SELECT id FROM oauth_account WHERE id = ?').get('oa-cred')
+		).toBeDefined();
+	});
+
 	it('deleteAccount removes user and calls signOut', async () => {
 		signOut.mockResolvedValueOnce({ deleted: true });
 		const res = await actions.deleteAccount?.({

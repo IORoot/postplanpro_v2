@@ -1,3 +1,4 @@
+import type { Session } from '@auth/sveltekit';
 import { getDatabase } from '$lib/db/index.js';
 import type { LayoutServerLoad } from './$types';
 
@@ -6,6 +7,14 @@ function sqliteIso(value: Date): string {
 }
 
 export const load: LayoutServerLoad = async ({ locals }) => {
+	let session: Session | null = null;
+	try {
+		session = await locals.auth();
+	} catch (e) {
+		console.error('[layout] locals.auth() failed:', e instanceof Error ? e.message : e);
+		session = null;
+	}
+
 	const accountId = locals.userId;
 	const now = new Date();
 	const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
@@ -40,7 +49,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	}
 
 	return {
-		session: await locals.auth(),
+		session,
 		sidebarCalendar,
 		userTier
 	};

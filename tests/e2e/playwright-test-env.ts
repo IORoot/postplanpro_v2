@@ -7,3 +7,9 @@ export const PLAYWRIGHT_AUTH_SECRET = 'playwright-e2e-auth-secret-at-least-32-ch
 
 export const E2E_USER_EMAIL = 'e2e@postplan.test';
 export const E2E_USER_PASSWORD = 'TestPassw0rd!';
+
+/** Dedicated user for password-reset E2E (not used by parallel signed-in tests). */
+export const E2E_RESET_USER_ID = 'e2e-password-reset-user';
+export const E2E_RESET_USER_EMAIL = 'e2e-reset@postplan.test';
+export const E2E_RESET_USER_PASSWORD = 'OldPassw0rd!';
+export const E2E_RESET_NEW_PASSWORD = 'NewPassw0rd!';

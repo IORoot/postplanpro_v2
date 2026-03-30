@@ -1,23 +1,52 @@
 import { handle as authHandle } from './auth.js';
+import type { Session } from '@auth/sveltekit';
 import { redirect, type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { getDatabase } from '$lib/db/index.js';
 
 const PUBLIC_PATHS = ['/welcome', '/auth/login'];
 
+/** Immutable build assets and dev tooling — never need session; skipping avoids extra /auth/session work. */
+function skipAuthStabilization(pathname: string): boolean {
+	return (
+		pathname.startsWith('/_app/') ||
+		pathname.startsWith('/@fs/') ||
+		pathname.startsWith('/@vite/') ||
+		pathname === '/favicon.svg' ||
+		pathname === '/favicon.ico' ||
+		pathname === '/robots.txt'
+	);
+}
+
 const appAuthGuard: Handle = async ({ event, resolve }) => {
-	// Skip static assets and non-routed files
+	const pathname = event.url.pathname;
+
+	// Auth.js `auth()` throws if the internal session request returns a non-200 body (e.g. misconfigured AUTH_SECRET / host).
+	// Replace it with a stable, non-throwing getter for this request. Must run even when `route.id` is null: the root
+	// layout still calls `locals.auth()`, and a null `route.id` early-return previously left the throwing `auth()` in place (500).
+	let session: Session | null = null;
+	if (!skipAuthStabilization(pathname)) {
+		const runAuth = event.locals.auth;
+		try {
+			session = runAuth ? await runAuth() : null;
+		} catch (err) {
+			console.error('[auth] session load failed:', err instanceof Error ? err.message : err);
+			session = null;
+		}
+		const stableAuth = async () => session;
+		event.locals.auth = stableAuth;
+		event.locals.getSession = stableAuth;
+		event.locals.userId = session?.user?.id ?? null;
+	}
+
+	// Skip static assets and non-routed files (no layout load / redirects)
 	if (!event.route.id) return resolve(event);
 
-	const pathname = event.url.pathname;
 	const isAuthRoute = pathname.startsWith('/auth');
 	const isPublicRoute = PUBLIC_PATHS.includes(pathname);
 	const isCronRoute = pathname.startsWith('/api/cron/send-due-posts');
 	const isCallbackRoute = pathname.startsWith('/api/callbacks/');
 	const isStripeWebhook = pathname === '/api/stripe/webhook';
-
-	const session = await event.locals.auth();
-	event.locals.userId = session?.user?.id ?? null;
 
 	// Blocked users: redirect to welcome (except for welcome and auth)
 	if (session?.user?.id && !isPublicRoute && !isAuthRoute && !isCronRoute && !isCallbackRoute && !isStripeWebhook) {

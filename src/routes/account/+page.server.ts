@@ -30,6 +30,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.prepare('SELECT id, provider, provider_account_id, created_at FROM oauth_account WHERE user_id = ? ORDER BY provider')
 		.all(userId) as { id: string; provider: string; provider_account_id: string; created_at: string }[];
 	const providerLabels: Record<string, string> = {
+		credentials: 'Email and password',
 		google: 'Google',
 		github: 'GitHub',
 		apple: 'Apple',
@@ -56,8 +57,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			id: o.id,
 			provider: o.provider,
 			label: providerLabels[o.provider] ?? o.provider,
-			created_at: o.created_at
+			created_at: o.created_at,
+			// Never remove the credentials row: it represents password sign-in; deleting it does not clear password_hash but breaks the expected link to email/password.
+			canDisconnect:
+				o.provider !== 'credentials' &&
+				(user.password_hash != null || oauthAccounts.length > 1)
 		})),
+		/** True if any linked account (other than credentials) can be disconnected; used only for footer hint. */
 		canDisconnectOAuth: user.password_hash != null || oauthAccounts.length > 1
 	};
 };
@@ -86,9 +92,14 @@ export const actions: Actions = {
 		if (!oauthId) return fail(400, { error: 'Missing oauth account id.' });
 		const db = getDatabase();
 		const row = db
-			.prepare('SELECT id FROM oauth_account WHERE id = ? AND user_id = ?')
-			.get(oauthId, userId) as { id: string } | undefined;
+			.prepare('SELECT id, provider FROM oauth_account WHERE id = ? AND user_id = ?')
+			.get(oauthId, userId) as { id: string; provider: string } | undefined;
 		if (!row) return fail(404, { error: 'OAuth account not found.' });
+		if (row.provider === 'credentials') {
+			return fail(400, {
+				error: 'Email and password sign-in cannot be disconnected here. Use password reset to change your password.'
+			});
+		}
 		const hasPassword = db.prepare('SELECT 1 FROM user WHERE id = ? AND password_hash IS NOT NULL').get(userId);
 		const oauthCount = db.prepare('SELECT COUNT(*) as n FROM oauth_account WHERE user_id = ?').get(userId) as { n: number };
 		if (!hasPassword && oauthCount.n <= 1) {

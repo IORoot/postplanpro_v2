@@ -13,13 +13,20 @@
 		<PageSectionHeading title="Reset password" description="Set a new password for your account." />
 		{#if !data.token}
 			<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-error">
-				Missing reset token.
+				Missing reset token. Open the full link from your email — it looks like
+				<code class="rounded bg-[var(--surface)] px-1 text-xs">/auth/reset-password?token=…</code>.
 			</p>
+			{#if data.looksLikeFormActionUrl}
+				<p class="mt-2 text-sm text-[var(--text-muted)]">
+					This URL looks like a form action (<code class="text-xs">?/reset</code>), not the email link. Request a new
+					reset from sign-in → Forgot password.
+				</p>
+			{/if}
 		{:else}
 			{#if form?.error}
 				<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-error">{form.error}</p>
 			{/if}
-			<form method="POST" action="?/reset" class="mt-4 space-y-3">
+			<form method="POST" action="/auth/reset-password?/reset" class="mt-4 space-y-3">
 				<input type="hidden" name="token" value={data.token} />
 				<div>
 					<label for="password" class="block text-sm font-medium text-[var(--text)]">New password</label>

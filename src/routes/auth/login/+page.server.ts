@@ -10,12 +10,36 @@ import {
 } from '../../../auth.js';
 import type { Actions, PageServerLoad } from './$types';
 
+/** Auth.js redirects here with ?error=… after OAuth cancel, AccessDenied, etc. */
+const AUTH_URL_ERROR_MESSAGES: Record<string, string> = {
+	AccessDenied: 'Sign-in was not completed or you do not have permission to sign in.',
+	OAuthCallbackError:
+		'Sign-in was cancelled or the provider could not finish signing you in. Try again.',
+	OAuthAccountNotLinked:
+		'This social account is not linked to your PostPlan user. Sign in with the method you used when you registered.',
+	AccountNotLinked:
+		'This social account is not linked to your PostPlan user. Sign in with the method you used when you registered.',
+	Verification: 'The sign-in link is invalid or has expired.',
+	Configuration: 'Sign-in could not be completed. Check server configuration or try again later.',
+	MissingCSRF: 'Your session expired. Please try signing in again.',
+	InvalidCallbackUrl: 'The return address was not valid. Start sign-in from the app again.'
+};
+
 export const load: PageServerLoad = async ({ locals, url }) => {
+	const errorParam = url.searchParams.get('error');
+	const authError =
+		errorParam && AUTH_URL_ERROR_MESSAGES[errorParam]
+			? AUTH_URL_ERROR_MESSAGES[errorParam]
+			: errorParam
+				? 'Sign-in failed. Please try again.'
+				: null;
+
 	return {
 		session: await locals.auth(),
 		providers: enabledProviders,
 		verified: url.searchParams.get('verified') === '1',
-		passwordReset: url.searchParams.get('passwordReset') === '1'
+		passwordReset: url.searchParams.get('passwordReset') === '1',
+		authError
 	};
 };
 

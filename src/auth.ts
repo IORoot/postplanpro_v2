@@ -148,15 +148,20 @@ export async function sendVerificationEmail(
 	email: string,
 	originHint?: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-	const token = createAuthToken(userId, 'verify_email', 60);
-	const origin = getLoginOrigin(originHint);
-	const verifyUrl = `${origin}/auth/verify-email?token=${encodeURIComponent(token)}`;
-	return sendAuthEmail({
-		to: email,
-		subject: 'Verify your PostPlan account',
-		text: `Verify your account by opening this one-time link (valid for 60 minutes): ${verifyUrl}`,
-		html: `<p>Verify your PostPlan account by clicking this one-time link (valid for 60 minutes):</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`
-	});
+	try {
+		const origin = getLoginOrigin(originHint);
+		const token = createAuthToken(userId, 'verify_email', 60);
+		const verifyUrl = `${origin}/auth/verify-email?token=${encodeURIComponent(token)}`;
+		return await sendAuthEmail({
+			to: email,
+			subject: 'Verify your PostPlan account',
+			text: `Verify your account by opening this one-time link (valid for 60 minutes): ${verifyUrl}`,
+			html: `<p>Verify your PostPlan account by clicking this one-time link (valid for 60 minutes):</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`
+		});
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : 'Failed to send verification email.';
+		return { ok: false, error: msg };
+	}
 }
 
 export async function sendResetPasswordEmail(
@@ -164,15 +169,20 @@ export async function sendResetPasswordEmail(
 	email: string,
 	originHint?: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-	const token = createAuthToken(userId, 'reset_password', 30);
-	const origin = getLoginOrigin(originHint);
-	const resetUrl = `${origin}/auth/reset-password?token=${encodeURIComponent(token)}`;
-	return sendAuthEmail({
-		to: email,
-		subject: 'Reset your PostPlan password',
-		text: `Reset your password using this one-time link (valid for 30 minutes): ${resetUrl}`,
-		html: `<p>Reset your PostPlan password using this one-time link (valid for 30 minutes):</p><p><a href="${resetUrl}">${resetUrl}</a></p>`
-	});
+	try {
+		const origin = getLoginOrigin(originHint);
+		const token = createAuthToken(userId, 'reset_password', 30);
+		const resetUrl = `${origin}/auth/reset-password?token=${encodeURIComponent(token)}`;
+		return await sendAuthEmail({
+			to: email,
+			subject: 'Reset your PostPlan password',
+			text: `Reset your password using this one-time link (valid for 30 minutes): ${resetUrl}`,
+			html: `<p>Reset your PostPlan password using this one-time link (valid for 30 minutes):</p><p><a href="${resetUrl}">${resetUrl}</a></p>`
+		});
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : 'Failed to send password reset email.';
+		return { ok: false, error: msg };
+	}
 }
 
 function ensureOAuthUser(input: {
@@ -325,6 +335,11 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 	trustHost,
 	secret: authSecret,
 	session: { strategy: 'jwt' },
+	// Route OAuth / sign-in failures to our login page (default is /auth/signin and /auth/error).
+	pages: {
+		signIn: '/auth/login',
+		error: '/auth/login'
+	},
 	providers: [credentialsProvider, ...configuredProviders.map((p) => p.provider)],
 	...(suppressCredentialsSigninLog
 		? {

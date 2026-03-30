@@ -18,6 +18,34 @@ describe('auth/reset-password/+page.server', () => {
 			url: new URL('http://test/reset?token=abc123')
 		} as Parameters<typeof load>[0]);
 		expect(r.token).toBe('abc123');
+		expect(r.looksLikeFormActionUrl).toBe(false);
+	});
+
+	it('load flags mistaken ?/reset URL (no token)', async () => {
+		const r = await load({
+			url: new URL('http://test/auth/reset-password?/reset')
+		} as Parameters<typeof load>[0]);
+		expect(r.token).toBe('');
+		expect(r.looksLikeFormActionUrl).toBe(true);
+	});
+
+	it('load empty token without form-action noise', async () => {
+		const r = await load({
+			url: new URL('http://test/auth/reset-password')
+		} as Parameters<typeof load>[0]);
+		expect(r.token).toBe('');
+		expect(r.looksLikeFormActionUrl).toBe(false);
+	});
+
+	it('reset returns 400 when token missing', async () => {
+		const res = await actions.reset?.({
+			request: formRequest('http://test', {
+				password: 'GoodPass1!',
+				confirmPassword: 'GoodPass1!'
+			})
+		} as Parameters<NonNullable<typeof actions.reset>>[0]);
+		expect(res).toMatchObject({ status: 400 });
+		expect((res as { data?: { error?: string } }).data?.error).toMatch(/Missing token/);
 	});
 
 	it('reset returns 400 when passwords mismatch', async () => {

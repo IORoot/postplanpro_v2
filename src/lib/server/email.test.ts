@@ -5,6 +5,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const sendMail = vi.fn();
 
+/** Mutable stand-in for SvelteKit `$env/dynamic/private` (tests do not load `.env` the same way as `vite dev`). */
+const mockPrivateEnv: Record<string, string | undefined> = {};
+
+vi.mock('$env/dynamic/private', () => ({
+	get env() {
+		return mockPrivateEnv;
+	}
+}));
+
 vi.mock('nodemailer', () => ({
 	default: {
 		createTransport: vi.fn(() => ({
@@ -14,25 +23,24 @@ vi.mock('nodemailer', () => ({
 }));
 
 describe('sendAuthEmail', () => {
-	const prev = { ...process.env };
-
 	beforeEach(() => {
 		sendMail.mockReset();
 		sendMail.mockResolvedValue(undefined);
-		process.env.SMTP_HOST = 'smtp.example.com';
-		process.env.SMTP_PORT = '587';
-		process.env.SMTP_USER = 'u';
-		process.env.SMTP_PASS = 'p';
-		process.env.SMTP_FROM = 'from@example.com';
+		for (const k of Object.keys(mockPrivateEnv)) delete mockPrivateEnv[k];
+		mockPrivateEnv.SMTP_HOST = 'smtp.example.com';
+		mockPrivateEnv.SMTP_PORT = '587';
+		mockPrivateEnv.SMTP_USER = 'u';
+		mockPrivateEnv.SMTP_PASS = 'p';
+		mockPrivateEnv.SMTP_FROM = 'from@example.com';
 	});
 
 	afterEach(() => {
-		process.env = { ...prev };
+		for (const k of Object.keys(mockPrivateEnv)) delete mockPrivateEnv[k];
 		vi.resetModules();
 	});
 
 	it('returns error when SMTP is not configured', async () => {
-		delete process.env.SMTP_HOST;
+		delete mockPrivateEnv.SMTP_HOST;
 		const { sendAuthEmail } = await import('./email.js');
 		const r = await sendAuthEmail({ to: 'a@b.com', subject: 's', text: 't', html: '<p>t</p>' });
 		expect(r).toEqual(

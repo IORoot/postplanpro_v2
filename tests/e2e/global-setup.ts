@@ -7,6 +7,9 @@ import {
 	PLAYWRIGHT_E2E_DB,
 	E2E_USER_EMAIL,
 	E2E_USER_PASSWORD,
+	E2E_RESET_USER_EMAIL,
+	E2E_RESET_USER_ID,
+	E2E_RESET_USER_PASSWORD,
 	PLAYWRIGHT_AUTH_SECRET
 } from './playwright-test-env.js';
 
@@ -49,5 +52,11 @@ export default async function globalSetup(): Promise<void> {
 		'E2E Webhook',
 		'https://example.com/e2e-webhook'
 	);
+	const resetHash = hashPasswordForTest(E2E_RESET_USER_PASSWORD);
+	db.prepare('DELETE FROM user WHERE id = ? OR email = ?').run(E2E_RESET_USER_ID, E2E_RESET_USER_EMAIL);
+	db.prepare(
+		`INSERT INTO user (id, email, email_verified_at, password_hash, tier, callback_token)
+     VALUES (?, ?, datetime('now'), ?, 'free', 'e2e-reset-callback')`
+	).run(E2E_RESET_USER_ID, E2E_RESET_USER_EMAIL, resetHash);
 	closeDatabaseForTesting();
 }
