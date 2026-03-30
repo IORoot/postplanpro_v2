@@ -72,10 +72,14 @@ const configuredProviders = [
 ].filter((p): p is { provider: Provider; meta: ProviderMeta } => p !== null);
 
 export const enabledProviders = configuredProviders.map((p) => p.meta);
+// Behind nginx/Caddy/Docker, the app must trust `Host` / `X-Forwarded-*` for OAuth callback URLs and CSRF.
+// Production used to default to false unless AUTH_TRUST_HOST was set explicitly, which breaks live OAuth while localhost still works.
 const trustHost =
-	env.AUTH_TRUST_HOST != null
-		? env.AUTH_TRUST_HOST === 'true'
-		: env.NODE_ENV !== 'production';
+	env.AUTH_TRUST_HOST === 'false'
+		? false
+		: env.AUTH_TRUST_HOST === 'true' ||
+			Boolean(env.AUTH_URL?.trim()) ||
+			env.NODE_ENV !== 'production';
 const authSecret =
 	env.AUTH_SECRET ??
 	(env.NODE_ENV !== 'production'
@@ -223,9 +227,20 @@ function ensureOAuthUser(input: {
 		).run(input.name ?? null, input.image ?? null, userId);
 	}
 
-	db.prepare(
-		"INSERT INTO oauth_account (id, user_id, provider, provider_account_id, created_at) VALUES (?, ?, ?, ?, datetime('now'))"
-	).run(crypto.randomUUID(), userId, input.provider, input.providerAccountId);
+	try {
+		db.prepare(
+			"INSERT INTO oauth_account (id, user_id, provider, provider_account_id, created_at) VALUES (?, ?, ?, ?, datetime('now'))"
+		).run(crypto.randomUUID(), userId, input.provider, input.providerAccountId);
+	} catch (e) {
+		// Concurrent OAuth callbacks can race on the same provider account; treat as success if the row exists now.
+		const again = db
+			.prepare(
+				'SELECT user_id FROM oauth_account WHERE provider = ? AND provider_account_id = ?'
+			)
+			.get(input.provider, input.providerAccountId) as { user_id: string } | undefined;
+		if (again) return again.user_id;
+		throw e;
+	}
 
 	return userId;
 }
@@ -353,17 +368,31 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 		: {}),
 	callbacks: {
 		async signIn({ user, account }) {
-			if (!account?.provider) return false;
+			if (!account?.provider) {
+				console.error('[auth][signIn] denied: missing account.provider', { hasAccount: !!account });
+				return false;
+			}
 			if (account.provider === 'credentials') return true;
-			if (!account.providerAccountId) return false;
-			const userId = ensureOAuthUser({
-				provider: account.provider,
-				providerAccountId: String(account.providerAccountId),
-				email: user.email,
-				name: user.name,
-				image: user.image
-			});
-			(user as { id?: string }).id = userId;
+			if (account.providerAccountId == null || account.providerAccountId === '') {
+				console.error('[auth][signIn] denied: missing providerAccountId', {
+					provider: account.provider,
+					keys: account ? Object.keys(account) : []
+				});
+				return false;
+			}
+			try {
+				const userId = ensureOAuthUser({
+					provider: account.provider,
+					providerAccountId: String(account.providerAccountId),
+					email: user?.email,
+					name: user?.name,
+					image: user?.image
+				});
+				if (user) (user as { id?: string }).id = userId;
+			} catch (e) {
+				console.error('[auth][signIn] ensureOAuthUser failed:', e instanceof Error ? e.stack : e);
+				throw e;
+			}
 			return true;
 		},
 		async jwt({ token, user }) {
