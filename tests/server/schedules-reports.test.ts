@@ -328,6 +328,32 @@ describe('reports/+page.server load', () => {
 		expect(r.reports).toEqual([]);
 		expect(r.reportType).toBe('logs');
 		expect(r.callbackStages).toEqual([]);
+		expect(r.upcomingPosts).toEqual([]);
+		expect(r.lastPublishedPosts).toEqual([]);
+		expect(r.failedPosts).toEqual([]);
+		expect(r.postsWithFailedStages).toEqual([]);
+	});
+
+	it('reflects statistics in URL when not logged in', async () => {
+		const r = await reportsLoad(
+			mockRequestEvent({ userId: null }, 'http://test/reports?report=statistics') as Parameters<typeof reportsLoad>[0]
+		);
+		expect(r.reportType).toBe('statistics');
+		expect(r.reports).toEqual([]);
+		expect(r.callbackStages).toEqual([]);
+	});
+
+	it('statistics report loads lists and skips send_log when logged in', async () => {
+		const r = await reportsLoad(
+			mockRequestEvent({ userId: TEST_USER_ID }, 'http://test/reports?report=statistics') as Parameters<
+				typeof reportsLoad
+			>[0]
+		);
+		expect(r.reportType).toBe('statistics');
+		expect(r.reports).toEqual([]);
+		expect(r.callbackStages).toEqual([]);
+		expect(Array.isArray(r.upcomingPosts)).toBe(true);
+		expect(Array.isArray(r.lastPublishedPosts)).toBe(true);
 	});
 
 	it('returns logs scoped to account with post and webhook titles', async () => {
@@ -339,6 +365,10 @@ describe('reports/+page.server load', () => {
 		expect(r.reports[0].post_title).toBe('Report Post');
 		expect(r.reports[0].webhook_name).toBe('Test Webhook');
 		expect(r.reports[0].request_json).toBe('{"x":1}');
+		expect(Array.isArray(r.upcomingPosts)).toBe(true);
+		expect(Array.isArray(r.lastPublishedPosts)).toBe(true);
+		expect(Array.isArray(r.failedPosts)).toBe(true);
+		expect(Array.isArray(r.postsWithFailedStages)).toBe(true);
 	});
 
 	it('callback-stages report filters and orders', async () => {

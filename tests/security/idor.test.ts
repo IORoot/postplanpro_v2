@@ -5,7 +5,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { actions as postListActions } from '../../src/routes/posts/+page.server.js';
 import { actions as calendarActions } from '../../src/routes/calendar/+page.server.js';
 import { load as postEditLoad, actions as postEditActions } from '../../src/routes/posts/[id]/+page.server.js';
-import { actions as settingsActions } from '../../src/routes/settings/+page.server.js';
+import { actions as outputsActions } from '../../src/routes/outputs/+page.server.js';
 import { POST as postSend } from '../../src/routes/api/posts/[id]/send/+server.js';
 import { getDatabase } from '$lib/db/index.js';
 import {
@@ -107,14 +107,14 @@ describe('IDOR: post edit load and update', () => {
 	});
 });
 
-describe('IDOR: settings deleteWebhook', () => {
+describe('IDOR: outputs deleteWebhook', () => {
 	it('cannot delete webhook owned by another user', async () => {
-		const res = await settingsActions.deleteWebhook?.({
-			request: formRequest('http://test/settings', { id: OTHER_WEBHOOK_ID }),
+		const res = await outputsActions.deleteWebhook?.({
+			request: formRequest('http://test/outputs', { id: OTHER_WEBHOOK_ID }),
 			locals: { userId: TEST_USER_ID },
 			params: {},
 			...({} as never)
-		} as Parameters<NonNullable<typeof settingsActions.deleteWebhook>>[0]);
+		} as Parameters<NonNullable<typeof outputsActions.deleteWebhook>>[0]);
 		expect(res).toMatchObject({ success: true });
 		const row = getDatabase().prepare('SELECT id FROM webhook_config WHERE id = ?').get(OTHER_WEBHOOK_ID);
 		expect(row).toEqual({ id: OTHER_WEBHOOK_ID });

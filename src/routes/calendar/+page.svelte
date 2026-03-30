@@ -1,8 +1,23 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
+
+	const QUICK_PATH_KEY = 'postplan-dismiss-dashboard-path';
+	let showQuickPath = $state(false);
+
+	onMount(() => {
+		if (typeof localStorage === 'undefined') return;
+		if (localStorage.getItem(QUICK_PATH_KEY) === '1') return;
+		showQuickPath = true;
+	});
+
+	function dismissQuickPath() {
+		localStorage.setItem(QUICK_PATH_KEY, '1');
+		showQuickPath = false;
+	}
 	let sendingId = $state<string | null>(null);
 	let sendError = $state<string | null>(null);
 	let sendSuccess = $state<string | null>(null);
@@ -559,6 +574,134 @@
 <svelte:head>
 	<title>Calendar – PostPlan</title>
 </svelte:head>
+
+{#if data.stats}
+	{#if showQuickPath && data.stats.totalPosts === 0 && data.stats.scheduleCount === 0}
+		<aside
+			class="alert-info empty-state-in mb-6 rounded-xl px-4 py-4 sm:px-5 sm:py-5"
+			aria-labelledby="calendar-quick-path-title"
+		>
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+				<div class="min-w-0">
+					<h2 id="calendar-quick-path-title" class="text-sm font-semibold text-[var(--text)]">
+						First-time checklist
+					</h2>
+					<p class="mt-1 max-w-[65ch] text-sm leading-relaxed text-[var(--text-muted)]">
+						Three steps to your first automated send — you can do them in any order, but this is the usual path.
+					</p>
+					<ol class="mt-3 list-decimal space-y-2 pl-4 text-sm leading-relaxed text-[var(--text-muted)]">
+						<li>
+							Add a <a href="/outputs" class="font-medium text-[var(--primary)] hover:underline">webhook</a> on the Outputs page so PostPlan knows where to POST.
+						</li>
+						<li>
+							<a href="/posts/new" class="font-medium text-[var(--primary)] hover:underline">Create a post</a> or
+							<a href="/inputs" class="font-medium text-[var(--primary)] hover:underline">import</a> content with a payload.
+						</li>
+						<li>
+							<a href="/schedules/new" class="font-medium text-[var(--primary)] hover:underline">Create a schedule</a>, then attach it to the post so sends follow your rules.
+						</li>
+					</ol>
+				</div>
+				<button
+					type="button"
+					class="shrink-0 rounded-lg border border-[var(--primary-border-soft)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
+					onclick={dismissQuickPath}
+				>
+					Dismiss
+				</button>
+			</div>
+		</aside>
+	{/if}
+
+	<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+		<div class="min-w-0 flex-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:overflow-visible">
+			<div class="flex w-max max-w-full flex-wrap gap-1.5 md:w-auto md:max-w-none">
+				<a
+					href="/posts"
+					title="Total posts"
+					class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+				>
+					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Total</p>
+					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.totalPosts}</p>
+				</a>
+				<a
+					href="/posts?status=draft"
+					title="Draft posts"
+					class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+				>
+					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Drafts</p>
+					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.draft}</p>
+				</a>
+				<a
+					href="/posts?status=scheduled"
+					title="Scheduled posts"
+					class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+				>
+					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Sched.</p>
+					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.scheduled}</p>
+				</a>
+				<a
+					href="/posts?status=sent"
+					title="Sent posts"
+					class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+				>
+					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Sent</p>
+					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.sent}</p>
+				</a>
+				<a
+					href="/posts?status=failed"
+					title="Failed posts"
+					class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+				>
+					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Failed</p>
+					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.failed}</p>
+				</a>
+				<a
+					href="/schedules"
+					title="Schedules"
+					class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+				>
+					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Sched.</p>
+					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.scheduleCount}</p>
+				</a>
+				<a
+					href="/account?section=globals"
+					title="Webhooks"
+					class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+				>
+					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Hooks</p>
+					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.webhookCount}</p>
+				</a>
+				<div class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5" title="Posts sent this week">
+					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Week</p>
+					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.sentThisWeek}</p>
+				</div>
+				<a
+					href="/reports?report=callback-stages"
+					title="Make.com callback stages (pass / fail)"
+					class="content-card min-w-[5.25rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+				>
+					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Stages</p>
+					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">
+						<span class="text-green-600 dark:text-green-400">{data.stagePasses ?? 0}</span>
+						<span class="mx-0.5 text-[var(--text-muted)] font-normal text-sm">/</span>
+						<span class="text-red-600 dark:text-red-400">{data.stageFails ?? 0}</span>
+					</p>
+				</a>
+			</div>
+		</div>
+		<div class="shrink-0">
+			<a href="/posts/new" class="btn-primary btn-touch inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-sm">
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+				</svg>
+				New post
+			</a>
+		</div>
+	</div>
+{:else}
+	<p class="mb-6 text-sm text-[var(--text-muted)]">Sign in to see your overview.</p>
+{/if}
 
 <PageSectionHeading title="Calendar" description="Modern multi-view calendar for scheduled posts." />
 {#if sendError}

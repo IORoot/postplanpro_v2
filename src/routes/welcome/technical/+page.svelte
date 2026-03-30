@@ -6,7 +6,7 @@
 		{ benefit: 'Import operations per month', free: '100', pro: '2,000', enterprise: 'Unlimited' },
 		{ benefit: 'Calendar view', free: '✓', pro: '✓', enterprise: '✓' },
 		{ benefit: 'Schedules & rules', free: '✓', pro: '✓', enterprise: '✓' },
-		{ benefit: 'Bulk import (WordPress, RSS, CSV, Squarespace)', free: '✓', pro: '✓', enterprise: '✓' },
+		{ benefit: 'Inputs (WordPress, RSS, CSV, Squarespace, callbacks)', free: '✓', pro: '✓', enterprise: '✓' },
 		{ benefit: 'Callback import (webhook)', free: '✓', pro: '✓', enterprise: '✓' },
 		{ benefit: 'Webhooks (outputs)', free: '✓', pro: '✓', enterprise: '✓' },
 		{ benefit: 'Reports & send logs', free: '✓', pro: '✓', enterprise: '✓' },
@@ -17,7 +17,7 @@
 
 <svelte:head>
 	<title>Technical details – PostPlan</title>
-	<meta name="description" content="Plans comparison and full feature list for PostPlan: dashboard, calendar, posts, schedules, bulk import, callback import, webhooks, reports, settings." />
+	<meta name="description" content="Plans comparison and full feature list for PostPlan: calendar (default home), posts, schedules, Inputs, Outputs, callback import, reports, Account." />
 </svelte:head>
 
 <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
@@ -62,16 +62,9 @@
 		<p class="mt-2 text-sm text-[var(--text-muted)]">Every area of the app and what it does.</p>
 		<dl class="mt-8 space-y-8">
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-				<dt class="text-lg font-semibold text-[var(--text)]">Dashboard (Home)</dt>
-				<dd class="mt-2 text-sm text-[var(--text-muted)]" style="line-height: 1.6;">
-					The main landing page after login. Shows a workflow diagram, stats (total posts, drafts, scheduled, sent, failed, schedules, webhooks, sent this week, Make.com stage passes/fails), upcoming posts list, quick actions (New post, Calendar, Schedules, Import), and recent activity (last sent posts, failed posts, posts with failed stages). Gives an at-a-glance view of your account.
-				</dd>
-			</div>
-
-			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
 				<dt class="text-lg font-semibold text-[var(--text)]">Calendar</dt>
 				<dd class="mt-2 text-sm text-[var(--text-muted)]" style="line-height: 1.6;">
-					Month and week views of all posts. See which posts are scheduled or sent on which days. Drag and drop to reschedule. Color-coded by post type. Click a day to create a post for that date. Uses schedules to compute when a post will fire; you see the spread of sends across the month. Counts toward your plan’s posts-per-month limit (scheduled + sent in that month).
+					Default page after login. At the top: compact stat chips (posts by status, schedules, webhooks, sent this week, Make.com stage pass/fail), a New post button, and a dismissible first-time checklist for new accounts. Below: multi-view calendar (day, week, month, year, agenda, schedule)—see which posts are scheduled or sent on which days, drag and drop to reschedule, color-coded by post type. Uses schedules to compute when a post will fire. Counts toward your plan’s posts-per-month limit (scheduled + sent in that month).
 				</dd>
 			</div>
 
@@ -92,28 +85,28 @@
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
 				<dt class="text-lg font-semibold text-[var(--text)]">Reports</dt>
 				<dd class="mt-2 text-sm text-[var(--text-muted)]" style="line-height: 1.6;">
-					Two report types. (1) Request / Response: for every sent post, the request JSON sent to the webhook and the response from the server. Lets you debug failed sends. (2) Callback stages: pass/fail counts for Make.com (or similar) callback stages, so you can see how many webhook calls succeeded or failed at each stage.
+					Sidebar: Statistics (upcoming posts, last published, failed posts, posts with failed Make.com stages), Request / Response (per-send request JSON and webhook response for debugging), and Callback stages (pass/fail per stage from Make.com or similar callbacks).
 				</dd>
 			</div>
 
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-				<dt class="text-lg font-semibold text-[var(--text)]">Import (Bulk create)</dt>
+				<dt class="text-lg font-semibold text-[var(--text)]">Inputs</dt>
 				<dd class="mt-2 text-sm text-[var(--text-muted)]" style="line-height: 1.6;">
-					Bulk-import posts from external sources. Supported: WordPress (API or CSV export), Squarespace (RSS), RSS feed, or a generic CSV. You choose a source, map fields (title, body, date, etc.) to post fields, pick a schedule and webhook, and the app creates many posts at once. Each bulk-import run counts as one “import operation” toward your monthly limit; the number of posts created counts toward the posts-per-month limit.
+					Import posts from external sources and configure HTTP callbacks. Source groups: CMS (WordPress, Squarespace), Spreadsheets (CSV), Feeds (RSS), and Callbacks (import API URL, token, and post-notification callback docs). For bulk import, you map fields to post fields, pick a schedule and webhook, and the app creates many posts at once. Each import run counts as one “import operation” toward your monthly limit; the number of posts created counts toward the posts-per-month limit.
 				</dd>
 			</div>
 
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
 				<dt class="text-lg font-semibold text-[var(--text)]">Callback import (API)</dt>
 				<dd class="mt-2 text-sm text-[var(--text-muted)]" style="line-height: 1.6;">
-					<code class="rounded bg-[var(--bg)] px-1.5 py-0.5 text-xs font-mono text-[var(--text)]">POST /api/callbacks/import</code> — Accepts a webhook request (e.g. from Make.com) with a secret token. Creates one or more posts from the payload and optionally assigns scheduled_at. Each request counts as one import operation and each created post counts as one callback input toward your monthly limits. You get a unique callback URL and token in Settings → Inputs.
+					<code class="rounded bg-[var(--bg)] px-1.5 py-0.5 text-xs font-mono text-[var(--text)]">POST /api/callbacks/import</code> — Accepts a webhook request (e.g. from Make.com) with a secret token. Creates one or more posts from the payload and optionally assigns scheduled_at. Each request counts as one import operation and each created post counts as one callback input toward your monthly limits. You get a unique callback URL and token under Inputs → Callbacks.
 				</dd>
 			</div>
 
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-				<dt class="text-lg font-semibold text-[var(--text)]">Settings</dt>
+				<dt class="text-lg font-semibold text-[var(--text)]">Outputs</dt>
 				<dd class="mt-2 text-sm text-[var(--text-muted)]" style="line-height: 1.6;">
-					Configure outputs (webhooks), inputs (callback import URL and token), templates (reusable payload structures with placeholders), and globals (key-value variables used in templates). Outputs define where posts are sent (URL, method, headers). Inputs define how external systems can create posts via the callback import API. Templates and globals let you build consistent JSON payloads across posts.
+					Webhook endpoints for scheduled posts: URL, optional API key (x-make-apikey), and optional HTTP headers. Each output has an ID used when importing via the callback API or mapping bulk imports.
 				</dd>
 			</div>
 
@@ -127,7 +120,7 @@
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
 				<dt class="text-lg font-semibold text-[var(--text)]">Account</dt>
 				<dd class="mt-2 text-sm text-[var(--text-muted)]" style="line-height: 1.6;">
-					Shows your current tier (free, pro, enterprise), usage this month (posts used/limit, callback inputs used/limit, imports used/limit), and billing. You can upgrade to Pro (Stripe Checkout), open the Stripe Customer Portal to manage or cancel subscription, or contact for Enterprise. Logout redirects to the public welcome site.
+					Plan &amp; billing: tier, usage this month (posts, callback inputs, imports), Stripe upgrade or customer portal, and Enterprise contact. Profile, password reset, connected OAuth providers, log out, and account deletion. Templates (reusable custom-field structures) and globals (key-value variables merged into webhook payloads) for consistent JSON across posts.
 				</dd>
 			</div>
 
@@ -141,7 +134,7 @@
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
 				<dt class="text-lg font-semibold text-[var(--text)]">Limits (monthly, per calendar month)</dt>
 				<dd class="mt-2 text-sm text-[var(--text-muted)]" style="line-height: 1.6;">
-					Posts: maximum number of posts that can be sent in a single calendar month (sent + scheduled for that month). No refill within the month—e.g. Free allows 20 sends in January total; if 5 are sent by Jan 10, you have 15 left for January and cannot add more for January. Callback inputs: number of posts created via the callback import API per month. Imports: number of import operations (one bulk-create run or one callback import request) per month. All enforced at creation/schedule time.
+					Posts: maximum number of posts that can be sent in a single calendar month (sent + scheduled for that month). No refill within the month—e.g. Free allows 20 sends in January total; if 5 are sent by Jan 10, you have 15 left for January and cannot add more for January. Callback inputs: number of posts created via the callback import API per month. Imports: number of import operations (one Inputs import run or one callback import request) per month. All enforced at creation/schedule time.
 				</dd>
 			</div>
 		</dl>

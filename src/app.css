@@ -386,3 +386,56 @@ body {
 		transition-duration: 0.001ms !important;
 	}
 }
+
+/* Shared two-column layout: Settings, Inputs, Outputs */
+.settings-layout {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+@media (min-width: 1024px) {
+	.settings-layout {
+		flex-direction: row;
+		align-items: flex-start;
+	}
+	.settings-sidebar {
+		width: 220px;
+		flex-shrink: 0;
+	}
+	.settings-content {
+		flex: 1;
+		min-width: 0;
+	}
+}
+.settings-nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+@media (min-width: 1024px) {
+	.settings-nav {
+		flex-direction: column;
+	}
+}
+.settings-nav-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	justify-content: flex-start;
+	padding: 0.5rem 0.75rem;
+	border-radius: 0.5rem;
+	font-size: 0.875rem;
+	color: var(--text-muted);
+	border: 1px solid transparent;
+	text-decoration: none;
+}
+.settings-nav-link:hover {
+	color: var(--text);
+	border-color: var(--primary-border-soft);
+	background: var(--primary-soft);
+}
+.settings-nav-link-active {
+	color: var(--primary);
+	border-color: var(--primary-border-soft);
+	background: var(--primary-soft);
+}

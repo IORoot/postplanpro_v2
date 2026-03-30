@@ -38,6 +38,10 @@ describe('calendar/+page.server load', () => {
 	it('returns empty posts when not authenticated', async () => {
 		const r = await calLoad('http://test/calendar?view=month&date=2025-06-01', null);
 		expect(r.posts).toEqual([]);
+		expect(r.stats).toBeNull();
+		expect(r.sentThisWeek).toBe(0);
+		expect(r.stagePasses).toBe(0);
+		expect(r.stageFails).toBe(0);
 	});
 
 	it('month view includes only posts in anchor year', async () => {
@@ -45,6 +49,8 @@ describe('calendar/+page.server load', () => {
 		const ids = r.posts.map((p) => p.id).sort();
 		expect(ids).toEqual(['cal-in']);
 		expect(r.view).toBe('month');
+		expect(r.stats).not.toBeNull();
+		expect(r.stats).toHaveProperty('totalPosts');
 	});
 
 	it('agenda view returns all scheduled posts regardless of year filter', async () => {

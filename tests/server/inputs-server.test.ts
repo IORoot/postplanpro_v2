@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { load, actions } from '../../src/routes/bulk-create/+page.server.js';
+import { load, actions } from '../../src/routes/inputs/+page.server.js';
 import { getDatabase } from '$lib/db/index.js';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
@@ -13,7 +13,7 @@ const CSV_DIR = path.join(process.cwd(), 'data', 'csv-imports');
 const importId = 'vitest-csv-import-1';
 
 beforeAll(async () => {
-	resetTestDatabase('bulk-create-server');
+	resetTestDatabase('inputs-server');
 	seedCallbackTestData();
 	await fs.mkdir(CSV_DIR, { recursive: true });
 	await fs.writeFile(path.join(CSV_DIR, `${importId}.csv`), 'title,content\nHello CSV,Body line\n', 'utf8');
@@ -27,22 +27,24 @@ afterAll(async () => {
 	}
 });
 
-describe('bulk-create/+page.server load', () => {
+describe('inputs/+page.server load', () => {
 	it('returns empty when unauthenticated', async () => {
-		const r = await load(mockRequestEvent({ userId: null }, 'http://test/bulk-create'));
+		const r = await load(mockRequestEvent({ userId: null }, 'http://test/inputs'));
 		expect(r.webhooks).toEqual([]);
+		expect(r.section).toBe('cms');
 	});
 
 	it('returns webhooks for user', async () => {
-		const r = await load(mockRequestEvent({ userId: TEST_USER_ID }, 'http://test/bulk-create'));
+		const r = await load(mockRequestEvent({ userId: TEST_USER_ID }, 'http://test/inputs'));
 		expect(r.webhooks.map((w) => w.name)).toEqual(['Test Webhook']);
+		expect(r.section).toBe('cms');
 	});
 });
 
-describe('bulk-create/+page.server actions', () => {
+describe('inputs/+page.server actions', () => {
 	it('discoverCsv returns 401 without user', async () => {
 		const res = await actions.discoverCsv?.({
-			request: formRequest('http://test/bulk-create', { csv_import_id: importId }),
+			request: formRequest('http://test/inputs', { csv_import_id: importId }),
 			locals: { userId: null },
 			params: {},
 			...({} as never)
@@ -53,7 +55,7 @@ describe('bulk-create/+page.server actions', () => {
 	it('importFromCsv creates posts from file', async () => {
 		try {
 			await actions.importFromCsv?.({
-				request: formRequest('http://test/bulk-create', {
+				request: formRequest('http://test/inputs', {
 					csv_import_id: importId,
 					delimiter: ',',
 					has_header: 'on',
@@ -85,7 +87,7 @@ describe('bulk-create/+page.server actions', () => {
 
 	it('importFromCsv returns 400 without import id', async () => {
 		const res = await actions.importFromCsv?.({
-			request: formRequest('http://test/bulk-create', {
+			request: formRequest('http://test/inputs', {
 				webhook_ids: [TEST_WEBHOOK_ID],
 				title_column: 'title'
 			}),

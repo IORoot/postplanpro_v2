@@ -10,6 +10,16 @@
 		return new Date(iso).toLocaleString();
 	}
 
+	function formatDateTime(iso: string) {
+		return new Date(iso).toLocaleString(undefined, {
+			weekday: 'short',
+			month: 'short',
+			day: 'numeric',
+			hour: 'numeric',
+			minute: '2-digit'
+		});
+	}
+
 	function tryPrettyJson(raw: string): string {
 		try {
 			const parsed = JSON.parse(raw);
@@ -21,11 +31,22 @@
 </script>
 
 <svelte:head>
-	<title>Reports – PostPlan</title>
+	<title>{data.reportType === 'statistics' ? 'Statistics' : 'Reports'} – PostPlan</title>
 </svelte:head>
 
 <div class="flex flex-col gap-6 lg:flex-row">
 	<nav class="flex shrink-0 flex-col gap-1 lg:w-52" aria-label="Report types">
+		<a
+			href="/reports?report=statistics"
+			class="flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors touch-manipulation {data.reportType === 'statistics'
+				? 'bg-[var(--primary)]/15 text-[var(--primary)]'
+				: 'text-[var(--text-muted)] hover:bg-[var(--primary-soft)] hover:text-[var(--text)]'}"
+		>
+			<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+				<path stroke-linecap="round" stroke-linejoin="round" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+			</svg>
+			Statistics
+		</a>
 		<a
 			href="/reports"
 			class="flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors touch-manipulation {data.reportType === 'logs'
@@ -51,7 +72,142 @@
 	</nav>
 
 	<main class="min-w-0 flex-1 space-y-6">
-		{#if data.reportType === 'logs'}
+		{#if data.reportType === 'statistics'}
+			<PageSectionHeading
+				title="Statistics"
+				description="Upcoming posts, recent publishes, failures, and posts with failed Make.com callback stages."
+			/>
+			<div>
+				<div class="mb-4 flex items-center justify-between gap-3">
+					<h3 class="text-base font-semibold text-[var(--text)]">Upcoming posts</h3>
+					<a href="/calendar" class="text-sm font-medium text-[var(--primary)] hover:underline">View calendar →</a>
+				</div>
+				<div class="content-card rounded-xl border border-[var(--primary-border-soft)] overflow-hidden">
+					{#if data.upcomingPosts.length === 0}
+						<div class="p-6 text-center text-[var(--text-muted)]">
+							<p>
+								No upcoming posts. Schedule some from the
+								<a href="/posts" class="text-[var(--primary)] hover:underline">Posts</a> or
+								<a href="/calendar" class="text-[var(--primary)] hover:underline">Calendar</a> page.
+							</p>
+						</div>
+					{:else}
+						<ul class="divide-y divide-[var(--primary-border-soft)]">
+							{#each data.upcomingPosts as post}
+								<li>
+									<a
+										href="/posts/{post.id}"
+										class="flex items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-hover)]"
+									>
+										<div class="min-w-0 flex-1">
+											<p class="font-medium text-[var(--text)] truncate">{post.title || 'Untitled'}</p>
+											<p class="text-xs text-[var(--text-muted)]">{post.webhook_name} · {formatDateTime(post.scheduled_at)}</p>
+										</div>
+										<span class="status-scheduled shrink-0 rounded px-2 py-1 text-xs font-medium">Scheduled</span>
+									</a>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				</div>
+			</div>
+			<div class="grid gap-8 lg:grid-cols-3 lg:gap-10">
+				<div>
+					<div class="mb-4 flex items-center justify-between gap-3">
+						<h3 class="text-base font-semibold text-[var(--text)]">Last 10 published</h3>
+						<a href="/posts?status=sent" class="text-sm font-medium text-[var(--primary)] hover:underline">View all →</a>
+					</div>
+					<div class="content-card rounded-xl border border-[var(--primary-border-soft)] overflow-hidden">
+						{#if (data.lastPublishedPosts?.length ?? 0) === 0}
+							<div class="p-6 text-center text-[var(--text-muted)]">
+								<p>No published posts yet.</p>
+							</div>
+						{:else}
+							<ul class="divide-y divide-[var(--primary-border-soft)]">
+								{#each data.lastPublishedPosts ?? [] as post}
+									<li>
+										<a
+											href="/posts/{post.id}"
+											class="flex items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-hover)]"
+										>
+											<div class="min-w-0 flex-1">
+												<p class="font-medium text-[var(--text)] truncate">{post.title || 'Untitled'}</p>
+												<p class="text-xs text-[var(--text-muted)]">{post.webhook_name} · {post.sent_at ? formatDateTime(post.sent_at) : '—'}</p>
+											</div>
+											<span class="status-sent shrink-0 rounded px-2 py-1 text-xs font-medium">Sent</span>
+										</a>
+									</li>
+								{/each}
+							</ul>
+						{/if}
+					</div>
+				</div>
+				<div>
+					<div class="mb-4 flex items-center justify-between gap-3">
+						<h3 class="text-base font-semibold text-[var(--text)]">Failed posts</h3>
+						{#if (data.failedPosts?.length ?? 0) > 0}
+							<a href="/posts?status=failed" class="text-sm font-medium text-[var(--primary)] hover:underline">View all →</a>
+						{/if}
+					</div>
+					<div class="content-card rounded-xl border border-[var(--primary-border-soft)] overflow-hidden">
+						{#if (data.failedPosts?.length ?? 0) === 0}
+							<div class="p-6 text-center text-[var(--text-muted)]">
+								<p>No failed posts.</p>
+							</div>
+						{:else}
+							<ul class="divide-y divide-[var(--primary-border-soft)]">
+								{#each data.failedPosts ?? [] as post}
+									<li>
+										<a
+											href="/posts/{post.id}"
+											class="block px-4 py-3 transition-colors hover:bg-[var(--surface-hover)]"
+										>
+											<p class="font-medium text-[var(--text)] truncate">{post.title || 'Untitled'}</p>
+											{#if post.error_message}
+												<p class="mt-0.5 truncate text-xs text-[var(--text-muted)]" title={post.error_message}>{post.error_message}</p>
+											{/if}
+											<p class="mt-0.5 text-xs text-[var(--text-muted)]">{formatDateTime(post.updated_at)}</p>
+										</a>
+									</li>
+								{/each}
+							</ul>
+						{/if}
+					</div>
+				</div>
+				<div>
+					<div class="mb-4 flex items-center justify-between gap-3">
+						<h3 class="text-base font-semibold text-[var(--text)]">Posts with failed stages</h3>
+						{#if (data.postsWithFailedStages?.length ?? 0) > 0}
+							<a href="/reports?report=callback-stages&filterStatus=fail" class="text-sm font-medium text-[var(--primary)] hover:underline">View report →</a>
+						{/if}
+					</div>
+					<div class="content-card rounded-xl border border-[var(--primary-border-soft)] overflow-hidden">
+						{#if (data.postsWithFailedStages?.length ?? 0) === 0}
+							<div class="p-6 text-center text-[var(--text-muted)]">
+								<p>No posts with failed Make.com stages.</p>
+							</div>
+						{:else}
+							<ul class="divide-y divide-[var(--primary-border-soft)]">
+								{#each data.postsWithFailedStages ?? [] as post}
+									<li>
+										<a
+											href="/posts/{post.id}"
+											class="flex items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-hover)]"
+										>
+											<div class="min-w-0 flex-1">
+												<p class="font-medium text-[var(--text)] truncate">{post.title || 'Untitled'}</p>
+												<p class="text-xs text-[var(--text-muted)]">{post.sent_at ? formatDateTime(post.sent_at) : '—'}</p>
+											</div>
+											<span class="status-failed shrink-0 rounded px-2 py-1 text-xs font-medium">Stage failed</span>
+										</a>
+									</li>
+								{/each}
+							</ul>
+						{/if}
+					</div>
+				</div>
+			</div>
+		{:else if data.reportType === 'logs'}
 			<PageSectionHeading
 				title="Request / Response"
 				description="For each send: the JSON we posted to your webhook and the response we got back—useful when a send fails or returns an error."
@@ -132,7 +288,7 @@
 				{/each}
 			{/if}
 		{:else}
-			<!-- Callback stages report -->
+			<!-- Callback stages (reportType === 'callback-stages') -->
 			<PageSectionHeading
 				title="Callback stages"
 				description="All post callback stages reported by Make.com (stage_passed / stage_failed)."

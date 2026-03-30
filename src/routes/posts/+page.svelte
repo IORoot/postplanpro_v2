@@ -173,10 +173,11 @@
 	{#if data.posts.length === 0}
 		<EmptyState title="No posts yet" titleId="posts-empty-list">
 			<p>
-				Add a webhook in Settings, then
+				Add a webhook in
+				<a href="/outputs" class="font-medium text-[var(--primary)] hover:underline">Outputs</a>, then
 				<a href="/posts/new" class="font-medium text-[var(--primary)] hover:underline">create a post</a>
 				or
-				<a href="/bulk-create" class="font-medium text-[var(--primary)] hover:underline">import</a>
+				<a href="/inputs" class="font-medium text-[var(--primary)] hover:underline">import</a>
 				— attach a schedule when you’re ready to send on a timer.
 			</p>
 		</EmptyState>

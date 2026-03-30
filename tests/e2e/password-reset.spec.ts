@@ -34,6 +34,6 @@ test.describe('Password reset', () => {
 		await page.getByLabel(/email/i).fill(E2E_RESET_USER_EMAIL);
 		await page.getByLabel(/^password$/i).fill(E2E_RESET_NEW_PASSWORD);
 		await page.getByRole('button', { name: 'Sign in with email' }).click();
-		await expect(page.getByRole('heading', { name: /^Dashboard$/i })).toBeVisible({ timeout: 20_000 });
+		await expect(page.getByRole('heading', { name: /^Calendar$/i })).toBeVisible({ timeout: 20_000 });
 	});
 });
