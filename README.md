@@ -13,6 +13,8 @@ bun install
 bun run dev
 ```
 
+Optional **pre-push version bump** (prompts whether to bump semver, update `changelog.md`, and `package.json`): `git config core.hooksPath scripts/git-hooks` once per clone. Skip with `SKIP_VERSION_BUMP=1 git push`. See `scripts/bump-version.sh`.
+
 ## Building
 
 ```sh
