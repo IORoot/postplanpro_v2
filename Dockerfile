@@ -1,8 +1,10 @@
-# Build SvelteKit (adapter-node) with Bun; run the Node server the adapter emits.
+# Build SvelteKit (adapter-node) with Bun; run with Node so better-sqlite3 matches a real Node ABI.
+# Bun-built node_modules can omit or misplace the .node addon after `bun install --production`, which
+# surfaces as "Could not locate the bindings file" and breaks OAuth (ensureOAuthUser hits SQLite).
 FROM oven/bun:1.3 AS builder
 WORKDIR /app
 
-# better-sqlite3: Bun does not use prebuilds yet; node-gyp needs a toolchain.
+# better-sqlite3: node-gyp needs a toolchain.
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends python3 make g++ \
 	&& rm -rf /var/lib/apt/lists/*
@@ -12,18 +14,25 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --ignore-scripts
 
 COPY . .
-# Full install: svelte-kit sync + native addons (better-sqlite3), then build and drop devDependencies.
+# Full install: svelte-kit sync + native addons, then build and production deps only.
 RUN bun install --frozen-lockfile \
 	&& bun run build \
 	&& bun install --frozen-lockfile --production
 
-FROM oven/bun:1.3 AS runner
+FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY package.json bun.lock ./
+# Rebuild native addon for Node (not Bun’s embedded ABI).
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends python3 make g++ \
+	&& rm -rf /var/lib/apt/lists/*
+
+COPY package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/build ./build
+
+RUN npm rebuild better-sqlite3
 
 ENV HOST=0.0.0.0
 ENV PORT=3000
@@ -31,4 +40,4 @@ ENV DATABASE_PATH=/data/postplan.db
 
 EXPOSE 3000
 
-CMD ["bun", "build/index.js"]
+CMD ["node", "build/index.js"]

@@ -4,7 +4,7 @@ Plan and send JSON payloads to webhooks on a schedule. Create posts, attach sche
 
 This repo uses [Bun](https://bun.sh) only for installs and scripts (`bun install`, `bun run …`, `bunx …`). You do not need the Node.js runtime installed for development, tests, or running the production build (`bun ./build` after `bun run build`).
 
-The dependency `@sveltejs/adapter-node` is SvelteKit’s standard self-hosted server bundle; the name reflects Node compatibility, but this project runs that output with Bun.
+The dependency `@sveltejs/adapter-node` is SvelteKit’s standard self-hosted server bundle. You can run `bun ./build/index.js` locally after `bun run build`; the **Docker image** runs `node build/index.js` and runs `npm rebuild better-sqlite3` so the native SQLite addon matches the runtime (Bun’s install layout was missing `.node` bindings in the container).
 
 ## Developing
 
