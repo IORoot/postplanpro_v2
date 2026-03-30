@@ -11,7 +11,7 @@ vi.mock('$app/stores', () => ({
 					sidebarCalendar: { year: 2025, month: 2, markers: {} },
 					session: { user: { name: 'Test', email: 'test@test.com' } }
 				},
-				url: { pathname: '/' }
+				url: { pathname: '/calendar' }
 			});
 			return () => {};
 		}
@@ -21,18 +21,16 @@ vi.mock('$app/stores', () => ({
 describe('Sidebar', () => {
 	it('renders nav links', () => {
 		render(Sidebar);
-		expect(screen.getByText('Home')).toBeInTheDocument();
 		expect(screen.getByText('Calendar')).toBeInTheDocument();
 		expect(screen.getByText('Posts')).toBeInTheDocument();
 		expect(screen.getByText('Schedules')).toBeInTheDocument();
 		expect(screen.getByText('Reports')).toBeInTheDocument();
-		expect(screen.getByText('Import')).toBeInTheDocument();
-		expect(screen.getByText('Settings')).toBeInTheDocument();
+		expect(screen.getByText('Inputs')).toBeInTheDocument();
+		expect(screen.getByText('Outputs')).toBeInTheDocument();
 	});
 
-	it('renders sign-out or user section', () => {
+	it('renders user section when signed in', () => {
 		render(Sidebar);
-		const form = document.querySelector('form');
-		expect(form || document.body.textContent).toBeTruthy();
+		expect(screen.getByText('test@test.com')).toBeInTheDocument();
 	});
 });

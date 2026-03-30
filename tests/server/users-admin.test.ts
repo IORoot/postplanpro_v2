@@ -39,7 +39,7 @@ describe('users/+page.server', () => {
 			load(
 				mockRequestEvent({ userId: VICTIM_ID }, 'http://test/users') as Parameters<typeof load>[0]
 			)
-		).rejects.toMatchObject({ status: 303, location: '/' });
+		).rejects.toMatchObject({ status: 303, location: '/calendar' });
 	});
 
 	it('admin load lists exactly seeded users', async () => {

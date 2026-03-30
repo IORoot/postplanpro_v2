@@ -1,24 +1,45 @@
 import { getDatabase } from '$lib/db/index.js';
+import { loadReportStatistics } from '$lib/server/overviewData.js';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 const CALLBACK_ORDER_COLS = ['title', 'stage', 'status', 'date'] as const;
 type CallbackOrderCol = (typeof CALLBACK_ORDER_COLS)[number];
 
+function parseReportType(url: URL): 'logs' | 'callback-stages' | 'statistics' {
+	const r = url.searchParams.get('report');
+	if (r === 'callback-stages') return 'callback-stages';
+	if (r === 'statistics') return 'statistics';
+	return 'logs';
+}
+
 export const load: PageServerLoad = async ({ locals, url }) => {
+	const reportType = parseReportType(url);
 	const accountId = locals.userId;
 	if (!accountId)
 		return {
 			reports: [],
-			reportType: 'logs' as const,
+			reportType,
 			callbackStages: [],
 			callbackOrderBy: 'date',
 			callbackOrderDir: 'desc',
-			callbackFilters: { title: '', stage: '', status: '' }
+			callbackFilters: { title: '', stage: '', status: '' },
+			upcomingPosts: [],
+			lastPublishedPosts: [],
+			failedPosts: [],
+			postsWithFailedStages: []
 		};
 
 	const db = getDatabase();
-	const reportType = (url.searchParams.get('report') === 'callback-stages' ? 'callback-stages' : 'logs') as 'logs' | 'callback-stages';
+	const statistics =
+		reportType === 'statistics'
+			? loadReportStatistics(db, accountId)
+			: {
+					upcomingPosts: [],
+					lastPublishedPosts: [],
+					failedPosts: [],
+					postsWithFailedStages: []
+				};
 
 	const reports =
 		reportType === 'logs'
@@ -101,7 +122,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		callbackStages,
 		callbackOrderBy,
 		callbackOrderDir,
-		callbackFilters: { title: filterTitle, stage: filterStage, status: filterStatus }
+		callbackFilters: { title: filterTitle, stage: filterStage, status: filterStatus },
+		...statistics
 	};
 };
 

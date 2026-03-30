@@ -7,15 +7,15 @@ async function signInWithEmail(page: import('@playwright/test').Page): Promise<v
 	await page.getByLabel(/email/i).fill(E2E_USER_EMAIL);
 	await page.getByLabel(/^password$/i).fill(E2E_USER_PASSWORD);
 	await page.getByRole('button', { name: 'Sign in with email' }).click();
-	// Auth.js returns redirect to `/` (dashboard); `options.redirectTo` is not always honored for credentials.
+	// Auth.js may redirect to `/` then server redirects to `/calendar`; `options.redirectTo` is not always honored for credentials.
 	await expect(page).not.toHaveURL(/\/auth\/login/, { timeout: 25_000 });
-	await expect(page.getByRole('heading', { name: /^Dashboard$/i })).toBeVisible({ timeout: 10_000 });
+	await expect(page.getByRole('heading', { name: /^Calendar$/i })).toBeVisible({ timeout: 10_000 });
 }
 
 test.describe('Authenticated (seeded E2E user)', () => {
-	test('email/password sign-in reaches dashboard', async ({ page }) => {
+	test('email/password sign-in reaches calendar', async ({ page }) => {
 		await signInWithEmail(page);
-		await expect(page.getByRole('heading', { name: /^Dashboard$/i })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /^Calendar$/i })).toBeVisible();
 	});
 
 	test('posts list loads with heading', async ({ page }) => {
@@ -25,11 +25,11 @@ test.describe('Authenticated (seeded E2E user)', () => {
 		await expect(page.getByRole('heading', { name: 'Posts', exact: true })).toBeVisible();
 	});
 
-	test('bulk-create is reachable when logged in', async ({ page }) => {
+	test('inputs page is reachable when logged in', async ({ page }) => {
 		await signInWithEmail(page);
-		await page.goto('/bulk-create');
-		await expect(page).toHaveURL(/\/bulk-create/);
-		await expect(page.getByRole('heading', { name: /^Import$/i })).toBeVisible();
+		await page.goto('/inputs');
+		await expect(page).toHaveURL(/\/inputs/);
+		await expect(page.getByRole('heading', { name: /^Inputs$/i })).toBeVisible();
 	});
 
 	test('reports page loads', async ({ page }) => {

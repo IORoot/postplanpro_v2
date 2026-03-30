@@ -21,14 +21,14 @@ describe('requireAdmin', () => {
 		}
 	});
 
-	it('redirects home when user is not admin tier', () => {
+	it('redirects to calendar when user is not admin tier', () => {
 		try {
 			requireAdmin(
 				mockRequestEvent({ userId: 'non-admin' }, 'http://test/users') as Parameters<typeof requireAdmin>[0]
 			);
 			expect.fail('expected redirect');
 		} catch (e) {
-			expect(e).toMatchObject({ status: 303, location: '/' });
+			expect(e).toMatchObject({ status: 303, location: '/calendar' });
 		}
 	});
 

@@ -1,12 +1,11 @@
 import { getDatabase } from '$lib/db/index.js';
-import { env } from '$env/dynamic/private';
+import { getStripeSecrets } from '$lib/server/stripeEnv.js';
 import Stripe from 'stripe';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
-	const secretKey = env.STRIPE_SECRET_KEY;
-	const webhookSecret = env.STRIPE_WEBHOOK_SECRET;
+	const { secretKey, webhookSecret } = getStripeSecrets();
 	if (!secretKey || !webhookSecret) {
 		return json({ error: 'Stripe not configured' }, { status: 503 });
 	}

@@ -1,4 +1,5 @@
 import { getDatabase } from '$lib/db/index.js';
+import { loadCalendarOverview } from '$lib/server/overviewData.js';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -93,6 +94,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const endStr = sqliteIso(end);
 
 	const db = getDatabase();
+	const overview = loadCalendarOverview(db, accountId);
 	const posts: CalendarPostRow[] = accountId
 		? ((view === 'agenda'
 				? db.prepare(
@@ -120,7 +122,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		view,
 		anchorDate: anchor.toISOString().slice(0, 10),
 		rangeStart: start.toISOString().slice(0, 10),
-		rangeEnd: end.toISOString().slice(0, 10)
+		rangeEnd: end.toISOString().slice(0, 10),
+		...overview
 	};
 };
 

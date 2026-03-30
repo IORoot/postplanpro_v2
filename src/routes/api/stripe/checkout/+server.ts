@@ -1,4 +1,5 @@
 import { getDatabase } from '$lib/db/index.js';
+import { getStripeSecrets } from '$lib/server/stripeEnv.js';
 import { env } from '$env/dynamic/private';
 import Stripe from 'stripe';
 import { redirect } from '@sveltejs/kit';
@@ -9,8 +10,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 	if (!session?.user?.id) {
 		throw redirect(303, '/auth/login');
 	}
-	const secretKey = env.STRIPE_SECRET_KEY;
-	const priceId = env.STRIPE_PRICE_ID_PRO_MONTHLY;
+	const { secretKey, priceIdProMonthly: priceId } = getStripeSecrets();
 	if (!secretKey || !priceId) {
 		return new Response('Stripe is not configured.', { status: 503 });
 	}

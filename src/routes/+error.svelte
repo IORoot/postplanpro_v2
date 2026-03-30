@@ -11,7 +11,7 @@
 	<h1 class="mt-2 text-xl font-bold text-[var(--text)]">We couldn’t load this page</h1>
 	<p class="mx-auto mt-3 max-w-md overflow-wrap-anywhere text-sm leading-relaxed text-[var(--text-muted)]">
 		{$page.error?.message ??
-			'Something unexpected happened. Use the buttons below to go back or return to your dashboard.'}
+			'Something unexpected happened. Use the buttons below to go back or return to the calendar.'}
 	</p>
 	<div class="mt-8 flex flex-wrap items-center justify-center gap-3">
 		<button
@@ -21,6 +21,6 @@
 		>
 			Previous page
 		</button>
-		<a href="/" class="btn-primary btn-touch text-white">Dashboard</a>
+		<a href="/calendar" class="btn-primary btn-touch text-white">Calendar</a>
 	</div>
 </div>
