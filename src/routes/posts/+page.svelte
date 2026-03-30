@@ -177,7 +177,7 @@
 				<a href="/outputs" class="font-medium text-[var(--primary)] hover:underline">Outputs</a>, then
 				<a href="/posts/new" class="font-medium text-[var(--primary)] hover:underline">create a post</a>
 				or
-				<a href="/inputs" class="font-medium text-[var(--primary)] hover:underline">import</a>
+				<a href="/webhooks" class="font-medium text-[var(--primary)] hover:underline">import</a>
 				— attach a schedule when you’re ready to send on a timer.
 			</p>
 		</EmptyState>

@@ -81,8 +81,8 @@
 						<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
 					</svg>
 				</div>
-				<h3 class="mt-4 text-lg font-semibold text-[var(--text)]">Callback import</h3>
-				<p class="mt-2 text-sm text-[var(--text-muted)]" style="line-height: 1.6;">Let Make.com or other tools send posts via webhook. Each request creates a post and counts toward your plan.</p>
+				<h3 class="mt-4 text-lg font-semibold text-[var(--text)]">Import webhook</h3>
+				<p class="mt-2 text-sm text-[var(--text-muted)]" style="line-height: 1.6;">Let Make.com or other tools POST JSON to create posts in PostPlan. Each request counts toward your plan.</p>
 			</div>
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--bg)] p-6 transition-colors hover:border-[var(--primary)]/30">
 				<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--primary)]/10 text-[var(--primary)]">

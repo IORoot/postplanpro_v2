@@ -6,8 +6,8 @@
 		{ benefit: 'Import operations per month', free: '100', pro: '2,000', enterprise: 'Unlimited' },
 		{ benefit: 'Calendar view', free: '✓', pro: '✓', enterprise: '✓' },
 		{ benefit: 'Schedules & rules', free: '✓', pro: '✓', enterprise: '✓' },
-		{ benefit: 'Inputs (WordPress, RSS, CSV, Squarespace, callbacks)', free: '✓', pro: '✓', enterprise: '✓' },
-		{ benefit: 'Callback import (webhook)', free: '✓', pro: '✓', enterprise: '✓' },
+		{ benefit: 'Inputs (WordPress, RSS, CSV, Squarespace) + Webhooks + Callbacks', free: '✓', pro: '✓', enterprise: '✓' },
+		{ benefit: 'Import webhook (JSON API)', free: '✓', pro: '✓', enterprise: '✓' },
 		{ benefit: 'Webhooks (outputs)', free: '✓', pro: '✓', enterprise: '✓' },
 		{ benefit: 'Reports & send logs', free: '✓', pro: '✓', enterprise: '✓' },
 		{ benefit: 'Account & billing', free: '✓', pro: '✓', enterprise: '✓' },
@@ -17,7 +17,7 @@
 
 <svelte:head>
 	<title>Technical details – PostPlan</title>
-	<meta name="description" content="Plans comparison and full feature list for PostPlan: calendar (default home), posts, schedules, Inputs, Outputs, callback import, reports, Account." />
+	<meta name="description" content="Plans comparison and full feature list for PostPlan: calendar (default home), posts, schedules, Inputs, Webhooks, Outputs, reports, Account." />
 </svelte:head>
 
 <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
@@ -92,14 +92,14 @@
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
 				<dt class="text-lg font-semibold text-[var(--text)]">Inputs</dt>
 				<dd class="mt-2 text-sm text-[var(--text-muted)]" style="line-height: 1.6;">
-					Import posts from external sources and configure HTTP callbacks. Source groups: CMS (WordPress, Squarespace), Spreadsheets (CSV), Feeds (RSS), and Callbacks (import API URL, token, and post-notification callback docs). For bulk import, you map fields to post fields, pick a schedule and webhook, and the app creates many posts at once. Each import run counts as one “import operation” toward your monthly limit; the number of posts created counts toward the posts-per-month limit.
+					Import posts from external sources. Source groups: CMS (WordPress, Squarespace), Spreadsheets (CSV), and Feeds (RSS). Under Callbacks: post-notification webhook docs (Make.com stages). For bulk import, you map fields to post fields, pick a schedule and webhook, and the app creates many posts at once. Each import run counts as one “import operation” toward your monthly limit; the number of posts created counts toward the posts-per-month limit.
 				</dd>
 			</div>
 
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-				<dt class="text-lg font-semibold text-[var(--text)]">Callback import (API)</dt>
+				<dt class="text-lg font-semibold text-[var(--text)]">Webhooks</dt>
 				<dd class="mt-2 text-sm text-[var(--text-muted)]" style="line-height: 1.6;">
-					<code class="rounded bg-[var(--bg)] px-1.5 py-0.5 text-xs font-mono text-[var(--text)]">POST /api/callbacks/import</code> — Accepts a webhook request (e.g. from Make.com) with a secret token. Creates one or more posts from the payload and optionally assigns scheduled_at. Each request counts as one import operation and each created post counts as one callback input toward your monthly limits. You get a unique callback URL and token under Inputs → Callbacks.
+					Inbound import webhook: <code class="rounded bg-[var(--bg)] px-1.5 py-0.5 text-xs font-mono text-[var(--text)]">POST /api/callbacks/import</code> with your webhook token. Creates posts from JSON (e.g. from Make.com or n8n). Each request counts as one import operation; created posts count toward callback-input limits. URL, token, and examples are on the Webhooks page; the same token is used for post notifications (Inputs → Callbacks).
 				</dd>
 			</div>
 
@@ -134,7 +134,7 @@
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
 				<dt class="text-lg font-semibold text-[var(--text)]">Limits (monthly, per calendar month)</dt>
 				<dd class="mt-2 text-sm text-[var(--text-muted)]" style="line-height: 1.6;">
-					Posts: maximum number of posts that can be sent in a single calendar month (sent + scheduled for that month). No refill within the month—e.g. Free allows 20 sends in January total; if 5 are sent by Jan 10, you have 15 left for January and cannot add more for January. Callback inputs: number of posts created via the callback import API per month. Imports: number of import operations (one Inputs import run or one callback import request) per month. All enforced at creation/schedule time.
+					Posts: maximum number of posts that can be sent in a single calendar month (sent + scheduled for that month). No refill within the month—e.g. Free allows 20 sends in January total; if 5 are sent by Jan 10, you have 15 left for January and cannot add more for January. Callback inputs: number of posts created via the import webhook API per month. Imports: number of import operations (one Inputs import run or one import webhook request) per month. All enforced at creation/schedule time.
 				</dd>
 			</div>
 		</dl>

@@ -1,6 +1,13 @@
 import type { Session } from '@auth/sveltekit';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { getDatabase } from '$lib/db/index.js';
 import type { LayoutServerLoad } from './$types';
+
+const appVersion = JSON.parse(
+	readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../package.json'), 'utf8')
+).version as string;
 
 function sqliteIso(value: Date): string {
 	return value.toISOString().slice(0, 19);
@@ -51,6 +58,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	return {
 		session,
 		sidebarCalendar,
-		userTier
+		userTier,
+		appVersion
 	};
 };

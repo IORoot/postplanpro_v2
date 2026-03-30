@@ -6,6 +6,7 @@
 	import SquarespaceImporter from './importers/SquarespaceImporter.svelte';
 	import RssImporter from './importers/RssImporter.svelte';
 	import CsvImporter from './importers/CsvImporter.svelte';
+	import InboundAuthTokenCard from '$lib/components/InboundAuthTokenCard.svelte';
 
 	let { data, form } = $props();
 
@@ -22,14 +23,7 @@
 		lastSection = s;
 	});
 
-	let generatedCallbackToken = $state<string | null>(null);
-	let importExampleTab = $state<'json' | 'curl'>('json');
 	let postNotificationExampleTab = $state<'json' | 'curl'>('json');
-
-	$effect(() => {
-		const token = (form as { token?: string } | null)?.token;
-		if (typeof token === 'string') generatedCallbackToken = token;
-	});
 
 	const showError = $derived(
 		section !== 'callbacks' &&
@@ -48,7 +42,7 @@
 
 <PageSectionHeading
 	title="Inputs"
-	description="Import from external sources or receive posts via HTTP callbacks."
+	description="Import from CMS, spreadsheets, and feeds. Post notification callbacks live under Callbacks."
 />
 
 <div class="settings-layout">
@@ -85,262 +79,22 @@
 			<section class="mt-8" id="inputs-callbacks">
 				<h2 class="text-lg font-medium text-[var(--text)]">Callbacks</h2>
 				<p class="mt-1 text-sm text-[var(--text-muted)]">
-					Inbound callbacks: import posts via JSON and receive post notifications from Make.com.
+					Post notification webhooks: tell PostPlan when a sent post reaches a stage in Make.com (or similar).
 				</p>
 
-				<div class="mt-8">
-					<h3 class="text-base font-medium text-[var(--text)]">Callback token</h3>
-					<div class="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
-						<div class="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-							<p class="mb-2 text-xs font-medium text-[var(--text-muted)]">Token</p>
-							{#if generatedCallbackToken}
-								<p class="text-xs text-[var(--text-muted)]">Save this token; it won’t be shown again.</p>
-								<div class="mt-2 flex flex-wrap items-center gap-2">
-									<code
-										class="min-w-0 flex-1 break-all rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 font-mono text-sm text-[var(--text)]"
-										>{generatedCallbackToken}</code
-									>
-									<button
-										type="button"
-										onclick={() =>
-											navigator.clipboard.writeText(generatedCallbackToken ?? '').then(() => alert('Copied to clipboard'))}
-										class="min-h-[44px] rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)]"
-									>
-										Copy
-									</button>
-									<button
-										type="button"
-										onclick={() => (generatedCallbackToken = null)}
-										class="min-h-[44px] rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)]"
-										>Dismiss</button
-									>
-								</div>
-							{:else if data.callbackTokenMasked}
-								<div class="flex flex-wrap items-center gap-2">
-									<code class="rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 font-mono text-sm text-[var(--text)]"
-										>{data.callbackTokenMasked}</code
-									>
-									<form
-										method="POST"
-										action="?/revokeCallbackToken"
-										use:enhance={({ cancel }) => {
-											if (!confirm('Revoke the callback token? Make.com scenarios using it will stop working until you generate a new one.'))
-												cancel();
-											return async () => {
-												generatedCallbackToken = null;
-												await invalidateAll();
-											};
-										}}
-										class="inline"
-									>
-										<button
-											type="submit"
-											class="min-h-[44px] rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)]"
-											>Revoke</button
-										>
-									</form>
-									<form
-										method="POST"
-										action="?/generateCallbackToken"
-										use:enhance={() =>
-											async ({ result }) => {
-												if (
-													result.type === 'success' &&
-													result.data &&
-													typeof (result.data as { token?: string }).token === 'string'
-												) {
-													generatedCallbackToken = (result.data as { token: string }).token;
-												}
-												await invalidateAll();
-											}}
-										class="inline"
-									>
-										<button
-											type="submit"
-											class="min-h-[44px] rounded-lg border border-amber-500 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20"
-											>Regenerate</button
-										>
-									</form>
-								</div>
-								<p class="mt-1 text-xs text-[var(--text-muted)]">Regenerating invalidates the previous token.</p>
-							{:else}
-								<form
-									method="POST"
-									action="?/generateCallbackToken"
-									use:enhance={() =>
-										async ({ result }) => {
-											if (
-												result.type === 'success' &&
-												result.data &&
-												typeof (result.data as { token?: string }).token === 'string'
-											) {
-												generatedCallbackToken = (result.data as { token: string }).token;
-											}
-											await invalidateAll();
-										}}
-									class="inline"
-								>
-									<button type="submit" class="btn-primary min-h-[44px] rounded-lg px-4 py-2 text-sm font-medium text-white"
-										>Generate callback token</button
-									>
-								</form>
-								<p class="mt-1 text-xs text-[var(--text-muted)]">
-									The payload sent to Make.com will include <code>callback_url</code> and <code>callback_token</code> when set.
-								</p>
-							{/if}
-						</div>
-						<div class="text-sm text-[var(--text-muted)]">
-							<p class="mt-0">Used to authenticate the import callback and post notification callbacks below.</p>
-							<p class="mt-2">Send in requests as:</p>
-							<ul class="mt-1 list-inside list-disc space-y-0.5">
-								<li><code class="rounded bg-[var(--bg)] px-1 text-xs">Authorization: Bearer &lt;token&gt;</code></li>
-								<li>or <code class="rounded bg-[var(--bg)] px-1 text-xs">X-Callback-Token: &lt;token&gt;</code></li>
-							</ul>
-						</div>
-					</div>
-				</div>
-
-				<div class="mt-8">
-					<h3 class="text-base font-medium text-[var(--text)]">Import callback</h3>
-					<div class="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
-						<div class="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-							<div class="my-3 overflow-hidden rounded-lg bg-[var(--surface)]">
-								<img src="/Callback_Import.svg" alt="Import callback setup" class="block h-auto object-contain" />
-							</div>
-							<p class="mb-2 text-xs font-medium text-[var(--text-muted)]">Callback URL</p>
-							{#if data.importCallbackUrl}
-								<div class="flex flex-wrap items-center gap-2">
-									<code class="min-w-0 flex-1 break-all rounded border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)]"
-										>{data.importCallbackUrl}</code
-									>
-									<button
-										type="button"
-										onclick={() =>
-											navigator.clipboard.writeText(data.importCallbackUrl ?? '').then(() => alert('Copied to clipboard'))}
-										class="min-h-[44px] rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)]"
-									>
-										Copy
-									</button>
-								</div>
-								<p class="mt-2 text-xs text-[var(--text-muted)]">
-									Send <code class="rounded bg-[var(--bg)] px-1 text-xs">POST</code> with
-									<code class="rounded bg-[var(--bg)] px-1 text-xs">Content-Type: application/json</code>.
-								</p>
-							{:else}
-								<p class="text-xs text-[var(--text-muted)]">Set <code>APP_BASE_URL</code> to see the callback URL.</p>
-							{/if}
-						</div>
-						<div class="text-sm text-[var(--text-muted)]">
-							<p class="mt-0">
-								Import posts from external tools (Make.com, n8n, custom scripts) by sending JSON. Use the callback token above to
-								authenticate.
-							</p>
-							<p class="mt-2">
-								Send <code class="rounded bg-[var(--bg)] px-1 text-xs">Authorization: Bearer &lt;token&gt;</code> or
-								<code class="rounded bg-[var(--bg)] px-1 text-xs">X-Callback-Token: &lt;token&gt;</code>.
-							</p>
-							<p class="mt-3 font-medium text-[var(--text)]">Example request</p>
-							<p class="mt-1 text-xs">
-								Send an object with a <code class="rounded bg-[var(--bg)] px-1">posts</code> array. Each post must include
-								<code class="rounded bg-[var(--bg)] px-1">webhook_id</code> or
-								<code class="rounded bg-[var(--bg)] px-1">webhook_ids</code>. Webhook IDs are on the
-								<a href="/outputs" class="font-medium text-[var(--primary)] hover:underline">Outputs</a> page.
-							</p>
-							<div class="mt-2 flex gap-1 border-b border-[var(--border)]">
-								<button
-									type="button"
-									class="min-h-[44px] rounded-t border border-[var(--border)] border-b-0 px-3 py-1.5 text-xs font-medium {importExampleTab ===
-									'json'
-										? 'bg-[var(--surface)] text-[var(--text)]'
-										: 'bg-transparent text-[var(--text-muted)] hover:bg-[var(--surface-hover)]'}"
-									onclick={() => (importExampleTab = 'json')}>JSON</button
-								>
-								<button
-									type="button"
-									class="min-h-[44px] rounded-t border border-[var(--border)] border-b-0 px-3 py-1.5 text-xs font-medium {importExampleTab ===
-									'curl'
-										? 'bg-[var(--surface)] text-[var(--text)]'
-										: 'bg-transparent text-[var(--text-muted)] hover:bg-[var(--surface-hover)]'}"
-									onclick={() => (importExampleTab = 'curl')}>curl</button
-								>
-							</div>
-							{#if importExampleTab === 'json'}
-								<div class="relative">
-									<button
-										type="button"
-										class="absolute right-2 top-2 min-h-[44px] min-w-[44px] rounded border border-white/30 bg-black/80 px-2 py-1 text-xs text-white hover:bg-white/10"
-										onclick={(e) => {
-											const code = (e.currentTarget as HTMLButtonElement).parentElement?.querySelector('pre code');
-											if (code) navigator.clipboard.writeText(code.textContent ?? '').then(() => alert('Copied to clipboard'));
-										}}>Copy</button
-									>
-									<pre
-										class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code
-											>{`{
-  "posts": [
-    {
-      "title": "My post title",
-      "webhook_id": "<webhook-id>",
-      "content": "Optional post body text.",
-      "image_url": "https://example.com/image.jpg",
-      "external_id": "external-123",
-      "colour": "#F4F4F0",
-      "schedule_ids": ["<schedule-id-1>", "<schedule-id-2>"],
-      "schedule_specific": "2025-01-01T09:00:00Z",
-      "fields": { "instagram.caption": "Custom caption" }
-    },
-    {
-      "title": "Another post",
-      "webhook_ids": ["<id1>", "<id2>"],
-      "content": "..."
-    }
-  ]
-}`}</code
-										></pre>
-								</div>
-							{:else}
-								<div class="relative">
-									<button
-										type="button"
-										class="absolute right-2 top-2 min-h-[44px] min-w-[44px] rounded border border-white/30 bg-black/80 px-2 py-1 text-xs text-white hover:bg-white/10"
-										onclick={(e) => {
-											const code = (e.currentTarget as HTMLButtonElement).parentElement?.querySelector('pre code');
-											if (code) navigator.clipboard.writeText(code.textContent ?? '').then(() => alert('Copied to clipboard'));
-										}}>Copy</button
-									>
-									<pre
-										class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code
-											>{`curl -X POST "${data.importCallbackUrl ?? 'https://your-app.com/api/callbacks/import'}" \\
-  -H "Content-Type: application/json" \\
-  -H "X-Callback-Token: YOUR_CALLBACK_TOKEN" \\
-  -d '{"posts":[{"title":"My post title","webhook_id":"<webhook-id>","content":"Optional post body."}]}'`}</code
-										></pre>
-								</div>
-							{/if}
-							<p class="mt-2 text-xs text-[var(--text-muted)]">
-								<code class="rounded bg-[var(--bg)] px-1 text-xs">external_id</code> is an optional stable ID from your system (e.g. a post or
-								item ID); when you send the same value again for the same webhook, PostPlan skips creating a duplicate draft.
-							</p>
-							<p class="mt-1 text-xs text-[var(--text-muted)]">
-								<code class="rounded bg-[var(--bg)] px-1 text-xs">colour</code> (or
-								<code class="rounded bg-[var(--bg)] px-1 text-xs">color</code>) is an optional hex colour for the post; if omitted or invalid,
-								it defaults to <code class="rounded bg-[var(--bg)] px-1 text-xs">#F4F4F0</code>.
-								<code class="rounded bg-[var(--bg)] px-1 text-xs">schedule_ids</code> is an optional array of schedule IDs – one post is
-								created per schedule using the same content – and
-								<code class="rounded bg-[var(--bg)] px-1 text-xs">schedule_specific</code> is an optional ISO datetime to schedule a single post
-								at an exact time; if neither is set, the post is imported as an unscheduled draft.
-							</p>
-							<ul class="mt-2 list-inside list-disc space-y-0.5 text-xs">
-								<li><code>posts[].title</code> – required</li>
-								<li><code>posts[].webhook_id</code> or <code>webhook_ids</code></li>
-								<li>
-									<code>posts[].content</code>, <code>image_url</code>, <code>external_id</code>, <code>colour</code>/<code>color</code>,
-									<code>schedule_ids</code>, <code>schedule_specific</code>, <code>fields</code> – optional
-								</li>
-							</ul>
-						</div>
-					</div>
-				</div>
+				<InboundAuthTokenCard callbackTokenMasked={data.callbackTokenMasked} {form}>
+					{#snippet help()}
+						<p class="mt-0">
+							Same token as the <strong>import webhook</strong> on
+							<a href="/webhooks" class="font-medium text-[var(--primary)] hover:underline">Webhooks</a>. Manage it here or there.
+						</p>
+						<p class="mt-2">Send in requests as:</p>
+						<ul class="mt-1 list-inside list-disc space-y-0.5">
+							<li><code class="rounded bg-[var(--bg)] px-1 text-xs">Authorization: Bearer &lt;token&gt;</code></li>
+							<li>or <code class="rounded bg-[var(--bg)] px-1 text-xs">X-Callback-Token: &lt;token&gt;</code></li>
+						</ul>
+					{/snippet}
+				</InboundAuthTokenCard>
 
 				<div class="mt-10 border-t border-[var(--border)] pt-8">
 					<h3 class="text-base font-medium text-[var(--text)]">Post notification callbacks</h3>
@@ -367,7 +121,7 @@
 								<p class="text-xs text-[var(--text-muted)]">Set <code>APP_BASE_URL</code> in your environment to see the callback URL.</p>
 							{/if}
 							<p class="mt-2 text-xs text-[var(--text-muted)]">
-								Use the callback token from the section above when calling this URL from Make.com.
+								Use the webhook token from the section above when calling this URL from Make.com.
 							</p>
 						</div>
 						<div class="text-sm text-[var(--text-muted)]">

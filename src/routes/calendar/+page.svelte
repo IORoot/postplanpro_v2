@@ -595,7 +595,7 @@
 						</li>
 						<li>
 							<a href="/posts/new" class="font-medium text-[var(--primary)] hover:underline">Create a post</a> or
-							<a href="/inputs" class="font-medium text-[var(--primary)] hover:underline">import</a> content with a payload.
+							<a href="/webhooks" class="font-medium text-[var(--primary)] hover:underline">import</a> content with a payload.
 						</li>
 						<li>
 							<a href="/schedules/new" class="font-medium text-[var(--primary)] hover:underline">Create a schedule</a>, then attach it to the post so sends follow your rules.

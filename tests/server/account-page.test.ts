@@ -76,10 +76,18 @@ describe('account/+page.server load', () => {
 		).rejects.toMatchObject({ status: 303, location: '/outputs' });
 	});
 
-	it('redirects legacy inputs section to inputs callbacks', async () => {
+	it('redirects legacy inputs section to webhooks', async () => {
 		await expect(
 			load(
 				mockRequestEvent({ userId: TEST_USER_ID }, 'http://test/account?section=inputs') as Parameters<typeof load>[0]
+			)
+		).rejects.toMatchObject({ status: 303, location: '/webhooks' });
+	});
+
+	it('redirects legacy callbacks section to inputs callbacks', async () => {
+		await expect(
+			load(
+				mockRequestEvent({ userId: TEST_USER_ID }, 'http://test/account?section=callbacks') as Parameters<typeof load>[0]
 			)
 		).rejects.toMatchObject({ status: 303, location: '/inputs?section=callbacks' });
 	});

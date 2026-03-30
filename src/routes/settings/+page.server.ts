@@ -7,7 +7,10 @@ export const load: PageServerLoad = ({ url }) => {
 	if (sectionRaw === 'outputs' || sectionRaw === 'targets') {
 		throw redirect(303, '/outputs');
 	}
-	if (sectionRaw === 'inputs' || sectionRaw === 'imports' || sectionRaw === 'callbacks') {
+	if (sectionRaw === 'inputs' || sectionRaw === 'imports') {
+		throw redirect(303, '/webhooks');
+	}
+	if (sectionRaw === 'callbacks') {
 		throw redirect(303, '/inputs?section=callbacks');
 	}
 	if (sectionRaw === 'globals') {

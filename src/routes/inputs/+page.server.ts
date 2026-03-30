@@ -12,10 +12,11 @@ import { getTierLimits } from '$lib/tiers.js';
 import Parser from 'rss-parser';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { env } from '$env/dynamic/private';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { parse as parseCsv } from 'csv-parse/sync';
+import { loadInboundAuthFields } from '$lib/server/inboundAuthLoad.js';
+import { callbackTokenFormActions } from '$lib/server/callbackTokenFormActions.js';
 
 const rssParser = new Parser({ timeout: 10000 });
 
@@ -24,8 +25,6 @@ type InputSection = (typeof INPUT_SECTIONS)[number];
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const accountId = locals.userId;
-	const base = env.APP_BASE_URL?.trim();
-	const importCallbackUrl = base ? base.replace(/\/$/, '') + '/api/callbacks/import' : null;
 	const sectionRaw = url.searchParams.get('section') ?? 'cms';
 	const section = (INPUT_SECTIONS.includes(sectionRaw as InputSection)
 		? sectionRaw
@@ -36,31 +35,18 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			webhooks: [],
 			schedules: [],
 			section,
-			callbackTokenMasked: null,
-			callbackUrl: null,
-			importCallbackUrl
+			...loadInboundAuthFields(null)
 		};
 	}
 	const db = getDatabase();
 	const webhooks = db.prepare('SELECT id, name FROM webhook_config WHERE account_id = ? ORDER BY name').all(accountId) as { id: string; name: string }[];
 	const schedules = db.prepare('SELECT id, name FROM schedule WHERE account_id = ? ORDER BY name').all(accountId) as { id: string; name: string }[];
-	const callbackTokenMasked = (() => {
-		const row = db.prepare('SELECT callback_token FROM user WHERE id = ?').get(accountId) as {
-			callback_token: string | null;
-		} | undefined;
-		const t = row?.callback_token?.trim();
-		if (!t) return null;
-		return '••••••••••••' + t.slice(-4);
-	})();
-	const callbackUrl = base ? base.replace(/\/$/, '') + '/api/callbacks/stage' : null;
 
 	return {
 		webhooks,
 		schedules,
 		section,
-		callbackTokenMasked,
-		callbackUrl,
-		importCallbackUrl
+		...loadInboundAuthFields(accountId)
 	};
 };
 
@@ -1373,17 +1359,5 @@ export const actions: Actions = {
 		incrementUsageMonth(db, accountId, monthCsv, { importOperations: 1 });
 		throw redirect(303, `/posts?imported=${createdIds.length}`);
 	},
-	generateCallbackToken: async ({ locals }) => {
-		const accountId = locals.userId;
-		if (!accountId) return fail(401, { error: 'Unauthorized' });
-		const token = crypto.randomUUID();
-		getDatabase().prepare('UPDATE user SET callback_token = ? WHERE id = ?').run(token, accountId);
-		return { token };
-	},
-	revokeCallbackToken: async ({ locals }) => {
-		const accountId = locals.userId;
-		if (!accountId) return fail(401, { error: 'Unauthorized' });
-		getDatabase().prepare('UPDATE user SET callback_token = NULL WHERE id = ?').run(accountId);
-		return { success: true };
-	}
+	...callbackTokenFormActions
 };

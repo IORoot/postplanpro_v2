@@ -148,7 +148,7 @@
 							<span class="text-xs text-[var(--text-muted)]">ID:</span>
 							<code
 								class="rounded bg-[var(--bg)] px-1.5 py-0.5 font-mono text-xs text-[var(--text)]"
-								title="Webhook ID for API and import callback">{webhook.id}</code
+								title="Webhook ID for API and JSON import webhook">{webhook.id}</code
 							>
 							<button
 								type="button"

@@ -57,11 +57,22 @@ describe('settings/+page.server redirect', () => {
 			'/outputs'
 		));
 
-	it('redirects legacy inputs section to inputs callbacks', () =>
+	it('redirects legacy inputs section to webhooks', () =>
 		expectRedirect(
 			() =>
 				settingsRedirectLoad(
 					mockRequestEvent({ userId: null }, 'http://test/settings?section=inputs') as Parameters<
+						typeof settingsRedirectLoad
+					>[0]
+				),
+			'/webhooks'
+		));
+
+	it('redirects legacy callbacks section to inputs callbacks', () =>
+		expectRedirect(
+			() =>
+				settingsRedirectLoad(
+					mockRequestEvent({ userId: null }, 'http://test/settings?section=callbacks') as Parameters<
 						typeof settingsRedirectLoad
 					>[0]
 				),
