@@ -42,40 +42,10 @@
 
 <PageSectionHeading
 	title="Inputs"
-	description="Import from CMS, spreadsheets, and feeds. Post notification callbacks live under Callbacks."
+	description="Import from CMS, spreadsheets, and feeds. Post notification callbacks live under Callbacks; import webhook under Webhooks in the sidebar."
 />
 
-<div class="settings-layout">
-	<aside class="settings-sidebar">
-		<nav class="settings-nav">
-			<a
-				href="/inputs?section=cms"
-				class="settings-nav-link {section === 'cms' ? 'settings-nav-link-active' : ''}"
-			>
-				CMS
-			</a>
-			<a
-				href="/inputs?section=spreadsheets"
-				class="settings-nav-link {section === 'spreadsheets' ? 'settings-nav-link-active' : ''}"
-			>
-				Spreadsheets
-			</a>
-			<a
-				href="/inputs?section=feeds"
-				class="settings-nav-link {section === 'feeds' ? 'settings-nav-link-active' : ''}"
-			>
-				Feeds
-			</a>
-			<a
-				href="/inputs?section=callbacks"
-				class="settings-nav-link {section === 'callbacks' ? 'settings-nav-link-active' : ''}"
-			>
-				Callbacks
-			</a>
-		</nav>
-	</aside>
-	<div class="settings-content">
-		{#if section === 'callbacks'}
+{#if section === 'callbacks'}
 			<section class="mt-8" id="inputs-callbacks">
 				<h2 class="text-lg font-medium text-[var(--text)]">Callbacks</h2>
 				<p class="mt-1 text-sm text-[var(--text-muted)]">
@@ -85,8 +55,8 @@
 				<InboundAuthTokenCard callbackTokenMasked={data.callbackTokenMasked} {form}>
 					{#snippet help()}
 						<p class="mt-0">
-							Same token as the <strong>import webhook</strong> on
-							<a href="/webhooks" class="font-medium text-[var(--primary)] hover:underline">Webhooks</a>. Manage it here or there.
+							Same token as the <strong>import webhook</strong> under
+							<a href="/inputs/webhooks" class="font-medium text-[var(--primary)] hover:underline">Webhooks</a> in this sidebar.
 						</p>
 						<p class="mt-2">Send in requests as:</p>
 						<ul class="mt-1 list-inside list-disc space-y-0.5">
@@ -328,8 +298,6 @@
 				<CsvImporter data={data} form={form} />
 			{/if}
 		{/if}
-	</div>
-</div>
 
 <style>
 	:global(.bulk-create-spinner) {

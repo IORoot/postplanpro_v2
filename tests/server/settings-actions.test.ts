@@ -57,7 +57,7 @@ describe('settings/+page.server redirect', () => {
 			'/outputs'
 		));
 
-	it('redirects legacy inputs section to webhooks', () =>
+	it('redirects legacy inputs section to inputs webhooks', () =>
 		expectRedirect(
 			() =>
 				settingsRedirectLoad(
@@ -65,7 +65,7 @@ describe('settings/+page.server redirect', () => {
 						typeof settingsRedirectLoad
 					>[0]
 				),
-			'/webhooks'
+			'/inputs/webhooks'
 		));
 
 	it('redirects legacy callbacks section to inputs callbacks', () =>

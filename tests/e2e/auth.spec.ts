@@ -24,7 +24,7 @@ test.describe('Auth', () => {
 	});
 
 	test('protected paths redirect to welcome when unauthenticated', async ({ page }) => {
-		for (const path of ['/posts', '/calendar', '/schedules', '/settings', '/inputs', '/webhooks', '/outputs', '/reports', '/account']) {
+		for (const path of ['/posts', '/calendar', '/schedules', '/settings', '/inputs', '/inputs/webhooks', '/outputs', '/reports', '/account']) {
 			await page.goto(path);
 			await expect(page).toHaveURL(/\/welcome/);
 		}

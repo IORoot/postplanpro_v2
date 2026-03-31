@@ -44,7 +44,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		throw redirect(303, '/outputs');
 	}
 	if (sectionRaw === 'inputs' || sectionRaw === 'imports') {
-		throw redirect(303, '/webhooks');
+		throw redirect(303, '/inputs/webhooks');
 	}
 	if (sectionRaw === 'callbacks') {
 		throw redirect(303, '/inputs?section=callbacks');

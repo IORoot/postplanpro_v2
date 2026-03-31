@@ -1,10 +1,7 @@
-import { loadInboundAuthFields } from '$lib/server/inboundAuthLoad.js';
-import { callbackTokenFormActions } from '$lib/server/callbackTokenFormActions.js';
-import type { Actions, PageServerLoad } from './$types';
+import { redirect } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
-	const accountId = locals.userId;
-	return loadInboundAuthFields(accountId);
+/** Legacy URL; import webhook UI lives under Inputs → Webhooks. */
+export const load: PageServerLoad = () => {
+	throw redirect(303, '/inputs/webhooks');
 };
-
-export const actions: Actions = callbackTokenFormActions;

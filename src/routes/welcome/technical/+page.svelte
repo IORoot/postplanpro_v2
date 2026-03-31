@@ -99,7 +99,7 @@
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
 				<dt class="text-lg font-semibold text-[var(--text)]">Webhooks</dt>
 				<dd class="mt-2 text-sm text-[var(--text-muted)]" style="line-height: 1.6;">
-					Inbound import webhook: <code class="rounded bg-[var(--bg)] px-1.5 py-0.5 text-xs font-mono text-[var(--text)]">POST /api/callbacks/import</code> with your webhook token. Creates posts from JSON (e.g. from Make.com or n8n). Each request counts as one import operation; created posts count toward callback-input limits. URL, token, and examples are on the Webhooks page; the same token is used for post notifications (Inputs → Callbacks).
+					Inbound import webhook: <code class="rounded bg-[var(--bg)] px-1.5 py-0.5 text-xs font-mono text-[var(--text)]">POST /api/callbacks/import</code> with your webhook token. Creates posts from JSON (e.g. from Make.com or n8n). Each request counts as one import operation; created posts count toward callback-input limits. URL, token, and examples are under <strong>Inputs → Webhooks</strong>; the same token is used for post notifications (Inputs → Callbacks).
 				</dd>
 			</div>
 

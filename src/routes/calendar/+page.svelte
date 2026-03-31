@@ -595,7 +595,7 @@
 						</li>
 						<li>
 							<a href="/posts/new" class="font-medium text-[var(--primary)] hover:underline">Create a post</a> or
-							<a href="/webhooks" class="font-medium text-[var(--primary)] hover:underline">import</a> content with a payload.
+							<a href="/inputs/webhooks" class="font-medium text-[var(--primary)] hover:underline">import</a> content with a payload.
 						</li>
 						<li>
 							<a href="/schedules/new" class="font-medium text-[var(--primary)] hover:underline">Create a schedule</a>, then attach it to the post so sends follow your rules.
@@ -818,13 +818,13 @@
 			</div>
 		</div>
 	</div>
-	<div class="content-card mt-4 overflow-hidden rounded-xl">
+	<div class="content-card mt-4 overflow-hidden ">
 		<div class="grid grid-cols-7 border-b border-[var(--border)] bg-[var(--surface)]">
 			{#each dayNames as day}
 				<div class="px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{day}</div>
 			{/each}
 		</div>
-		<div class="grid grid-cols-7">
+		<div class="grid grid-cols-7 border-l border-[var(--border)] bg-[var(--surface)]">
 			{#each monthGridDays() as cell}
 				<div
 					class="min-h-[88px] border-r border-b border-[var(--border)] p-1.5 last:border-r-0 sm:min-h-[130px] sm:p-2 {isToday(cell.date) ? 'calendar-today' : ''}"

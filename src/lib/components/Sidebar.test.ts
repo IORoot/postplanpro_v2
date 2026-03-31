@@ -26,7 +26,6 @@ describe('Sidebar', () => {
 		expect(screen.getByText('Schedules')).toBeInTheDocument();
 		expect(screen.getByText('Reports')).toBeInTheDocument();
 		expect(screen.getByText('Inputs')).toBeInTheDocument();
-		expect(screen.getByText('Webhooks')).toBeInTheDocument();
 		expect(screen.getByText('Outputs')).toBeInTheDocument();
 	});
 

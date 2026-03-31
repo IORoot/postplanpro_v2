@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 import { describe, it, expect, beforeAll, vi } from 'vitest';
-import { load, actions } from '../../src/routes/webhooks/+page.server.js';
+import { load, actions } from '../../src/routes/inputs/webhooks/+page.server.js';
 import { getDatabase } from '$lib/db/index.js';
 import { resetTestDatabase, seedCallbackTestData, TEST_USER_ID } from '../helpers/testDb.js';
 import { mockRequestEvent } from '../helpers/mockRequest.js';
@@ -16,17 +16,17 @@ beforeAll(() => {
 	seedCallbackTestData();
 });
 
-describe('webhooks/+page.server load', () => {
+describe('inputs/webhooks/+page.server load', () => {
 	it('exposes import and stage URLs when APP_BASE_URL is set', async () => {
 		const r = await load(
-			mockRequestEvent({ userId: TEST_USER_ID }, 'http://test/webhooks') as Parameters<typeof load>[0]
+			mockRequestEvent({ userId: TEST_USER_ID }, 'http://test/inputs/webhooks') as Parameters<typeof load>[0]
 		);
 		expect(r.callbackUrl).toBe('https://app.example.com/api/callbacks/stage');
 		expect(r.importCallbackUrl).toBe('https://app.example.com/api/callbacks/import');
 	});
 });
 
-describe('webhooks/+page.server callback token actions', () => {
+describe('inputs/webhooks/+page.server callback token actions', () => {
 	it('generateCallbackToken updates user row', async () => {
 		const res = await actions.generateCallbackToken?.({
 			request: new Request('http://test'),
