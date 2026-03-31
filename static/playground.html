@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Playground</title>
+		<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+		<style>
+			.wrapper {
+				background-color: #ddd;
+				padding: 16px;
+			}
+		</style>
+
+		<style>
+
+			/* BUTTONS */
+
+			.btn {
+				display:inline-block;
+				background-color: black;
+				padding: 5px 5px 5px 5px;
+				box-shadow:
+					inset -1.2px -1.2px rgba(255, 255, 255, 0.8),
+					1px 1px 2px rgba(0, 0, 0, 0.2),
+					4px 12px 24px -6px rgba(0, 0, 0, 0.1);
+				transition: 0.15s ease;
+			}
+
+			.btn div {
+				text-transform: uppercase;
+				min-width: 8rem;
+				position: relative;
+				background-color: #a49d9c;
+				padding: 0.9rem 2rem;
+				color: rgba(255, 255, 255, 0.6);
+				border-radius: 0.4rem;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 1rem;
+				border: none;
+				box-shadow:
+					inset 1px 1px rgba(255, 255, 255, 0.4),
+					inset 0 1px rgba(255, 255, 255, 0.6),
+					inset 0 1px 0.8rem rgba(0, 0, 0, 0.1),
+					inset 0 -4px 1px rgba(0, 0, 0, 0.2),
+					inset -1px -1px 2px rgba(0, 0, 0, 0.8),
+					0.8rem 0.8rem 1rem rgba(0, 0, 0, 0.4),
+					1.5rem 1.5rem 2rem rgba(0, 0, 0, 0.4);
+				outline: none;
+				cursor: pointer;
+				transition: 0.15s ease;
+			}
+
+			.btn div:hover {
+				color: #fff;
+			}
+			
+			.btn div:active {
+				box-shadow:
+					inset 1px 1px rgba(255, 255, 255, 0.4),
+					inset 0 1px rgba(255, 255, 255, 0.6),
+					inset 0 1px 12px rgba(0, 0, 0, 0.1),
+					inset 0 -4px 1px rgba(0, 0, 0, 0.2),
+					inset -1px -1px 2px rgba(0, 0, 0, 0.8);
+				background-color: color-mix(in oklch, #a49d9c, black 6%);
+				width: calc(100% - 1px);
+				transition: 0.15s ease;
+			}
+
+			.square div {
+				min-width: 8rem;
+				display: inline-flex;
+				aspect-ratio: 1;
+				padding: 0.9rem;
+				box-sizing: border-box;
+			}
+
+			.square div:active {
+				width: auto;
+			}
+
+			.dark div{
+				background-color: #262626;
+				box-shadow: inset 1px 1px rgba(255, 255, 255, 0.1),
+					inset 0 1px rgba(255, 255, 255, 0.3), inset 0 1px 12px rgba(0, 0, 0, 0.1),
+					inset 0 -4px 1px rgba(0, 0, 0, 0.2), inset -1px -1px 2px rgba(0, 0, 0, 0.8),
+					12px 12px 16px rgba(0, 0, 0, 0.4), 24px 24px 32px rgba(0, 0, 0, 0.4);
+			}
+
+			.dark div:active {
+				box-shadow: inset 1px 1px rgba(255, 255, 255, 0.15),
+					inset 0 1px rgba(255, 255, 255, 0.3), inset 0 1px 12px rgba(0, 0, 0, 0.1),
+					inset 0 -4px 1px rgba(0, 0, 0, 0.2), inset -1px -1px 2px rgba(0, 0, 0, 0.8);
+				background-color: color-mix(in oklch, #262626, black 12%);
+			}
+
+
+			.primary div{
+				background-color: #005f78;
+				box-shadow: inset 1px 1px rgba(255, 255, 255, 0.1),
+					inset 0 1px rgba(255, 255, 255, 0.3), inset 0 1px 12px rgba(0, 0, 0, 0.1),
+					inset 0 -4px 1px rgba(0, 0, 0, 0.2), inset -1px -1px 2px rgba(0, 0, 0, 0.8),
+					12px 12px 16px rgba(0, 0, 0, 0.4), 24px 24px 32px rgba(0, 0, 0, 0.4);
+			}
+
+			.primary div:active {
+				box-shadow: inset 1px 1px rgba(255, 255, 255, 0.15),
+					inset 0 1px rgba(255, 255, 255, 0.3), inset 0 1px 12px rgba(0, 0, 0, 0.1),
+					inset 0 -4px 1px rgba(0, 0, 0, 0.2), inset -1px -1px 2px rgba(0, 0, 0, 0.8);
+				background-color: color-mix(in oklch, #005f78, black 12%);
+			}
+
+		</style>
+
+		<style>
+			/* ROTARY DIALS */
+			.rotary2,
+			.rotary1 {
+				display:inline-block;
+				background-color: black;
+				padding: 2px;
+				box-shadow:
+					inset -1.2px -1.2px rgba(255, 255, 255, 0.8),
+					1px 1px 2px rgba(0, 0, 0, 0.2),
+					4px 12px 24px -6px rgba(0, 0, 0, 0.1);
+				transition: 0.15s ease;
+				border-radius: 100%;
+			}
+
+			
+			.rotary1 div {
+				text-transform: uppercase;
+				min-width: 6rem;
+				aspect-ratio: 1;
+				padding: 0.9rem;
+				box-sizing: border-box;
+				position: relative;
+				background-color: #a49d9c;
+				padding: 0.9rem 2rem;
+				color: rgba(255, 255, 255, 0.6);
+				border-radius: 100%;
+				display: flex;
+				box-shadow:
+					inset 1px 1px rgba(255, 255, 255, 0.4),
+					inset 0 1px rgba(255, 255, 255, 0.6),
+					inset 0 1px 0.8rem rgba(0, 0, 0, 0.1),
+					inset 0 -4px 1px rgba(0, 0, 0, 0.2),
+					inset -1px -1px 2px rgba(0, 0, 0, 0.8),
+					0.8rem 0.8rem 1rem rgba(0, 0, 0, 0.4),
+					1.5rem 1.5rem 2rem rgba(0, 0, 0, 0.4);
+			}
+			
+			.rotary1 div:after {
+				content: "";
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				border-radius: 100%;
+				width:50%;
+				height:50%;
+				box-shadow:
+					inset 1px 1px rgba(255, 255, 255, 0.4),
+					inset 0 1px rgba(255, 255, 255, 0.6),
+					inset 0 1px 0.8rem rgba(0, 0, 0, 0.1),
+					inset 0 -4px 1px rgba(0, 0, 0, 0.2),
+					inset -1px -1px 2px rgba(0, 0, 0, 0.8),
+					0.4rem 0.4rem 0.5rem rgba(0, 0, 0, 0.4),
+					0.75rem 0.75rem 1rem rgba(0, 0, 0, 0.4);
+			}
+
+			.rotary2 div {
+				text-transform: uppercase;
+				min-width: 1rem;
+				aspect-ratio: 1;
+				padding: 0.4rem;
+				box-sizing: border-box;
+				position: relative;
+				background-color: #262626;
+				padding: 2rem;
+				color: rgba(255, 255, 255, 0.6);
+				border-radius: 100%;
+				display: flex;
+				box-shadow:
+					inset 1px 1px rgba(255, 255, 255, 0.1),
+					inset 0 1px rgba(255, 255, 255, 0.3),
+					inset 0 1px 0.8rem rgba(0, 0, 0, 0.1),
+					inset 0 -4px 1px rgba(0, 0, 0, 0.2),
+					inset -1px -1px 2px rgba(0, 0, 0, 0.8),
+					0.8rem 0.8rem 1rem rgba(0, 0, 0, 0.4),
+					1.5rem 1.5rem 2rem rgba(0, 0, 0, 0.4);
+			}
+
+			.rotary2 div:after {
+				content: "";
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				border-radius: 100%;
+				width:85%;
+				height:85%;
+				box-shadow:
+					inset 1px 1px rgba(255, 255, 255, 0.1),
+					inset 0 1px rgba(255, 255, 255, 0.3),
+					inset 0 1px 0.8rem rgba(0, 0, 0, 0.1),
+					inset 0 -4px 1px rgba(0, 0, 0, 0.2),
+					inset -1px -1px 2px rgba(0, 0, 0, 0.8),
+					0.4rem 0.4rem 0.5rem rgba(0, 0, 0, 0.4),
+					0.75rem 0.75rem 1rem rgba(0, 0, 0, 0.4);
+			}
+
+			.notched {
+				position: relative; /* required for ::before positioning */
+			}
+
+			/* Knurled outer rim: repeating "teeth" in a ring via masking. */
+			.notched::before {
+				content: "";
+				position: absolute;
+				inset: 3px; /* let the rim sit right on the outer edge */
+				border-radius: 9999px;
+				background: repeating-conic-gradient(
+					from 0deg,
+					rgba(255, 255, 255, 0.35) 0deg 3deg,
+					rgba(0, 0, 0, 0.85) 3deg 6deg
+				);
+				-webkit-mask: radial-gradient(
+					farthest-side,
+					transparent calc(100% - 6px),
+					#000 calc(100% - 6px) 100%
+				);
+				mask: radial-gradient(
+					farthest-side,
+					transparent calc(100% - 4px),
+					#000 calc(100% - 4px) 100%
+				);
+				opacity: 0.2;
+				z-index: 2;
+				pointer-events: none;
+			}
+
+			/* Keep the dial face above the knurled rim. */
+			.notched > div {
+				z-index: 1;
+			}
+		</style>
+
+
+
+	</head>
+	<body class="p-4 font-sans antialiased">
+		<h1 class="text-2xl font-bold">Styles</h1>
+
+		<h2 class="text-xl font-bold">Buttons</h2>
+
+		<div class="wrapper">
+			<div class="container">
+				<div class="btn"><div>Light</div></div>
+				<div class="btn dark"><div>Dark</div></div>
+				<div class="btn primary"><div>Primary</div></div>
+				
+				<div class="btn square"><div>Light</div></div>
+				<div class="btn square dark"><div>Dark</div></div>
+				<div class="btn square primary"><div>Primary</div></div>
+			</div>
+		</div>
+
+		<h2 class="text-xl font-bold">Rotary Dials</h2>
+
+
+		<div class="wrapper">
+			<div class="container">
+				<div class="rotary1"><div></div></div>
+				<div class="rotary2 notched"><div></div></div>
+			</div>
+			</div>
+		</div>
+
+	</body>
+</html>

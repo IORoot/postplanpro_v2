@@ -125,6 +125,8 @@
   cursor: not-allowed;
 }
 
+
+
 /* Destructive outline (aligned with alert-error palette, theme-aware) */
 .btn-danger-outline {
   border: 1px solid var(--danger-border);
