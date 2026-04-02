@@ -510,6 +510,7 @@
 			gsap.set('#input_wordpress', { clearProps: 'borderColor' });
 			gsap.set('#schedule_daily_inspiration', { clearProps: 'borderColor' });
 			gsap.set('#output_make', { clearProps: 'borderColor' });
+			gsap.set('#inputs', { opacity: 0.2 });
 			gsap.set('#schedules', { opacity: 0.2 });
 			gsap.set('#calendar', { opacity: 0.2 });
 			gsap.set('#calendar .grid > div', { opacity: 0.2 });
@@ -532,6 +533,7 @@
 
 			if (checkpoint === 'after_posts') return;
 
+			gsap.set('#inputs', { opacity: 1 });
 			gsap.set('#input_wordpress', { borderColor: '#22c55e' });
 			resetPipeSvg(document.querySelector('#website_to_inputs'), true);
 
@@ -565,6 +567,7 @@
 			}
 			gsap.killTweensOf(clockState);
 			gsap.killTweensOf('.website_post');
+			gsap.killTweensOf('#inputs');
 			gsap.killTweensOf('#schedules');
 			gsap.killTweensOf('#calendar');
 			gsap.killTweensOf('#calendar .grid > div');
@@ -765,6 +768,27 @@
 
 		function flashWordpressBorder(onComplete) {
 			flashBorderGreen(document.querySelector('#input_wordpress'), onComplete, { keepGreen: true });
+		}
+
+		/** Fade #inputs in, then WordPress flash and website→inputs pipe (runId-guarded). */
+		function fadeInInputsThenWebsiteToInputsPipe(runId, onPipeComplete) {
+			gsap.to('#inputs', {
+				opacity:    1,
+				duration:   0.5,
+				ease:       'power2.out',
+				onComplete: () => {
+					if (runId !== introRunId) return;
+					flashWordpressBorder(() => {
+						if (runId !== introRunId) return;
+						animatePipe(document.querySelector('#website_to_inputs'), 0, {
+							onComplete() {
+								if (runId !== introRunId) return;
+								onPipeComplete?.();
+							}
+						});
+					});
+				}
+			});
 		}
 
 		/** One green ring flash per platform row, top to bottom (YouTube → …). */
@@ -1182,15 +1206,7 @@
 					() => {
 						if (runId !== introRunId) return;
 						setTimelineActive('import_data');
-						flashWordpressBorder(() => {
-							if (runId !== introRunId) return;
-							animatePipe(document.querySelector('#website_to_inputs'), 0, {
-								onComplete() {
-									if (runId !== introRunId) return;
-									runScheduleAndCalendarReveal();
-								}
-							});
-						});
+						fadeInInputsThenWebsiteToInputsPipe(runId, () => runScheduleAndCalendarReveal());
 					},
 					null,
 					'afterPosts'
@@ -1218,15 +1234,7 @@
 					applyCheckpoint('after_posts');
 					if (rid !== introRunId) return;
 					setTimelineActive('import_data');
-					flashWordpressBorder(() => {
-						if (rid !== introRunId) return;
-						animatePipe(document.querySelector('#website_to_inputs'), 0, {
-							onComplete() {
-								if (rid !== introRunId) return;
-								runScheduleAndCalendarReveal();
-							}
-						});
-					});
+					fadeInInputsThenWebsiteToInputsPipe(rid, () => runScheduleAndCalendarReveal());
 					return;
 				}
 				if (stage === 'schedule_calendar') {
@@ -1321,7 +1329,7 @@
 
 
 
-		<div id="inputs" class="row-span-3 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative">
+		<div id="inputs" class="row-span-3 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-20">
 			<div class="section_title text-2xl">INPUTS</div>
 			
 			<div id="input_wordpress" class="border border-neutral-700 p-4 flex gap-4 bg-neutral-800">
