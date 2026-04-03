@@ -76,6 +76,18 @@ const appAuthGuard: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
+/** SSR: match client-side forced dark shell for marketing + auth (see setPathnameForThemeMerge). */
+const ssrPublicDarkShell: Handle = async ({ event, resolve }) => {
+	const p = event.url.pathname;
+	const useDark = p.startsWith('/welcome') || p.startsWith('/auth');
+	return resolve(event, {
+		transformPageChunk: ({ html, done }) => {
+			if (!useDark || !done) return html;
+			return html.replace('<html lang="en">', '<html lang="en" class="dark">');
+		}
+	});
+};
+
 /** Baseline hardening for all responses (HTML, JSON, assets). */
 const securityHeaders: Handle = async ({ event, resolve }) => {
 	const response = await resolve(event);
@@ -91,4 +103,4 @@ const securityHeaders: Handle = async ({ event, resolve }) => {
 	});
 };
 
-export const handle = sequence(authHandle, appAuthGuard, securityHeaders);
+export const handle = sequence(authHandle, appAuthGuard, ssrPublicDarkShell, securityHeaders);

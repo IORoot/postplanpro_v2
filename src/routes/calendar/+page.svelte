@@ -765,7 +765,7 @@
 
 {#if view === 'month'}
 	<div class="content-card mt-4 rounded-xl p-4">
-		<div class="mb-3 rounded-xl bg-[var(--surface)] p-3">
+		<div class="mb-3 rounded-xl bg-[var(--surface)]">
 			<div class="mb-3 flex items-center justify-center gap-2">
 				<a
 					href={hrefFor('month', new Date(anchor.getFullYear() - 1, anchor.getMonth(), 1))}
@@ -833,14 +833,16 @@
 					ondragover={(e) => monthDragOver(e, cell.date)}
 					ondrop={(e) => monthDrop(e, cell.date)}
 				>
-					<div class="text-right text-xs {cell.inMonth ? 'text-[var(--text)]' : 'text-[var(--text-muted)] opacity-50'} {isToday(cell.date) ? 'calendar-today-num inline-block' : ''}">
-						{cell.date.getDate()}
+					<div
+						class="flex justify-end text-xs {cell.inMonth ? 'text-[var(--text)]' : 'text-[var(--text-muted)] opacity-50'}"
+					>
+						<span class={isToday(cell.date) ? 'calendar-today-num' : ''}>{cell.date.getDate()}</span>
 					</div>
 					<div class="mt-2 space-y-1">
 						{#each postsForDay(cell.date) as post (post.id)}
 							<div
 								class="calendar-post-accent rounded-lg px-2 py-2 cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
-								style={`background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? '#ffffff'};`}
+								style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? '#fafafa'};`}
 								role="button"
 								tabindex="-1"
 								aria-label="Drag to reschedule"
@@ -852,7 +854,7 @@
 									{#if post.image_url}
 										<img src={post.image_url} alt={"Preview for " + post.title} class="h-5 w-5 rounded object-cover border border-[var(--border)]" loading="lazy" />
 									{/if}
-									<a href={"/posts/" + post.id} class="min-w-0 flex-1 truncate text-xs font-medium text-[var(--text)] hover:underline">
+									<a href={"/posts/" + post.id} class="min-w-0 flex-1 truncate text-xs font-medium text-neutral-900 hover:underline">
 										{formatTime(post.scheduled_at)} {post.title}
 									</a>
 								</div>
@@ -876,7 +878,7 @@
 	</div>
 {:else if view === 'week'}
 	<div class="content-card mt-4 rounded-xl p-3">
-		<div class="mb-3 rounded-xl bg-[var(--surface)] p-3">
+		<div class="mb-6 rounded-xl bg-[var(--surface)]">
 			<div class="mb-2 flex items-center justify-between">
 				<a
 					href={hrefFor('week', new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))}
@@ -972,7 +974,7 @@
 							{#each weekPostsForDay(d) as post (post.id)}
 								<div
 									class="calendar-post-accent absolute left-1 right-1 rounded-lg px-2 py-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
-									style={`top: ${weekPostTopPx(post.scheduled_at)}px; height: ${WEEK_POST_HEIGHT_PX}px; background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? '#ffffff'};`}
+									style={`top: ${weekPostTopPx(post.scheduled_at)}px; height: ${WEEK_POST_HEIGHT_PX}px; background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? '#fafafa'};`}
 									role="button"
 									tabindex="-1"
 									aria-label="Drag to reschedule"
@@ -984,7 +986,7 @@
 										{#if post.image_url}
 											<img src={post.image_url} alt={"Preview for " + post.title} class="h-6 w-6 rounded object-cover border border-[var(--border)]" loading="lazy" />
 										{/if}
-										<a href={"/posts/" + post.id} class="min-w-0 flex-1 truncate text-xs font-medium text-[var(--text)] hover:underline">
+										<a href={"/posts/" + post.id} class="min-w-0 flex-1 truncate text-xs font-medium text-neutral-900 hover:underline">
 											{formatTime(post.scheduled_at)} {post.title}
 										</a>
 										<button
@@ -1071,7 +1073,7 @@
 							<a
 								href={"/posts/" + post.id}
 								class="block h-2 w-2 rounded-full border border-[var(--border)] hover:scale-125"
-								style={`background-color: ${post.color ?? '#e5e7eb'};`}
+								style={`background-color: ${post.color ?? '#e5e5e5'};`}
 								title={post.title + ' — ' + formatTime(post.scheduled_at)}
 							></a>
 						{/each}
@@ -1099,7 +1101,7 @@
 							{#each postsAtHour(hour) as post (post.id)}
 								<div
 									class="calendar-post-accent min-w-0 max-w-sm flex-[1_1_240px] rounded-lg p-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
-									style={`background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? 'var(--border)'};`}
+									style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? 'var(--border)'};`}
 									role="button"
 									tabindex="-1"
 									aria-label="Drag to reschedule"
@@ -1111,8 +1113,8 @@
 										{#if post.image_url}
 											<img src={post.image_url} alt="" class="h-8 w-8 shrink-0 rounded border border-[var(--border)] object-cover" loading="lazy" />
 										{/if}
-										<a href={"/posts/" + post.id} class="break-words text-sm font-medium text-[var(--text)] hover:underline" title={post.title}>{post.title}</a>
-										<p class="break-words text-[10px] text-[var(--text-muted)]">{formatTime(post.scheduled_at)} · {post.webhook_name}</p>
+										<a href={"/posts/" + post.id} class="break-words text-sm font-medium text-neutral-900 hover:underline" title={post.title}>{post.title}</a>
+										<p class="break-words text-[10px] text-neutral-600">{formatTime(post.scheduled_at)} · {post.webhook_name}</p>
 										<div class="mt-1 flex flex-wrap items-center gap-1">
 											<span class={"rounded px-1.5 py-0.5 text-[10px] font-medium " + statusClass(post.status)}>{post.status}</span>
 											<button
@@ -1184,8 +1186,8 @@
 							{#each postsToShow as post (post.id)}
 								<a
 									href={"/posts/" + post.id}
-									class="calendar-post-accent block min-w-0 cursor-grab truncate rounded-md px-2 py-1 text-xs text-[var(--text)] hover:underline active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
-									style={`background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? '#ffffff'};`}
+									class="calendar-post-accent block min-w-0 cursor-grab truncate rounded-md px-2 py-1 text-xs text-neutral-900 hover:underline active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
+									style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? '#fafafa'};`}
 									title={`${new Date(post.scheduled_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })} · ${post.title}`}
 									draggable={true}
 									ondragstart={(e) => handleDragStart(e, post)}
@@ -1224,13 +1226,13 @@
 					{@const isPostToday = isToday(postDate)}
 					<div
 						class="calendar-post-accent rounded-lg p-2 {isPostToday ? 'calendar-today' : ''}"
-						style={`background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? '#ffffff'};`}
+						style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? '#fafafa'};`}
 					>
 						<div class="flex items-center gap-2">
 							{#if post.image_url}
 								<img src={post.image_url} alt={"Preview for " + post.title} class="h-8 w-8 rounded object-cover border border-[var(--border)]" loading="lazy" />
 							{/if}
-							<a href={"/posts/" + post.id} class="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text)] hover:underline">
+							<a href={"/posts/" + post.id} class="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900 hover:underline">
 								{new Date(post.scheduled_at).toLocaleString()} · {post.title}
 							</a>
 							<button

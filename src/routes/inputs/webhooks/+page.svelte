@@ -101,14 +101,14 @@
 				<div class="relative">
 					<button
 						type="button"
-						class="absolute right-2 top-2 min-h-[44px] min-w-[44px] rounded border border-white/30 bg-black/80 px-2 py-1 text-xs text-white hover:bg-white/10"
+						class="absolute right-2 top-2 min-h-[44px] min-w-[44px] rounded border border-neutral-50/30 bg-neutral-950/80 px-2 py-1 text-xs text-neutral-50 hover:bg-neutral-50/10"
 						onclick={(e) => {
 							const code = (e.currentTarget as HTMLButtonElement).parentElement?.querySelector('pre code');
 							if (code) navigator.clipboard.writeText(code.textContent ?? '').then(() => alert('Copied to clipboard'));
 						}}>Copy</button
 					>
 					<pre
-						class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code
+						class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-neutral-950 p-3 pr-16 text-xs text-neutral-50"><code
 							>{`{
   "posts": [
     {
@@ -117,7 +117,7 @@
       "content": "Optional post body text.",
       "image_url": "https://example.com/image.jpg",
       "external_id": "external-123",
-      "colour": "#F4F4F0",
+      "colour": "#f5f5f5",
       "schedule_ids": ["<schedule-id-1>", "<schedule-id-2>"],
       "schedule_specific": "2025-01-01T09:00:00Z",
       "fields": { "instagram.caption": "Custom caption" }
@@ -135,14 +135,14 @@
 				<div class="relative">
 					<button
 						type="button"
-						class="absolute right-2 top-2 min-h-[44px] min-w-[44px] rounded border border-white/30 bg-black/80 px-2 py-1 text-xs text-white hover:bg-white/10"
+						class="absolute right-2 top-2 min-h-[44px] min-w-[44px] rounded border border-neutral-50/30 bg-neutral-950/80 px-2 py-1 text-xs text-neutral-50 hover:bg-neutral-50/10"
 						onclick={(e) => {
 							const code = (e.currentTarget as HTMLButtonElement).parentElement?.querySelector('pre code');
 							if (code) navigator.clipboard.writeText(code.textContent ?? '').then(() => alert('Copied to clipboard'));
 						}}>Copy</button
 					>
 					<pre
-						class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code
+						class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-neutral-950 p-3 pr-16 text-xs text-neutral-50"><code
 							>{`curl -X POST "${data.importCallbackUrl ?? 'https://your-app.com/api/callbacks/import'}" \\
   -H "Content-Type: application/json" \\
   -H "X-Callback-Token: YOUR_WEBHOOK_TOKEN" \\
@@ -157,7 +157,7 @@
 			<p class="mt-1 text-xs text-[var(--text-muted)]">
 				<code class="rounded bg-[var(--bg)] px-1 text-xs">colour</code> (or
 				<code class="rounded bg-[var(--bg)] px-1 text-xs">color</code>) is an optional hex colour for the post; if omitted or invalid,
-				it defaults to <code class="rounded bg-[var(--bg)] px-1 text-xs">#F4F4F0</code>.
+				it defaults to <code class="rounded bg-[var(--bg)] px-1 text-xs">#f5f5f5</code>.
 				<code class="rounded bg-[var(--bg)] px-1 text-xs">schedule_ids</code> is an optional array of schedule IDs – one post is
 				created per schedule using the same content – and
 				<code class="rounded bg-[var(--bg)] px-1 text-xs">schedule_specific</code> is an optional ISO datetime to schedule a single post

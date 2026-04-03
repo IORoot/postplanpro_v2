@@ -204,7 +204,7 @@
 			{@const statusClass = post.status === 'draft' ? 'status-draft' : post.status === 'scheduled' ? 'status-scheduled' : post.status === 'sent' ? 'status-sent' : 'status-failed'}
 			<div
 				class="content-card content-card-accent rounded-xl p-4"
-				style={`background-color: ${post.color ?? '#ffffff'}; border-left-color: ${post.color ?? 'var(--primary)'};`}
+				style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? 'var(--primary)'};`}
 			>
 				<div class="flex flex-wrap items-start justify-between gap-4">
 					<div class="min-w-0 flex flex-1 items-start gap-3">

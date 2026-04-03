@@ -1,17 +1,22 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount } from 'svelte';
-import { page } from '$app/stores';
-	import { initTheme } from '$lib/stores/theme.js';
+	import { afterNavigate } from '$app/navigation';
+	import { get } from 'svelte/store';
+	import { page } from '$app/stores';
+	import { initTheme, setPathnameForThemeMerge } from '$lib/stores/theme.js';
 	import { toggleSidebar } from '$lib/stores/sidebar.js';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 
 	let { children } = $props();
-	let mounted = $state(false);
 
 	onMount(() => {
+		setPathnameForThemeMerge(get(page).url.pathname);
 		initTheme();
-		mounted = true;
+	});
+
+	afterNavigate(({ to }) => {
+		if (to) setPathnameForThemeMerge(to.url.pathname);
 	});
 </script>
 

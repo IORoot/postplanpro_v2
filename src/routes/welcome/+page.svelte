@@ -1,4 +1,6 @@
 <script lang="ts">
+	import WorkflowAnimation from '$lib/components/WorkflowAnimation.svelte';
+
 	let { data } = $props();
 </script>
 
@@ -25,14 +27,10 @@
 			</a>
 		</div>
 	</div>
-	<!-- Hero image -->
-	<div class="mx-auto mt-12 max-w-5xl px-4 sm:mt-16">
-		<div class="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-6">
-			<img
-				src="/workflow.svg"
-				alt="PostPlan workflow: import from various sources into Manager, Importer, Scheduler, Publisher; publish to APIs and integrations"
-				class="w-full object-contain"
-			/>
+	<!-- Interactive workflow (GSAP) — reusable component -->
+	<div class="mx-auto mt-12 sm:mt-16">
+		<div class="overflow-hidden sm:p-4">
+			<WorkflowAnimation class="rounded-lg" />
 		</div>
 	</div>
 </section>

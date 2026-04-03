@@ -141,14 +141,14 @@
 								<div class="relative">
 									<button
 										type="button"
-										class="absolute right-2 top-2 min-h-[44px] min-w-[44px] rounded border border-white/30 bg-black/80 px-2 py-1 text-xs text-white hover:bg-white/10"
+										class="absolute right-2 top-2 min-h-[44px] min-w-[44px] rounded border border-neutral-50/30 bg-neutral-950/80 px-2 py-1 text-xs text-neutral-50 hover:bg-neutral-50/10"
 										onclick={(e) => {
 											const code = (e.currentTarget as HTMLButtonElement).parentElement?.querySelector('pre code');
 											if (code) navigator.clipboard.writeText(code.textContent ?? '').then(() => alert('Copied to clipboard'));
 										}}>Copy</button
 									>
 									<pre
-										class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code
+										class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-neutral-950 p-3 pr-16 text-xs text-neutral-50"><code
 											>{`{
   "post_id": "uuid-of-the-post",
   "stage": "instagram_published"
@@ -159,14 +159,14 @@
 								<div class="relative">
 									<button
 										type="button"
-										class="absolute right-2 top-2 min-h-[44px] min-w-[44px] rounded border border-white/30 bg-black/80 px-2 py-1 text-xs text-white hover:bg-white/10"
+										class="absolute right-2 top-2 min-h-[44px] min-w-[44px] rounded border border-neutral-50/30 bg-neutral-950/80 px-2 py-1 text-xs text-neutral-50 hover:bg-neutral-50/10"
 										onclick={(e) => {
 											const code = (e.currentTarget as HTMLButtonElement).parentElement?.querySelector('pre code');
 											if (code) navigator.clipboard.writeText(code.textContent ?? '').then(() => alert('Copied to clipboard'));
 										}}>Copy</button
 									>
 									<pre
-										class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-black p-3 pr-16 text-xs text-white"><code
+										class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-neutral-950 p-3 pr-16 text-xs text-neutral-50"><code
 											>{`curl -X POST "${data.callbackUrl ?? 'https://your-app.com/api/callbacks/stage'}" \\
   -H "Content-Type: application/json" \\
   -H "X-Callback-Token: YOUR_CALLBACK_TOKEN" \\
@@ -224,7 +224,7 @@
 									role="img"
 									viewBox="0 0 24 24"
 									xmlns="http://www.w3.org/2000/svg"
-									class="h-20 w-20 text-black"
+									class="h-20 w-20 text-neutral-950"
 									fill="currentColor"
 									aria-hidden="true"
 									><title>Squarespace</title><path

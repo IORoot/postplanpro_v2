@@ -44,7 +44,7 @@
 		{#each data.schedules as schedule}
 			<div
 				class="content-card content-card-accent rounded-xl p-4 shadow-sm border-l-4"
-				style="border-left-color: {schedule.color ?? '#e5e7eb'}; background-color: {schedule.color ?? 'var(--surface)'};"
+				style="border-left-color: {schedule.color ?? '#e5e5e5'}; background-color: {schedule.color ?? 'var(--surface)'};"
 			>
 				<div class="flex flex-wrap items-center justify-between gap-4">
 					<div class="min-w-0">

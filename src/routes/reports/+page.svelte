@@ -333,7 +333,7 @@
 						</select>
 					</div>
 					<div class="flex items-end gap-2">
-						<button type="submit" class="btn-primary btn-touch text-white">Apply filters</button>
+						<button type="submit" class="btn-primary btn-touch">Apply filters</button>
 						<a href="/reports?report=callback-stages" class="rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center">Reset</a>
 					</div>
 				</div>

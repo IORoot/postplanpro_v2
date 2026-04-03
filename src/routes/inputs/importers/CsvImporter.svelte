@@ -414,7 +414,7 @@
 								<p class="font-medium text-[var(--text)]">Example row (JSON)</p>
 								<p class="text-xs text-[var(--text-muted)]">Click any key to copy its path (column name) to the clipboard.</p>
 								<div class="relative">
-									<div class="max-h-[600px] overflow-auto rounded-lg bg-black p-3 text-xs font-mono text-white">
+									<div class="max-h-[600px] overflow-auto rounded-lg bg-neutral-950 p-3 text-xs font-mono text-neutral-50">
 										<SampleJsonViewer data={sampleRows[0]} onCopied={handleCopiedToClipboard} />
 									</div>
 									{#if showCopiedToast}

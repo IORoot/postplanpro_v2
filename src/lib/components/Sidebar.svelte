@@ -125,7 +125,7 @@
 {#if $sidebarOpen}
 	<button
 		type="button"
-		class="fixed inset-0 z-40 bg-black/50 md:hidden"
+		class="fixed inset-0 z-40 bg-neutral-950/50 md:hidden"
 		aria-label="Close menu"
 		transition:fade={{ duration: 180 }}
 		onclick={closeSidebar}
@@ -156,7 +156,7 @@
 		</div>
 		<!-- Main menu -->
 		<nav class="flex-1 overflow-y-auto p-3">
-			<div class="sidebar-mini-cal mb-4 rounded-lg border bg-black/10 p-2">
+			<div class="sidebar-mini-cal mb-4 rounded-lg border bg-neutral-950/10 p-2">
 				<div class="mb-2 flex items-center justify-between px-1">
 					<button
 						type="button"
