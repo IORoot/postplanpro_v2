@@ -1,4 +1,5 @@
 <script lang="ts">
+	import HeroWarpBackground from '$lib/components/HeroWarpBackground.svelte';
 	import WorkflowAnimation from '$lib/components/WorkflowAnimation.svelte';
 
 	let { data } = $props();
@@ -9,27 +10,36 @@
 	<meta name="description" content="Plan content in a calendar, use schedules and bulk import, and fire posts to your webhooks when they're due. Free tier available." />
 </svelte:head>
 
-<!-- Hero -->
-<section class="relative overflow-hidden bg-[var(--bg)] px-4 py-16 sm:px-6 sm:py-24 lg:px-8 lg:py-32">
-	<div class="mx-auto max-w-4xl text-center">
-		<h1 class="text-4xl font-bold tracking-tight text-[var(--text)] sm:text-5xl lg:text-6xl" style="letter-spacing: -0.03em; line-height: 1.1;">
+<!-- Hero — GSAP-driven warp background (Composio-style pixel tunnel) -->
+<section
+	class="relative overflow-hidden bg-[#030308] px-4 py-16 text-white sm:px-6 sm:py-24 lg:px-8 lg:py-32"
+>
+	<HeroWarpBackground class=""/>
+	<div class="relative z-10 mr-auto max-w-4xl text-left">
+		<h1
+			class="text-4xl font-bold tracking-tight text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.45)] sm:text-5xl lg:text-6xl"
+			style="letter-spacing: -0.03em; line-height: 1.1;"
+		>
 			Schedule posts.<br />Send to webhooks.
 		</h1>
-		<p class="mx-auto mt-6 max-w-[52ch] text-pretty text-lg leading-relaxed text-[var(--text-muted)]">
+		<p class=" mt-6 max-w-[52ch] text-pretty text-lg leading-relaxed text-neutral-300">
 			Plan content in a calendar, use schedules and bulk import, and fire posts when they’re due. Connect Make.com, Zapier, or any HTTP endpoint.
 		</p>
 		<div class="mt-10 flex flex-wrap items-center justify-center gap-4">
 			<a href="/auth/login" class="btn-primary inline-flex rounded-lg px-6 py-3 text-base font-semibold text-white">
 				Get started free
 			</a>
-			<a href="/welcome#pricing" class="inline-flex rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-3 text-base font-medium text-[var(--text)] hover:bg-[var(--surface-hover)]">
+			<a
+				href="/welcome#pricing"
+				class="inline-flex rounded-lg border border-neutral-600 bg-white/5 px-6 py-3 text-base font-medium text-white hover:bg-white/10"
+			>
 				See pricing
 			</a>
 		</div>
 	</div>
 	<!-- Interactive workflow (GSAP) — reusable component -->
-	<div class="mx-auto mt-12 sm:mt-16">
-		<div class="overflow-hidden sm:p-4">
+	<div class="relative z-10 mx-auto mt-12 sm:mt-16">
+		<div class="overflow-hidden rounded-xl border border-neutral-800/80 sm:p-4 bg-neutral-950">
 			<WorkflowAnimation class="rounded-lg" />
 		</div>
 	</div>

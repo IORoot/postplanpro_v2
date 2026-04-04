@@ -16,7 +16,7 @@
 	<div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
 		<a href="/welcome" class="flex items-center gap-2">
 			<img src="/logo.svg" alt="PostPlan" class="h-9 w-auto" />
-			<span class="text-xl font-semibold text-[var(--text)]">PostPlan</span>
+			<span class="text-xl font-semibold text-[var(--text)]">PostPlan<span class="text-[var(--primary)]">Pro</span></span>
 		</a>
 
 		<nav class="hidden items-center gap-8 md:flex" aria-label="Main">
