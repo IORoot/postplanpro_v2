@@ -419,59 +419,10 @@
 			}
 		}
 
-		/* Carousel: show connector lines; slide inner must not clip overflow */
-		#intro_animation.intro--carousel-mode #intro_slides_track .intro-slide > div:first-child {
-			overflow: visible !important;
-		}
-
-		#intro_animation.intro--carousel-mode .intro-pipe-connector {
-			display: block !important;
+		/* Pipes live in #intro_pipes_overlay in carousel mode — slides keep normal overflow */
+		#intro_pipes_overlay .intro-pipe-connector {
 			pointer-events: none;
-			z-index: 25;
 			overflow: visible !important;
-		}
-
-		#intro_animation.intro--carousel-mode #website,
-		#intro_animation.intro--carousel-mode #inputs,
-		#intro_animation.intro--carousel-mode #schedules,
-		#intro_animation.intro--carousel-mode #calendar,
-		#intro_animation.intro--carousel-mode #outputs {
-			overflow-x: visible;
-			position: relative;
-		}
-
-		/* Website → inputs: horizontal, middle right (all breakpoints in carousel) */
-		#intro_animation.intro--carousel-mode #website_to_inputs {
-			display: block !important;
-		}
-		#intro_animation.intro--carousel-mode #website_to_inputs_mobile {
-			display: none !important;
-		}
-
-		/* Inputs → schedules: horizontal along top-right edge */
-		#intro_animation.intro--carousel-mode #inputs_to_schedules {
-			display: block !important;
-			top: 3rem !important;
-			right: -32px !important;
-			left: auto !important;
-			transform: translateY(-50%) !important;
-		}
-		#intro_animation.intro--carousel-mode #inputs_to_schedules_mobile {
-			display: none !important;
-		}
-
-		/* Calendar → outputs & outputs → platforms: horizontal middle right */
-		#intro_animation.intro--carousel-mode #calendar_to_outputs {
-			display: block !important;
-		}
-		#intro_animation.intro--carousel-mode #calendar_to_outputs_mobile {
-			display: none !important;
-		}
-		#intro_animation.intro--carousel-mode #outputs_to_platforms {
-			display: block !important;
-		}
-		#intro_animation.intro--carousel-mode #outputs_to_platforms_mobile {
-			display: none !important;
 		}
 
 		.intro-slide-panel {
@@ -493,10 +444,16 @@
 				width: 100%;
 			}
 
-			#intro_slides_track {
-				flex: 0 1 auto;
-				align-items: stretch;
+			#intro_carousel_stage {
+				flex: 1 1 auto;
+				min-width: 0;
 				min-height: 11rem;
+			}
+
+			#intro_slides_track {
+				flex: 1 1 auto;
+				min-height: 0;
+				align-items: stretch;
 			}
 
 			#intro_slides_track .intro-slide {
@@ -690,11 +647,63 @@
 
 		let introLayoutKey = '';
 
+		/** While true, ignore scroll-based timeline sync (avoids fighting smooth scroll from setTimelineActive). */
+		let introCarouselScrollSyncSuppressed = false;
+		let introCarouselScrollSyncTimer = 0;
+
+		function beginIntroCarouselProgrammaticScroll(track) {
+			introCarouselScrollSyncSuppressed = true;
+			window.clearTimeout(introCarouselScrollSyncTimer);
+			let settled = false;
+			const end = () => {
+				if (settled) return;
+				settled = true;
+				window.clearTimeout(introCarouselScrollSyncTimer);
+				introCarouselScrollSyncSuppressed = false;
+				if (track && track.isConnected && getIntroLayoutKey() !== 'xl') {
+					const i = getIntroSlideIndexFromScroll(track);
+					setTimelineActive(slideIndexToStage(i, getIntroLayoutKey()), { scroll: false });
+					scheduleLayoutIntroPipesOverlay();
+				}
+			};
+			track.addEventListener('scrollend', end, { once: true });
+			introCarouselScrollSyncTimer = window.setTimeout(end, 520);
+		}
+
+		/** Snap index for carousel scroll position (handles last slide + subpixel scroll width). */
+		function getIntroSlideIndexFromScroll(track) {
+			const slides = track.children;
+			if (!slides.length) return 0;
+			const w = track.clientWidth;
+			if (w <= 0) return 0;
+			const left = track.scrollLeft;
+			const maxScroll = Math.max(0, track.scrollWidth - track.clientWidth);
+			if (maxScroll > 0 && left >= maxScroll - 2) return slides.length - 1;
+			let best = 0;
+			let bestDist = Infinity;
+			for (let i = 0; i < slides.length; i++) {
+				const slide = slides[i];
+				const center = slide.offsetLeft + slide.offsetWidth * 0.5;
+				const viewCenter = left + w * 0.5;
+				const d = Math.abs(center - viewCenter);
+				if (d < bestDist) {
+					bestDist = d;
+					best = i;
+				}
+			}
+			return best;
+		}
+
 		function getIntroLayoutKey() {
 			const w = window.innerWidth;
 			if (w >= 1280) return 'xl';
 			if (w >= 768) return 'tablet';
 			return 'mobile';
+		}
+
+		/** Connector lines are hidden below the `md` breakpoint (see `getIntroLayoutKey` → `mobile`). */
+		function introPipesEnabled() {
+			return getIntroLayoutKey() !== 'mobile';
 		}
 
 		function stageToSlideIndex(stage, layoutKey) {
@@ -709,9 +718,12 @@
 				};
 				return m[stage] ?? 0;
 			}
+			/* tablet: four slides — outputs and platforms are separate so Send vs Automate each has its own view */
 			if (stage === 'website_posts' || stage === 'import_data') return 0;
 			if (stage === 'schedule_calendar') return 1;
-			return 2;
+			if (stage === 'send_webhook') return 2;
+			if (stage === 'run_automation') return 3;
+			return 0;
 		}
 
 		function slideIndexToStage(index, layoutKey) {
@@ -720,7 +732,7 @@
 				return s[Math.max(0, Math.min(s.length - 1, index))];
 			}
 			if (layoutKey === 'tablet') {
-				const s = ['import_data', 'schedule_calendar', 'run_automation'];
+				const s = ['import_data', 'schedule_calendar', 'send_webhook', 'run_automation'];
 				return s[Math.max(0, Math.min(s.length - 1, index))];
 			}
 			return 'website_posts';
@@ -733,14 +745,21 @@
 			if (!track) return;
 			const idx = stageToSlideIndex(stage, layoutKey);
 			if (idx == null) return;
+			const slide = track.children[idx];
 			const w = track.clientWidth;
 			if (w <= 0) return;
-			track.scrollTo({ left: idx * w, behavior: opts.instant ? 'auto' : 'smooth' });
+			const targetLeft = slide ? slide.offsetLeft : idx * w;
+			beginIntroCarouselProgrammaticScroll(track);
+			track.scrollTo({ left: targetLeft, behavior: opts.instant ? 'auto' : 'smooth' });
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => scheduleLayoutIntroPipesOverlay());
+			});
 		}
 
 		function applyIntroLayout(opts = {}) {
 			const root = document.getElementById('intro_animation');
 			const track = document.getElementById('intro_slides_track');
+			const stage = document.getElementById('intro_carousel_stage');
 			if (!root || !track) return;
 
 			const layoutKey = getIntroLayoutKey();
@@ -765,6 +784,12 @@
 			const clock = document.getElementById('clock');
 			if (!clock) return;
 
+			function ensureTrackInsideStage() {
+				if (!stage || track.parentElement === stage) return;
+				const overlay = document.getElementById('intro_pipes_overlay');
+				stage.insertBefore(track, overlay || null);
+			}
+
 			if (layoutKey === 'xl') {
 				root.classList.remove('intro--carousel-mode');
 				const order = ['website', 'inputs', 'schedules', 'calendar', 'clock', 'outputs', 'platforms'];
@@ -772,14 +797,19 @@
 					const el = id === 'clock' ? clock : panels[id];
 					if (el) root.appendChild(el);
 				});
-				root.appendChild(track);
+				ensureTrackInsideStage();
+				if (stage) root.appendChild(stage);
+				else root.appendChild(track);
+				reparentIntroPipesToPanels();
 				introLayoutKey = layoutKey;
 				return;
 			}
 
 			root.classList.add('intro--carousel-mode');
 			root.appendChild(clock);
-			root.appendChild(track);
+			ensureTrackInsideStage();
+			if (stage) root.appendChild(stage);
+			else root.appendChild(track);
 
 			function addSlide(innerClass, ids, slideExtraClass = '') {
 				const slide = document.createElement('div');
@@ -813,8 +843,12 @@
 			} else {
 				addSlide('flex min-h-0 min-w-0 flex-1 flex-row gap-2 overflow-hidden', ['website', 'inputs']);
 				addSlide(schedCalInner, ['schedules', 'calendar'], 'intro-slide--sched-cal');
-				addSlide('flex min-h-0 min-w-0 flex-1 flex-row gap-2 overflow-hidden', ['outputs', 'platforms']);
+				addSlide(panelColInner, ['outputs']);
+				addSlide(panelColInner, ['platforms']);
 			}
+
+			reparentIntroPipesToOverlay();
+			scheduleLayoutIntroPipesOverlay();
 
 			introLayoutKey = layoutKey;
 		}
@@ -849,32 +883,199 @@
 			return document.getElementById('intro_animation')?.classList.contains('intro--carousel-mode');
 		}
 
+		const INTRO_PIPE_HOST = {
+			website_to_inputs: 'website',
+			website_to_inputs_mobile: 'website',
+			inputs_to_schedules: 'inputs',
+			inputs_to_schedules_mobile: 'inputs',
+			schedules_to_calendar: 'schedules',
+			calendar_to_outputs: 'calendar',
+			calendar_to_outputs_mobile: 'calendar',
+			outputs_to_platforms: 'outputs',
+			outputs_to_platforms_mobile: 'outputs'
+		};
+
+		const INTRO_PIPE_GEOM = [
+			{ id: 'website_to_inputs', from: ['website', 'right'], to: ['inputs', 'left'] },
+			{ id: 'website_to_inputs_mobile', from: ['website', 'bottom'], to: ['inputs', 'top'] },
+			{ id: 'inputs_to_schedules', from: ['inputs', 'right'], to: ['schedules', 'left'] },
+			{ id: 'inputs_to_schedules_mobile', from: ['inputs', 'bottom'], to: ['schedules', 'top'] },
+			{ id: 'schedules_to_calendar', from: ['schedules', 'bottom'], to: ['calendar', 'top'] },
+			{ id: 'calendar_to_outputs', from: ['calendar', 'right'], to: ['outputs', 'left'] },
+			{ id: 'calendar_to_outputs_mobile', from: ['calendar', 'bottom'], to: ['outputs', 'top'] },
+			{ id: 'outputs_to_platforms', from: ['outputs', 'right'], to: ['platforms', 'left'] },
+			{ id: 'outputs_to_platforms_mobile', from: ['outputs', 'bottom'], to: ['platforms', 'top'] }
+		];
+
+		let introPipesLayoutRaf = 0;
+
+		function backupIntroPipeInlineStyles(svg) {
+			if (!svg || svg.dataset.introPipeStyleBackup !== undefined) return;
+			svg.dataset.introPipeStyleBackup = svg.getAttribute('style') || '';
+		}
+
+		function restoreIntroPipeInlineStyles(svg) {
+			if (!svg || svg.dataset.introPipeStyleBackup === undefined) return;
+			svg.setAttribute('style', svg.dataset.introPipeStyleBackup);
+		}
+
+		function reparentIntroPipesToOverlay() {
+			const overlay = document.getElementById('intro_pipes_overlay');
+			if (!overlay) return;
+			Object.keys(INTRO_PIPE_HOST).forEach((id) => {
+				const el = document.getElementById(id);
+				if (el) {
+					backupIntroPipeInlineStyles(el);
+					overlay.appendChild(el);
+				}
+			});
+		}
+
+		function reparentIntroPipesToPanels() {
+			Object.entries(INTRO_PIPE_HOST).forEach(([pipeId, hostId]) => {
+				const el = document.getElementById(pipeId);
+				const panelHost = document.getElementById(hostId);
+				if (el && panelHost) {
+					panelHost.appendChild(el);
+					restoreIntroPipeInlineStyles(el);
+				}
+			});
+		}
+
+		function introPipeEdgePoint(rect, edge) {
+			if (!rect || (rect.width <= 0 && rect.height <= 0)) return null;
+			const mx = rect.left + rect.width * 0.5;
+			const my = rect.top + rect.height * 0.5;
+			if (edge === 'right') return { x: rect.right, y: my };
+			if (edge === 'left') return { x: rect.left, y: my };
+			if (edge === 'bottom') return { x: mx, y: rect.bottom };
+			if (edge === 'top') return { x: mx, y: rect.top };
+			return null;
+		}
+
+		function syncPipeDashAfterLayout(svg) {
+			const line = svg?.querySelector('.pipe-line');
+			if (!line) return;
+			const len = pipeLineLength(line);
+			const drawn = svg.classList.contains('opacity-100');
+			gsap.set(line, {
+				strokeDasharray: len,
+				strokeDashoffset: drawn ? 0 : len,
+				opacity: 1
+			});
+		}
+
+		function placePipeLineInOverlay(svg, overlay, p1, p2) {
+			if (!svg || !overlay || !p1 || !p2) return;
+			const ol = overlay.getBoundingClientRect();
+			const ax = p1.x - ol.left;
+			const ay = p1.y - ol.top;
+			const bx = p2.x - ol.left;
+			const by = p2.y - ol.top;
+			const left = Math.min(ax, bx);
+			const top = Math.min(ay, by);
+			const w = Math.max(4, Math.ceil(Math.abs(bx - ax)));
+			const h = Math.max(4, Math.ceil(Math.abs(by - ay)));
+			svg.style.cssText = [
+				'position:absolute',
+				`left:${left}px`,
+				`top:${top}px`,
+				`width:${w}px`,
+				`height:${h}px`,
+				'overflow:visible',
+				'transform:none'
+			].join(';');
+			const line = svg.querySelector('.pipe-line');
+			if (!line) return;
+			line.setAttribute('x1', String(ax - left));
+			line.setAttribute('y1', String(ay - top));
+			line.setAttribute('x2', String(bx - left));
+			line.setAttribute('y2', String(by - top));
+			svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+			svg.setAttribute('preserveAspectRatio', 'none');
+			if (!gsap.isTweening(line)) syncPipeDashAfterLayout(svg);
+			else {
+				const len = pipeLineLength(line);
+				gsap.set(line, { strokeDasharray: len });
+			}
+		}
+
+		function layoutIntroPipesOverlay() {
+			const overlay = document.getElementById('intro_pipes_overlay');
+			if (!overlay || !introCarouselMode() || !introPipesEnabled()) return;
+			INTRO_PIPE_GEOM.forEach((spec) => {
+				const svg = document.getElementById(spec.id);
+				if (!svg || svg.parentElement !== overlay) return;
+				const fromEl = document.getElementById(spec.from[0]);
+				const toEl = document.getElementById(spec.to[0]);
+				if (!fromEl || !toEl) return;
+				const p1 = introPipeEdgePoint(fromEl.getBoundingClientRect(), spec.from[1]);
+				const p2 = introPipeEdgePoint(toEl.getBoundingClientRect(), spec.to[1]);
+				if (!p1 || !p2) return;
+				placePipeLineInOverlay(svg, overlay, p1, p2);
+			});
+		}
+
+		function scheduleLayoutIntroPipesOverlay() {
+			if (!introCarouselMode() || !introPipesEnabled()) return;
+			cancelAnimationFrame(introPipesLayoutRaf);
+			introPipesLayoutRaf = requestAnimationFrame(() => {
+				introPipesLayoutRaf = 0;
+				layoutIntroPipesOverlay();
+			});
+		}
+
 		function getWebsiteToInputsSvg() {
-			if (introCarouselMode()) return document.getElementById('website_to_inputs');
+			if (!introPipesEnabled()) return null;
+			if (introCarouselMode()) {
+				return window.matchMedia('(min-width: 768px)').matches
+					? document.getElementById('website_to_inputs')
+					: document.getElementById('website_to_inputs_mobile');
+			}
 			return window.matchMedia('(min-width: 768px)').matches
 				? document.getElementById('website_to_inputs')
 				: document.getElementById('website_to_inputs_mobile');
 		}
 
 		function getInputsToSchedulesSvg() {
+			if (!introPipesEnabled()) return null;
 			if (window.matchMedia('(min-width: 1280px)').matches)
 				return document.getElementById('inputs_to_schedules');
-			if (introCarouselMode()) return document.getElementById('inputs_to_schedules');
+			if (introCarouselMode()) {
+				return window.matchMedia('(min-width: 768px)').matches
+					? document.getElementById('inputs_to_schedules')
+					: document.getElementById('inputs_to_schedules_mobile');
+			}
 			return document.getElementById('inputs_to_schedules_mobile');
 		}
 
 		function getCalendarToOutputsSvg() {
+			if (!introPipesEnabled()) return null;
 			if (window.matchMedia('(min-width: 1280px)').matches)
 				return document.getElementById('calendar_to_outputs');
-			if (introCarouselMode()) return document.getElementById('calendar_to_outputs');
+			if (introCarouselMode()) {
+				return window.matchMedia('(min-width: 768px)').matches
+					? document.getElementById('calendar_to_outputs')
+					: document.getElementById('calendar_to_outputs_mobile');
+			}
 			return document.getElementById('calendar_to_outputs_mobile');
 		}
 
 		function getOutputsToPlatformsSvg() {
+			if (!introPipesEnabled()) return null;
 			if (window.matchMedia('(min-width: 768px)').matches)
 				return document.getElementById('outputs_to_platforms');
-			if (introCarouselMode()) return document.getElementById('outputs_to_platforms');
+			if (introCarouselMode()) {
+				return window.matchMedia('(min-width: 768px)').matches
+					? document.getElementById('outputs_to_platforms')
+					: document.getElementById('outputs_to_platforms_mobile');
+			}
 			return document.getElementById('outputs_to_platforms_mobile');
+		}
+
+		function getSchedulesToCalendarSvg() {
+			if (!introPipesEnabled()) return null;
+			return document.querySelector('#schedules_to_calendar');
 		}
 
 		function removeAllPipePixels() {
@@ -958,7 +1159,7 @@
 			gsap.set('#schedule_daily_inspiration', { borderColor: '#22c55e' });
 			resetPipeSvg(getInputsToSchedulesSvg(), true);
 			gsap.set(['#calendar', '#calendar .grid > div'], { opacity: 1 });
-			resetPipeSvg(document.querySelector('#schedules_to_calendar'), true);
+			resetPipeSvg(getSchedulesToCalendarSvg(), true);
 			gsap.set('#calendar .calendar_animated_post', { opacity: 1 });
 
 			if (checkpoint === 'calendar_ready') return;
@@ -1135,6 +1336,29 @@
 		}
 
 		/**
+		 * Like animatePipe, but when pipes are disabled (mobile) or svg is missing,
+		 * runs onDrawStart/onStreamStart/onComplete after `delay` so timelines keep working.
+		 */
+		/** Seconds to dwell on the Import slide when pipes are skipped (mobile). */
+		const PIPE_SKIP_DWELL_IMPORT_SEC = 1.8;
+		/** Seconds to dwell on the Automate slide when pipes are skipped (mobile). */
+		const PIPE_SKIP_DWELL_AUTOMATE_SEC = 2.5;
+
+		function animatePipeMaybe(svgEl, delay = 0, opts = {}) {
+			if (!svgEl || !introPipesEnabled()) {
+				const dwell = opts.mobileDwell != null ? opts.mobileDwell : 0;
+				gsap.delayedCall(delay, () => {
+					opts.onDrawStart?.();
+					opts.onStreamStart?.();
+					if (dwell > 0) gsap.delayedCall(dwell, () => opts.onComplete?.());
+					else opts.onComplete?.();
+				});
+				return;
+			}
+			animatePipe(svgEl, delay, opts);
+		}
+
+		/**
 		 * animatePipeSequence(selectors, initialDelay)
 		 *
 		 * Chains multiple pipe SVGs so each one starts immediately after the previous
@@ -1206,12 +1430,13 @@
 					if (runId !== introRunId) return;
 					flashWordpressBorder(() => {
 						if (runId !== introRunId) return;
-						animatePipe(getWebsiteToInputsSvg(), 0, {
-							onComplete() {
-								if (runId !== introRunId) return;
-								onPipeComplete?.();
-							}
-						});
+					animatePipeMaybe(getWebsiteToInputsSvg(), 0, {
+						mobileDwell: PIPE_SKIP_DWELL_IMPORT_SEC,
+						onComplete() {
+							if (runId !== introRunId) return;
+							onPipeComplete?.();
+						}
+					});
 					});
 				}
 			});
@@ -1358,7 +1583,7 @@
 					makeEl,
 					() => {
 						if (runId !== introRunId) return;
-						animatePipe(calP, 0, {
+						animatePipeMaybe(calP, 0, {
 							onComplete: () => {
 								if (runId !== introRunId) return;
 								gsap.to('#platforms', {
@@ -1368,7 +1593,8 @@
 									onComplete: () => {
 										if (runId !== introRunId) return;
 										setTimelineActive('run_automation');
-										animatePipe(outP, 0, {
+										animatePipeMaybe(outP, 0, {
+											mobileDwell: PIPE_SKIP_DWELL_AUTOMATE_SEC,
 											onDrawStart: flashPlatformBoxesInOrder,
 											onComplete:  () => {
 												if (runId !== introRunId) return;
@@ -1426,7 +1652,7 @@
 							makeEl,
 							() => {
 								if (runId !== introRunId) return;
-								animatePipe(calP, 0, {
+								animatePipeMaybe(calP, 0, {
 									onComplete: () => {
 										if (runId !== introRunId) return;
 										gsap.to('#platforms', {
@@ -1436,7 +1662,8 @@
 											onComplete: () => {
 												if (runId !== introRunId) return;
 												setTimelineActive('run_automation');
-												animatePipe(outP, 0, {
+												animatePipeMaybe(outP, 0, {
+													mobileDwell: PIPE_SKIP_DWELL_AUTOMATE_SEC,
 													onDrawStart: flashPlatformBoxesInOrder,
 													onComplete:  () => {
 														if (runId !== introRunId) return;
@@ -1480,7 +1707,7 @@
 			setTimelineActive('schedule_calendar');
 
 			const pipeIn  = getInputsToSchedulesSvg();
-			const pipeSch = document.querySelector('#schedules_to_calendar');
+			const pipeSch = getSchedulesToCalendarSvg();
 			const posts   = document.querySelectorAll('#calendar .calendar_animated_post');
 
 			const showPosts = () => {
@@ -1506,7 +1733,7 @@
 					const startInputsToSchedulesPipe = () => {
 						if (runId !== introRunId) return;
 						if (pipeIn) {
-							animatePipe(pipeIn, 0, {
+							animatePipeMaybe(pipeIn, 0, {
 								onComplete: () => {
 									if (runId !== introRunId) return;
 									gsap.to(['#calendar', '#calendar .grid > div'], {
@@ -1516,7 +1743,7 @@
 										onComplete: () => {
 											if (runId !== introRunId) return;
 											if (pipeSch) {
-												animatePipe(pipeSch, 0, { onComplete: showPosts });
+												animatePipeMaybe(pipeSch, 0, { onComplete: showPosts });
 											} else {
 												showPosts();
 											}
@@ -1531,7 +1758,7 @@
 								ease:       'power2.out',
 								onComplete: () => {
 									if (runId !== introRunId) return;
-									if (pipeSch) animatePipe(pipeSch, 0, { onComplete: showPosts });
+									if (pipeSch) animatePipeMaybe(pipeSch, 0, { onComplete: showPosts });
 									else showPosts();
 								}
 							});
@@ -1710,12 +1937,15 @@
 					'scroll',
 					() => {
 						if (getIntroLayoutKey() === 'xl') return;
+						scheduleLayoutIntroPipesOverlay();
 						window.clearTimeout(scrollEndTimer);
 						scrollEndTimer = window.setTimeout(() => {
+							if (introCarouselScrollSyncSuppressed) return;
 							const w = track.clientWidth;
 							if (w <= 0) return;
-							const i = Math.round(track.scrollLeft / w);
+							const i = getIntroSlideIndexFromScroll(track);
 							setTimelineActive(slideIndexToStage(i, getIntroLayoutKey()), { scroll: false });
+							scheduleLayoutIntroPipesOverlay();
 						}, 80);
 					},
 					{ passive: true }
@@ -1736,6 +1966,7 @@
 						playFromStage(stage);
 					} else if (keyNow !== 'xl') {
 						scrollIntroToStage(stage, { instant: true });
+						scheduleLayoutIntroPipesOverlay();
 					}
 				}, 150);
 			});
@@ -1761,7 +1992,21 @@
 			</div>
 		</div>
 
-		<div id="intro_slides_track" class="flex min-h-0 min-w-0 flex-row overflow-x-auto overflow-y-hidden snap-x snap-mandatory xl:hidden" aria-label="Animation stages"></div>
+		<div
+			id="intro_carousel_stage"
+			class="max-xl:relative max-xl:flex max-xl:min-h-0 max-xl:min-w-0 max-xl:flex-1 max-xl:flex-col xl:contents"
+		>
+			<div
+				id="intro_slides_track"
+				class="flex min-h-0 min-w-0 flex-1 flex-row overflow-x-auto overflow-y-hidden snap-x snap-mandatory xl:hidden"
+				aria-label="Animation stages"
+			></div>
+			<div
+				id="intro_pipes_overlay"
+				class="pointer-events-none max-md:hidden max-xl:absolute max-xl:inset-0 max-xl:z-[35] overflow-visible xl:hidden"
+				aria-hidden="true"
+			></div>
+		</div>
 
 		<div id="website" class="min-h-0 min-w-0 md:col-span-1 xl:row-span-3 xl:h-full bg-neutral-200 border border-neutral-800 relative">
 
@@ -2094,7 +2339,8 @@
 				<line class="pipe-line" x1="0" y1="8" x2="32" y2="8"
 					stroke-width="1"/>
 			</svg>
-			<svg id="calendar_to_outputs_mobile" class="intro-pipe-connector line absolute left-1/2 top-full -translate-x-1/2 md:left-[calc((100%-2rem)/4)] stroke-green-500 opacity-0 pointer-events-none xl:hidden overflow-visible" xmlns="http://www.w3.org/2000/svg" width="16" height="32">
+			<svg id="calendar_to_outputs_mobile" class="intro-pipe-connector line block stroke-green-500 opacity-0 pointer-events-none xl:hidden overflow-visible" xmlns="http://www.w3.org/2000/svg" width="16" height="32"
+				style="position:absolute; left:50%; top:100%; transform:translateX(-50%);">
 				<line class="pipe-line" x1="8" y1="0" x2="8" y2="32" stroke-width="1"/>
 			</svg>
 		</div>

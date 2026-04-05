@@ -127,7 +127,7 @@
 	</div>
 	<!-- Interactive workflow (GSAP) — reusable component -->
 	<div class="relative z-10 mx-auto mt-12 sm:mt-16">
-		<div class="overflow-hidden rounded-xl border border-neutral-800/80 sm:p-4 bg-neutral-950">
+		<div class="overflow-hidden rounded-xl md:border border-neutral-800/80 sm:p-4 md:bg-neutral-950">
 			<WorkflowAnimation class="rounded-lg" />
 		</div>
 	</div>
