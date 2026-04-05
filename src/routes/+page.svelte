@@ -1,1 +1,1 @@
-<!-- Root redirects to /calendar in +page.server.ts; this file satisfies the route. -->
+<!-- Root redirects to /welcome (unauthenticated) or /calendar (authenticated) via +page.server.ts -->

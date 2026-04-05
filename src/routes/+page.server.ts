@@ -1,6 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
-	throw redirect(303, '/calendar');
+export const load: PageServerLoad = async ({ locals }) => {
+	const session = await locals.auth().catch(() => null);
+	throw redirect(303, session?.user ? '/calendar' : '/welcome');
 };

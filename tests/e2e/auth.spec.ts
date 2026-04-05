@@ -6,15 +6,15 @@ test.describe('Auth', () => {
 		await expect(page).toHaveURL(/\/welcome/);
 	});
 
-	test('welcome page has table of price tiers', async ({ page }) => {
+	test('welcome page has pricing section with all three plan tiers', async ({ page }) => {
 		await page.goto('/welcome');
 		await expect(page).toHaveURL('/welcome');
-		const table = page.getByRole('table');
-		await expect(table).toBeVisible();
-		// Plan names in first column (exact to avoid matching "Sign up free" etc.)
-		await expect(table.getByRole('cell', { name: 'Free', exact: true })).toBeVisible();
-		await expect(table.getByRole('cell', { name: 'Pro', exact: true })).toBeVisible();
-		await expect(table.getByRole('cell', { name: 'Enterprise', exact: true })).toBeVisible();
+		const pricing = page.locator('#pricing');
+		await expect(pricing).toBeVisible();
+		// Plan names appear as headings in the card-based pricing layout
+		await expect(pricing.getByRole('heading', { name: 'Free', exact: true })).toBeVisible();
+		await expect(pricing.getByRole('heading', { name: 'Pro', exact: true })).toBeVisible();
+		await expect(pricing.getByRole('heading', { name: 'Enterprise', exact: true })).toBeVisible();
 	});
 
 	test('login page loads', async ({ page }) => {
