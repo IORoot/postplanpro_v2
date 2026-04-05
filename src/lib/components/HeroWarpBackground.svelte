@@ -4,11 +4,21 @@
 
 	interface Props {
 		class?: string;
+		/** When set, the warp vanishing point uses this element’s vertical center (viewport-relative), so it stays aligned as layout changes. */
+		alignAnchor?: HTMLElement | null;
 	}
-	let { class: className = '' }: Props = $props();
+	let { class: className = '', alignAnchor = null }: Props = $props();
 
 	let host = $state<HTMLDivElement | null>(null);
 	let canvas = $state<HTMLCanvasElement | null>(null);
+
+	/** Radial vignette Y position (% of host height), kept in sync with warp `cy`. */
+	let vignetteYPercent = $state(30);
+
+	let requestResize: () => void = () => {};
+
+	/** Synced from `alignAnchor` so `measure()` (inside onMount) always reads the current node, not a stale closure. */
+	let warpAlignEl: HTMLElement | null = null;
 
 	/** Straight bar in screen space: tail (near VP) → head (toward edge), built from pixel squares. */
 	type Bar = {
@@ -103,7 +113,14 @@
 			h = Math.max(1, r.height);
 			diag = Math.hypot(w, h);
 			cx = w * 0.5;
-			cy = h * 0.36;
+			if (warpAlignEl) {
+				const ar = warpAlignEl.getBoundingClientRect();
+				cy = ar.top + ar.height * 0.5 - r.top;
+			} else {
+				cy = h * 0.36;
+			}
+			cy = Math.min(h * 0.92, Math.max(h * 0.08, cy));
+			vignetteYPercent = (cy / h) * 100;
 			k = diag * 0.44;
 		}
 
@@ -195,6 +212,7 @@
 
 		const ro = new ResizeObserver(() => resize());
 		ro.observe(host);
+		requestResize = resize;
 		resize();
 
 		const tick = (_time: number, delta: number): void => {
@@ -217,10 +235,20 @@
 		}
 
 		return () => {
+			requestResize = () => {};
 			mq.removeEventListener('change', syncMotion);
 			gsap.ticker.remove(tick);
 			ro.disconnect();
 		};
+	});
+
+	$effect(() => {
+		warpAlignEl = alignAnchor;
+		requestResize();
+		if (!alignAnchor) return;
+		const ro = new ResizeObserver(() => requestResize());
+		ro.observe(alignAnchor);
+		return () => ro.disconnect();
 	});
 </script>
 
@@ -231,9 +259,10 @@
 	<div bind:this={host} class="absolute inset-0">
 		<canvas bind:this={canvas} class="hero-warp-canvas block h-full w-full"></canvas>
 	</div>
-	<!-- Keeps headline readable like Composio — center falls off to particles on the sides -->
+	<!-- Keeps headline readable — vignette tracks warp center vertically -->
 	<div
-		class="absolute inset-0 bg-[radial-gradient(ellipse_58%_52%_at_50%_30%,rgba(3,3,8,0.88)_0%,rgba(3,3,8,0.35)_45%,transparent_72%)]"
+		class="absolute inset-0"
+		style="background: radial-gradient(ellipse 58% 52% at 50% {vignetteYPercent}%, rgba(3,3,8,0.88) 0%, rgba(3,3,8,0.35) 45%, transparent 72%);"
 	></div>
 </div>
 
