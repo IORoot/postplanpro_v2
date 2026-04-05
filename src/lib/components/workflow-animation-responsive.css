@@ -1,0 +1,264 @@
+/* Generated from static/animation_responsive.html — run: node scripts/build-responsive-workflow-animation-module.mjs */
+
+@font-face {
+	font-family: 'MD Thermochrome';
+	src: url('/fonts/MDThermochrome0.3-Medium.otf') format('opentype');
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+
+.workflow-animation.intro-font #intro_animation {
+	font-family: 'MD Thermochrome', ui-sans-serif, system-ui, sans-serif;
+}
+
+.website_post_image {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cline x1='0' y1='0' x2='100' y2='100' stroke='%23bbb' stroke-width='2'/%3E%3Cline x1='100' y1='0' x2='0' y2='100' stroke='%23bbb' stroke-width='2'/%3E%3C/svg%3E");
+  			background-size: 100% 100%;
+}
+
+/* Calendar “today” while the clock date advances */
+#intro_animation #calendar .grid > div.current_date {
+	border-color: #22c55e;
+}
+
+#timeline .timeline-btn {
+	cursor: pointer;
+	color: inherit;
+	text-align: center;
+}
+#timeline .timeline-btn:focus-visible {
+	outline: 2px solid #22c55e;
+	outline-offset: 2px;
+}
+#timeline .timeline-btn.timeline-active {
+	border-color: #22c55e;
+	box-shadow: 0 0 0 1px #22c55e, 0 0 14px rgba(34, 197, 94, 0.35);
+	background: rgb(38 38 38);
+}
+
+#intro_pause_toggle {
+	cursor: pointer;
+	color: inherit;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+/* Must beat any generic `svg { display: … }`; only one icon visible */
+#intro_pause_toggle svg.intro-pause-icon.hidden,
+#intro_pause_toggle svg.intro-play-icon.hidden {
+	display: none !important;
+}
+#intro_pause_toggle svg.intro-pause-icon:not(.hidden),
+#intro_pause_toggle svg.intro-play-icon:not(.hidden) {
+	display: block;
+}
+#intro_pause_toggle:focus-visible {
+	outline: 2px solid #22c55e;
+	outline-offset: 2px;
+}
+#intro_pause_toggle.intro-paused {
+	border-color: #eab308;
+	box-shadow: 0 0 0 1px #eab308;
+}
+
+/* Carousel mode: compact in-flow clock above slides */
+@media (max-width: 1279px) {
+	#intro_animation.intro--carousel-mode #clock {
+		flex-shrink: 0;
+		padding: 0.35rem 0.5rem 0.4rem;
+		gap: 0.125rem;
+	}
+
+	#intro_animation.intro--carousel-mode #clock .clock-block-heading {
+		display: none;
+	}
+
+	#intro_animation.intro--carousel-mode #clock .clock-date-row {
+		padding-bottom: 0.2rem;
+		margin-bottom: 0;
+		gap: 0.25rem;
+		align-items: baseline;
+		border-bottom-width: 1px;
+	}
+
+	#intro_animation.intro--carousel-mode #clock_month {
+		font-size: 0.65rem;
+		line-height: 1.1;
+	}
+
+	#intro_animation.intro--carousel-mode #clock_day {
+		font-size: 1.125rem;
+		line-height: 1;
+	}
+
+	#intro_animation.intro--carousel-mode #clock_ordinal {
+		font-size: 0.55rem;
+	}
+
+	#intro_animation.intro--carousel-mode #clock_time {
+		font-size: 1.35rem;
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	#intro_animation.intro--carousel-mode #clock .clock-time-row {
+		padding-top: 0.1rem;
+	}
+
+	#intro_slides_track {
+		-webkit-overflow-scrolling: touch;
+	}
+}
+
+/* Pipes live in #intro_pipes_overlay in carousel mode — slides keep normal overflow */
+#intro_pipes_overlay .intro-pipe-connector {
+	pointer-events: none;
+	overflow: visible !important;
+}
+
+.intro-slide-panel {
+	flex: 1 1 0%;
+	min-height: 0;
+	min-width: 0;
+	overflow-y: auto;
+}
+
+/* Below xl: cap total height at the viewport; do not stretch to fill 100dvh */
+@media (max-width: 1279px) {
+	.animation_and_timeline {
+		max-height: 100dvh;
+		overflow-y: auto;
+	}
+
+	#intro_animation.intro--carousel-mode {
+		flex: 0 1 auto;
+		width: 100%;
+	}
+
+	#intro_carousel_stage {
+		flex: 1 1 auto;
+		min-width: 0;
+		min-height: 11rem;
+	}
+
+	#intro_slides_track {
+		flex: 1 1 auto;
+		min-height: 0;
+		align-items: stretch;
+	}
+
+	#intro_slides_track .intro-slide {
+		min-height: 11rem;
+	}
+
+	/* Slides (except sched/cal inner layout): inner fills slide height */
+	#intro_slides_track .intro-slide:not(.intro-slide--sched-cal) > div:first-child {
+		flex: 1 1 auto;
+		min-height: 0;
+		width: 100%;
+	}
+
+	#intro_slides_track .intro-slide:not(.intro-slide--sched-cal) > div.flex-col > .intro-slide-panel {
+		flex: 1 1 0% !important;
+		min-height: 0;
+	}
+
+	#intro_slides_track .intro-slide:not(.intro-slide--sched-cal) > div.flex-row > .intro-slide-panel {
+		flex: 1 1 0% !important;
+		min-height: 0;
+		align-self: stretch;
+	}
+
+	/* Website: posts area grows to fill panel */
+	#intro_animation.intro--carousel-mode #website.intro-slide-panel {
+		display: flex;
+		flex-direction: column;
+		overflow-x: visible;
+		overflow-y: hidden;
+		min-height: 0;
+	}
+
+	#intro_animation.intro--carousel-mode #website .website_posts {
+		flex: 1 1 auto;
+		min-height: 0;
+		overflow-y: auto;
+	}
+
+	#intro_animation.intro--carousel-mode #inputs.intro-slide-panel {
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+	}
+
+	/* Schedules + calendar: full natural height, no inner scrollbars on calendar */
+	#intro_slides_track .intro-slide--sched-cal {
+		max-height: none;
+	}
+
+	#intro_slides_track .intro-slide--sched-cal > div:first-child {
+		flex: 1 1 auto;
+		min-height: 0;
+		width: 100%;
+		justify-content: flex-start;
+	}
+
+	#intro_animation.intro--carousel-mode #schedules.intro-slide-panel {
+		flex: 0 0 auto !important;
+		overflow: visible !important;
+		min-height: 0;
+	}
+
+	#intro_animation.intro--carousel-mode #calendar.intro-slide-panel {
+		flex: 0 0 auto !important;
+		overflow: visible !important;
+		min-height: 0;
+	}
+
+	#intro_animation.intro--carousel-mode #calendar .grid {
+		gap: 0.35rem;
+	}
+
+	#intro_animation.intro--carousel-mode #calendar .section_title {
+		margin-bottom: 0.25rem;
+	}
+
+	#intro_animation.intro--carousel-mode .schedule_daily {
+		font-size: 0.8rem;
+		line-height: 1.25;
+	}
+
+	#intro_animation.intro--carousel-mode .schedule_daily .w-32 {
+		width: 5rem;
+		min-width: 5rem;
+		padding-left: 0.35rem;
+		padding-right: 0.35rem;
+		font-size: 0.65rem;
+	}
+
+	/* Schedule + calendar slide: keep both panels fully visible (not opacity-30 / GSAP dim). */
+	#intro_animation.intro--carousel-mode #schedules,
+	#intro_animation.intro--carousel-mode #calendar {
+		opacity: 1 !important;
+	}
+
+	#intro_animation.intro--carousel-mode #calendar .grid > div {
+		opacity: 1 !important;
+	}
+}
+
+/* Carousel: show every input / output / platform row (not only md+). */
+#intro_animation.intro--carousel-mode #inputs [id^='input_'] {
+	display: flex !important;
+	gap: 0.5rem;
+}
+
+#intro_animation.intro--carousel-mode #outputs [id^='output_'] {
+	display: flex !important;
+	gap: 0.5rem;
+}
+
+#intro_animation.intro--carousel-mode #platforms [id^='platform_'] {
+	display: flex !important;
+	gap: 0.5rem;
+}

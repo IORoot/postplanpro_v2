@@ -3,6 +3,8 @@
 	import WorkflowAnimation from '$lib/components/WorkflowAnimation.svelte';
 	import FeatureSectionAnimation from '$lib/components/FeatureSectionAnimation.svelte';
 
+	let heroCopyEl = $state<HTMLDivElement | null>(null);
+
 	const sections = [
 		{
 			n: 1 as const,
@@ -100,8 +102,8 @@
 <section
 	class="relative overflow-hidden bg-[#030308] px-4 py-16 text-white sm:px-6 sm:py-24 lg:px-8 lg:py-32"
 >
-	<HeroWarpBackground class=""/>
-	<div class="relative z-10 mr-auto max-w-4xl text-left">
+	<HeroWarpBackground alignAnchor={heroCopyEl} />
+	<div bind:this={heroCopyEl} class="relative z-10 mr-auto max-w-4xl text-left">
 		<h1
 			class="text-4xl font-bold tracking-tight text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.45)] sm:text-5xl lg:text-6xl"
 			style="letter-spacing: -0.03em; line-height: 1.1;"
@@ -125,7 +127,7 @@
 	</div>
 	<!-- Interactive workflow (GSAP) — reusable component -->
 	<div class="relative z-10 mx-auto mt-12 sm:mt-16">
-		<div class="overflow-hidden rounded-xl border border-neutral-800/80 sm:p-4 bg-neutral-950">
+		<div class="overflow-hidden rounded-xl md:border border-neutral-800/80 sm:p-4 md:bg-neutral-950">
 			<WorkflowAnimation class="rounded-lg" />
 		</div>
 	</div>

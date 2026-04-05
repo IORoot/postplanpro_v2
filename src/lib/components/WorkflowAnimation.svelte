@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
-	import { mountWorkflowAnimation } from '$lib/workflowAnimation/mountWorkflowAnimation.js';
+	import { onDestroy, onMount } from 'svelte';
+	import { mountResponsiveWorkflowAnimation } from '$lib/workflowAnimation/mountResponsiveWorkflowAnimation.js';
+	import './workflow-animation-responsive.css';
 
 	interface Props {
 		class?: string;
@@ -11,7 +12,7 @@
 	let teardown: (() => void) | undefined;
 
 	onMount(() => {
-		if (host) teardown = mountWorkflowAnimation(host);
+		if (host) teardown = mountResponsiveWorkflowAnimation(host);
 	});
 
 	onDestroy(() => {
@@ -21,11 +22,41 @@
 
 <div
 	bind:this={host}
-	class="workflow-animation animation_and_timeline flex flex-col gap-8  {className ?? ''}"
+	class="workflow-animation intro-font animation_and_timeline flex flex-col gap-2 max-xl:gap-2 xl:gap-8 bg-black xl:min-h-0 {className ?? ''}"
 >
-	<div id="intro_animation" class="intro_animation grid auto-rows-auto grid-cols-1 md:grid-cols-2 xl:grid-cols-7 xl:grid-rows-3 gap-8 p-4 text-white">
 
-		<div id="website" class="md:col-span-1 xl:row-span-3 xl:h-full bg-neutral-200 border border-neutral-800 relative">
+	<div id="intro_animation" class="intro_animation font-md-thermochrome text-white max-xl:flex max-xl:flex-col max-xl:min-h-0 max-xl:gap-2 p-2 max-xl:p-2 xl:grid xl:auto-rows-auto xl:grid-cols-7 xl:grid-rows-3 xl:gap-8 xl:p-4">
+
+		<div id="clock" class="shrink-0 bg-neutral-200 p-4 pb-0 border border-neutral-100 flex flex-col gap-2 text-neutral-800 md:col-span-2 xl:col-span-1 xl:col-start-6 xl:row-start-1">
+			<div class="clock-block-heading section_title text-2xl mb-4">CLOCK</div>
+			<div class="clock-date-row w-full flex border-b border-neutral-700">
+				<div id="clock_month" class="month text-xl w-full">January</div>
+				<div id="clock_day" class="day text-3xl">30</div>
+				<div id="clock_ordinal" class="ordinal text-sm">th</div>
+			</div>
+
+			<div class="clock-time-row w-full flex">
+				<div id="clock_time" class="time text-5xl m-auto text-green-700">09:00</div>
+			</div>
+		</div>
+
+		<div
+			id="intro_carousel_stage"
+			class="max-xl:relative max-xl:flex max-xl:min-h-0 max-xl:min-w-0 max-xl:flex-1 max-xl:flex-col xl:contents"
+		>
+			<div
+				id="intro_slides_track"
+				class="flex min-h-0 min-w-0 flex-1 flex-row overflow-x-auto overflow-y-hidden snap-x snap-mandatory xl:hidden"
+				aria-label="Animation stages"
+			></div>
+			<div
+				id="intro_pipes_overlay"
+				class="pointer-events-none max-md:hidden max-xl:absolute max-xl:inset-0 max-xl:z-[35] overflow-visible xl:hidden"
+				aria-hidden="true"
+			></div>
+		</div>
+
+		<div id="website" class="min-h-0 min-w-0 md:col-span-1 xl:row-span-3 xl:h-full bg-neutral-200 border border-neutral-800 relative">
 
 			<div class="website_header bg-neutral-200 h-6 p-1">
 				<svg role="img" class="w-4 h-4 fill-green-500" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>WordPress</title><path d="M21.469 6.825c.84 1.537 1.318 3.3 1.318 5.175 0 3.979-2.156 7.456-5.363 9.325l3.295-9.527c.615-1.54.82-2.771.82-3.864 0-.405-.026-.78-.07-1.11m-7.981.105c.647-.03 1.232-.105 1.232-.105.582-.075.514-.93-.067-.899 0 0-1.755.135-2.88.135-1.064 0-2.85-.15-2.85-.15-.585-.03-.661.855-.075.885 0 0 .54.061 1.125.09l1.68 4.605-2.37 7.08L5.354 6.9c.649-.03 1.234-.1 1.234-.1.585-.075.516-.93-.065-.896 0 0-1.746.138-2.874.138-.2 0-.438-.008-.69-.015C4.911 3.15 8.235 1.215 12 1.215c2.809 0 5.365 1.072 7.286 2.833-.046-.003-.091-.009-.141-.009-1.06 0-1.812.923-1.812 1.914 0 .89.513 1.643 1.06 2.531.411.72.89 1.643.89 2.977 0 .915-.354 1.994-.821 3.479l-1.075 3.585-3.9-11.61.001.014zM12 22.784c-1.059 0-2.081-.153-3.048-.437l3.237-9.406 3.315 9.087c.024.053.05.101.078.149-1.12.393-2.325.609-3.582.609M1.211 12c0-1.564.336-3.05.935-4.39L7.29 21.709C3.694 19.96 1.212 16.271 1.211 12M12 0C5.385 0 0 5.385 0 12s5.385 12 12 12 12-5.385 12-12S18.615 0 12 0"/></svg>
@@ -79,10 +110,10 @@
 
 			</div>
 
-			<svg id="website_to_inputs" class="website_to_inputs stroke-green-500 opacity-0 pointer-events-none hidden md:block" xmlns="http://www.w3.org/2000/svg" width="32" height="16" style="position:absolute; top:50%; right:-32px; transform:translateY(-50%); overflow:visible;">
+			<svg id="website_to_inputs" class="intro-pipe-connector website_to_inputs stroke-green-500 opacity-0 pointer-events-none hidden md:block" xmlns="http://www.w3.org/2000/svg" width="32" height="16" style="position:absolute; top:50%; right:-32px; transform:translateY(-50%); overflow:visible;">
 				<line class="pipe-line" x1="0" y1="8" x2="32" y2="8" stroke-width="1"/>
 			</svg>
-			<svg id="website_to_inputs_mobile" class="website_to_inputs block stroke-green-500 opacity-0 pointer-events-none md:hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="32" style="position:absolute; left:50%; top:100%; transform:translateX(-50%); overflow:visible;">
+			<svg id="website_to_inputs_mobile" class="intro-pipe-connector website_to_inputs block stroke-green-500 opacity-0 pointer-events-none md:hidden " xmlns="http://www.w3.org/2000/svg" width="16" height="32" style="position:absolute; left:50%; top:100%; transform:translateX(-50%); overflow:visible;">
 				<line class="pipe-line" x1="8" y1="0" x2="8" y2="32" stroke-width="1"/>
 			</svg>
 
@@ -90,7 +121,7 @@
 
 
 
-		<div id="inputs" class="md:col-span-1 xl:row-span-3 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
+		<div id="inputs" class="min-h-0 min-w-0 md:col-span-1 xl:row-span-3 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
 			<div class="section_title text-2xl">INPUTS</div>
 			
 			<div id="input_wordpress" class="border border-neutral-700 p-2 flex gap-2 bg-neutral-800 h-full">
@@ -139,13 +170,13 @@
 				<p class="text-md my-auto">Callbacks</p>
 			</div>
 
-			<svg id="inputs_to_schedules" class="line stroke-green-500 opacity-0 pointer-events-none hidden xl:block" xmlns="http://www.w3.org/2000/svg"
+			<svg id="inputs_to_schedules" class="intro-pipe-connector line stroke-green-500 opacity-0 pointer-events-none hidden xl:block" xmlns="http://www.w3.org/2000/svg"
 				width="32" height="16"
 				style="position:absolute; top:16.666%; right:-32px; transform:translateY(-50%); overflow:visible;">
 				<line class="pipe-line" x1="0" y1="8" x2="32" y2="8"
 					stroke-width="1"/>
 			</svg>
-			<svg id="inputs_to_schedules_mobile" class="line block stroke-green-500 opacity-0 pointer-events-none xl:hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="32"
+			<svg id="inputs_to_schedules_mobile" class="intro-pipe-connector line block stroke-green-500 opacity-0 pointer-events-none xl:hidden z-50" xmlns="http://www.w3.org/2000/svg" width="16" height="32"
 				style="position:absolute; left:50%; top:100%; transform:translateX(-50%); overflow:visible;">
 				<line class="pipe-line" x1="8" y1="0" x2="8" y2="32" stroke-width="1"/>
 			</svg>
@@ -154,7 +185,7 @@
 
 
 
-		<div id="schedules" class="md:col-span-2 xl:col-span-3 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
+		<div id="schedules" class="min-h-0 min-w-0 md:col-span-2 xl:col-span-3 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
 			<div class="section_title text-2xl">SCHEDULES</div>
 
 			<div id="schedule_daily_inspiration" class="schedule_daily border border-neutral-700 px-4 py-2 flex gap-4 bg-neutral-800 xl:text-2xl">
@@ -169,7 +200,7 @@
 				<div class="w-full m-auto text-center">0 17 * * 5</div>
 			</div>
 
-			<svg id="schedules_to_calendar" class="line stroke-green-500 opacity-0" xmlns="http://www.w3.org/2000/svg"
+			<svg id="schedules_to_calendar" class="intro-pipe-connector line stroke-green-500 opacity-0" xmlns="http://www.w3.org/2000/svg"
 				width="16" height="32"
 				style="position:absolute; bottom:-32px; left:50%; transform:translateX(-50%); overflow:visible;">
 				<line class="pipe-line" x1="8" y1="0" x2="8" y2="32"
@@ -179,7 +210,7 @@
 
 
 
-		<div id="calendar" class="md:col-span-2 xl:col-span-3 xl:row-span-2 xl:col-start-3 xl:row-start-2 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
+		<div id="calendar" class="min-h-0 min-w-0 md:col-span-2 xl:col-span-3 xl:row-span-2 xl:col-start-3 xl:row-start-2 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
 			<div class="section_title text-2xl">CALENDAR</div>
 
 			<div class="grid grid-cols-8 gap-4 auto-rows-auto max-xl:h-auto xl:grid-rows-5 xl:h-full">
@@ -350,35 +381,21 @@
 
 			</div>
 
-			<svg id="calendar_to_outputs" class="line stroke-green-500 opacity-0 pointer-events-none hidden xl:block" xmlns="http://www.w3.org/2000/svg"
+			<svg id="calendar_to_outputs" class="intro-pipe-connector line stroke-green-500 opacity-0 pointer-events-none hidden xl:block" xmlns="http://www.w3.org/2000/svg"
 				width="32" height="16"
 				style="position:absolute; top:50%; right:-32px; transform:translateY(-50%); overflow:visible;">
 				<line class="pipe-line" x1="0" y1="8" x2="32" y2="8"
 					stroke-width="1"/>
 			</svg>
-			<svg id="calendar_to_outputs_mobile" class="line absolute left-1/2 top-full -translate-x-1/2 md:left-[calc((100%-2rem)/4)] stroke-green-500 opacity-0 pointer-events-none xl:hidden overflow-visible" xmlns="http://www.w3.org/2000/svg" width="16" height="32">
+			<svg id="calendar_to_outputs_mobile" class="intro-pipe-connector line block stroke-green-500 opacity-0 pointer-events-none xl:hidden overflow-visible" xmlns="http://www.w3.org/2000/svg" width="16" height="32"
+				style="position:absolute; left:50%; top:100%; transform:translateX(-50%);">
 				<line class="pipe-line" x1="8" y1="0" x2="8" y2="32" stroke-width="1"/>
 			</svg>
 		</div>
 
 
 
-		<div id="clock" class="clock--mobile-hidden md:col-span-2 xl:col-span-1 xl:col-start-6 xl:row-start-1 bg-neutral-200 p-4 pb-0 border border-neutral-100 flex flex-col gap-2 text-neutral-800">
-			<div class="clock-block-heading section_title text-2xl mb-4">CLOCK</div>
-			<div class="clock-date-row w-full flex border-b border-neutral-700">
-				<div id="clock_month" class="month text-xl w-full">January</div>
-				<div id="clock_day" class="day text-3xl">30</div>
-				<div id="clock_ordinal" class="ordinal text-sm">th</div>
-			</div>
-
-			<div class="clock-time-row w-full flex">
-				<div id="clock_time" class="time text-5xl m-auto text-green-700">09:00</div>
-			</div>
-		</div>
-		
-
-
-		<div id="outputs" class="md:col-span-1 xl:row-span-2 xl:col-start-6 xl:row-start-2 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
+		<div id="outputs" class="min-h-0 min-w-0 md:col-span-1 xl:row-span-2 xl:col-start-6 xl:row-start-2 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
 			<div class="section_title text-2xl">OUTPUTS</div>
 			<div id="output_make" class="border border-neutral-700 p-2 flex gap-2 bg-neutral-800 h-full">
 				<svg role="img" class="w-8 h-8 fill-white my-auto" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Make</title><path fill="#6D00CC" d="M13.38 3.498c-.27 0-.511.19-.566.465L9.85 18.986a.578.578 0 0 0 .453.678l4.095.826a.58.58 0 0 0 .682-.455l2.963-15.021a.578.578 0 0 0-.453-.678l-4.096-.826a.589.589 0 0 0-.113-.012zm-5.876.098a.576.576 0 0 0-.516.318L.062 17.697a.575.575 0 0 0 .256.774l3.733 1.877a.578.578 0 0 0 .775-.258l6.926-13.781a.577.577 0 0 0-.256-.776L7.762 3.658a.571.571 0 0 0-.258-.062zm11.74.115a.576.576 0 0 0-.576.576v15.426c0 .318.258.578.576.578h4.178a.58.58 0 0 0 .578-.578V4.287a.578.578 0 0 0-.578-.576Z"/></svg>
@@ -407,20 +424,20 @@
 				<p class="text-md my-auto">Webhooks</p>
 			</div>
 
-			<svg id="outputs_to_platforms" class="line stroke-green-500 opacity-0 pointer-events-none hidden md:block" xmlns="http://www.w3.org/2000/svg"
+			<svg id="outputs_to_platforms" class="intro-pipe-connector line stroke-green-500 opacity-0 pointer-events-none hidden md:block" xmlns="http://www.w3.org/2000/svg"
 				width="32" height="16"
 				style="position:absolute; top:50%; right:-32px; transform:translateY(-50%); overflow:visible;">
 				<line class="pipe-line" x1="0" y1="8" x2="32" y2="8"
 					stroke-width="1"/>
 			</svg>
-			<svg id="outputs_to_platforms_mobile" class="line block stroke-green-500 opacity-0 pointer-events-none md:hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="32"
+			<svg id="outputs_to_platforms_mobile" class="intro-pipe-connector line block stroke-green-500 opacity-0 pointer-events-none md:hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="32"
 				style="position:absolute; left:50%; top:100%; transform:translateX(-50%); overflow:visible;">
 				<line class="pipe-line" x1="8" y1="0" x2="8" y2="32" stroke-width="1"/>
 			</svg>
 
 		</div>
 
-		<div id="platforms" class="md:col-span-1 xl:row-span-3 xl:col-start-7 xl:row-start-1 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 opacity-30">
+		<div id="platforms" class="min-h-0 min-w-0 md:col-span-1 xl:row-span-3 xl:col-start-7 xl:row-start-1 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 opacity-30">
 			<div class="section_title text-2xl">PLATFORMS</div>
 
 			<div id="platform_youtube" class="border border-neutral-700 p-2 flex gap-2 bg-neutral-800 h-full">
@@ -491,130 +508,15 @@
 		</div>
 	</div>
 
-	<div id="timeline" class="flex p-2 xl:p-4 w-full text-white m-auto gap-1 xl:gap-4 justify-center flex-wrap">
-		<button type="button" class="timeline-btn border border-neutral-700 p-1 xl:p-4 text-sm xl:text-md bg-neutral-800 min-w-[7rem]" data-stage="website_posts">Content</button>
-		<button type="button" class="timeline-btn border border-neutral-700 p-1 xl:p-4 text-sm xl:text-md bg-neutral-800 min-w-[7rem]" data-stage="import_data">Import</button>
-		<button type="button" class="timeline-btn border border-neutral-700 p-1 xl:p-4 text-sm xl:text-md bg-neutral-800 min-w-[7rem]" data-stage="schedule_calendar">Schedule Calendar</button>
-		<button type="button" class="timeline-btn border border-neutral-700 p-1 xl:p-4 text-sm xl:text-md bg-neutral-800 min-w-[7rem]" data-stage="send_webhook">Send</button>
-		<button type="button" class="timeline-btn border border-neutral-700 p-1 xl:p-4 text-sm xl:text-md bg-neutral-800 min-w-[7rem]" data-stage="run_automation">Automate</button>
+	<div id="timeline" class="flex shrink-0 p-1 max-xl:p-1 xl:p-4 w-full text-white m-auto gap-1 xl:gap-4 justify-center flex-wrap max-xl:pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+		<button type="button" class="timeline-btn border border-neutral-700 p-2 xl:p-4 text-sm xl:text-md bg-neutral-800 min-w-[7rem]" data-stage="website_posts">Content</button>
+		<button type="button" class="timeline-btn border border-neutral-700 p-2 xl:p-4 text-sm xl:text-md bg-neutral-800 min-w-[7rem]" data-stage="import_data">Import</button>
+		<button type="button" class="timeline-btn border border-neutral-700 p-2 xl:p-4 text-sm xl:text-md bg-neutral-800 min-w-[7rem]" data-stage="schedule_calendar">Schedule Calendar</button>
+		<button type="button" class="timeline-btn border border-neutral-700 p-2 xl:p-4 text-sm xl:text-md bg-neutral-800 min-w-[7rem]" data-stage="send_webhook">Send</button>
+		<button type="button" class="timeline-btn border border-neutral-700 p-2 xl:p-4 text-sm xl:text-md bg-neutral-800 min-w-[7rem]" data-stage="run_automation">Automate</button>
+		<button type="button" id="intro_pause_toggle" class=" p-1 xl:p-3 min-w-[2.75rem] xl:min-w-[3.25rem] " aria-pressed="false" aria-label="Pause intro animation">
+			<svg class="intro-pause-icon w-5 h-5 xl:w-6 xl:h-6 fill-neutral-700" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+			<svg class="intro-play-icon hidden w-5 h-5 xl:w-6 xl:h-6 fill-current" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5v14l11-7L8 5z"/></svg>
+		</button>
 	</div>
 </div>
-
-<style>
-	/* Same faces as static/animation.html — paths are served from /static */
-	@font-face {
-		font-family: 'Home Video';
-		src: url('/fonts/HomeVideo-Regular.ttf') format('truetype');
-		font-weight: 400;
-		font-style: normal;
-		font-display: swap;
-	}
-	@font-face {
-		font-family: 'Home Video';
-		src: url('/fonts/HomeVideo-Bold.ttf') format('truetype');
-		font-weight: 700;
-		font-style: normal;
-		font-display: swap;
-	}
-	@font-face {
-		font-family: 'MD Thermochrome';
-		src: url('/fonts/MDThermochrome0.3-Medium.otf') format('opentype');
-		font-weight: 500;
-		font-style: normal;
-		font-display: swap;
-	}
-	@font-face {
-		font-family: 'PP Neue Bit';
-		src: url('/fonts/ppneuebit-bold.otf') format('opentype');
-		font-weight: 700;
-		font-style: normal;
-		font-display: swap;
-	}
-
-	.workflow-animation #intro_animation {
-		font-family: 'MD Thermochrome', ui-sans-serif, system-ui, sans-serif;
-	}
-
-.website_post_image {
-background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cline x1='0' y1='0' x2='100' y2='100' stroke='%23bbb' stroke-width='2'/%3E%3Cline x1='100' y1='0' x2='0' y2='100' stroke='%23bbb' stroke-width='2'/%3E%3C/svg%3E");
-  			background-size: 100% 100%;
-}
-
-/* Calendar “today” while the clock date advances */
-#intro_animation #calendar .grid > div.current_date {
-border-color: #22c55e;
-}
-
-#timeline .timeline-btn {
-cursor: pointer;
-color: inherit;
-text-align: center;
-}
-#timeline .timeline-btn:focus-visible {
-outline: 2px solid #22c55e;
-outline-offset: 2px;
-}
-/* JS toggles .timeline-active on buttons */
-.workflow-animation :global(#timeline .timeline-btn.timeline-active) {
-	border-color: #22c55e;
-	box-shadow: 0 0 0 1px #22c55e, 0 0 14px rgba(34, 197, 94, 0.35);
-	background: rgb(38 38 38);
-}
-
-/* Mobile (max-width 1279px): hide #clock in the layout; only show compact fixed clock while scrolling through #intro_animation */
-@media (max-width: 1279px) {
-	.workflow-animation :global(#clock.clock--mobile-hidden) {
-		display: none !important;
-	}
-
-	.workflow-animation :global(#clock.clock--floating) {
-		position: fixed;
-		bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
-		right: max(0.75rem, env(safe-area-inset-right, 0px));
-		left: auto;
-		top: auto;
-		z-index: 50;
-		width: max-content;
-		max-width: min(10.5rem, 42vw);
-		padding: 0.35rem 0.5rem 0.45rem;
-		gap: 0.125rem;
-		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55);
-		border-radius: 0.375rem;
-	}
-
-	.workflow-animation :global(#clock.clock--floating .clock-block-heading) {
-		display: none;
-	}
-
-	.workflow-animation :global(#clock.clock--floating .clock-date-row) {
-		padding-bottom: 0.2rem;
-		margin-bottom: 0;
-		gap: 0.25rem;
-		align-items: baseline;
-	}
-
-	.workflow-animation :global(#clock.clock--floating #clock_month) {
-		font-size: 0.65rem;
-		line-height: 1.1;
-	}
-
-	.workflow-animation :global(#clock.clock--floating #clock_day) {
-		font-size: 1.125rem;
-		line-height: 1;
-	}
-
-	.workflow-animation :global(#clock.clock--floating #clock_ordinal) {
-		font-size: 0.55rem;
-	}
-
-	.workflow-animation :global(#clock.clock--floating #clock_time) {
-		font-size: 1.35rem;
-		margin-left: auto;
-		margin-right: auto;
-	}
-
-	.workflow-animation :global(#clock.clock--floating .clock-time-row) {
-		padding-top: 0.1rem;
-	}
-}
-</style>
