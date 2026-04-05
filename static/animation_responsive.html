@@ -315,79 +315,8 @@
 
 
 	</head>
-	<body class="p-4 font-sans antialiased">
-		<h1 class="text-2xl font-bold">Styles</h1>
+	<body class="p-2 max-xl:p-2 xl:p-4 font-sans antialiased">
 
-		<h2 class="text-xl font-bold">Buttons</h2>
-
-		<div class="wrapper">
-			<div class="container">
-				<div class="btn"><div>Light</div></div>
-				<div class="btn dark"><div>Dark</div></div>
-				<div class="btn primary"><div>Primary</div></div>
-				
-				<div class="btn square"><div>Light</div></div>
-				<div class="btn square dark"><div>Dark</div></div>
-				<div class="btn square primary"><div>Primary</div></div>
-			</div>
-		</div>
-
-		<h2 class="text-xl font-bold">Rotary Dials</h2>
-		https://github.com/hugozap/react-rotary-knob
-
-		<div class="wrapper">
-			<div class="container">
-				<div class="rotary1"><div></div></div>
-				<div class="rotary2 notched"><div></div></div>
-			</div>
-		</div>
-
-
-		<h2 class="text-xl font-bold">Knobs</h2>
-
-		<h2 class="text-xl font-bold">Sliders</h2>
-
-		<h2 class="text-xl font-bold">Fonts</h2>
-
-		<div class="wrapper space-y-4">
-			<p class="text-sm text-neutral-600">
-
-			<div class="space-y-2 rounded-lg border border-neutral-300 bg-white p-4">
-				<p class="font-home-video text-4xl font-normal">Home Video — regular 0123456789 ABCDEFG</p>
-				<p class="font-home-video text-4xl font-bold">Home Video — bold 0123456789 ABCDEFG</p>
-			</div>
-			<p class="font-md-thermochrome text-4xl font-medium">
-				MD Thermochrome — medium 0123456789 ABCDEFG
-			</p>
-			<p class="font-pp-neue-bit text-4xl font-bold leading-tight">
-				PP Neue Bit — bold 0123456789 ABCDEFG
-			</p>
-		</div>
-
-		<h2 class="text-xl font-bold">LEDs</h2>
-		
-		<h2 class="text-xl font-bold">Digital Displays</h2>
-
-		<div class="font-glow font-md-thermochrome text-4xl font-medium bg-olive-900 text-amber-700 p-4 mb-4" >
-			Digital Display - Orange
-		</div>
-
-		<div class="font-glow font-md-thermochrome text-4xl font-medium bg-stone-800 text-green-700 p-4" >
-			Digital Display - Green
-		</div>
-
-		<h2 class="text-xl font-bold">Progress Bar</h2>
-
-		<h2 class="text-xl font-bold">Screens</h2>
-
-		<h2 class="text-xl font-bold">Switches</h2>
-		https://codepen.io/jkantner/pen/YzJpPBE
-
-		<h2 class="text-xl font-bold">Panels</h2>
-
-		<h2 class="text-xl font-bold">Grills</h2>
-
-	<h2 class="text-xl font-bold">Animation</h2>
 	
 
 	<style>
@@ -416,69 +345,326 @@
 			background: rgb(38 38 38);
 		}
 
-		/* Mobile (max-width 1279px): hide #clock in the layout; only show compact fixed clock while scrolling through #intro_animation */
+		#intro_pause_toggle {
+			cursor: pointer;
+			color: inherit;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+		}
+		/* Must beat any generic `svg { display: … }`; only one icon visible */
+		#intro_pause_toggle svg.intro-pause-icon.hidden,
+		#intro_pause_toggle svg.intro-play-icon.hidden {
+			display: none !important;
+		}
+		#intro_pause_toggle svg.intro-pause-icon:not(.hidden),
+		#intro_pause_toggle svg.intro-play-icon:not(.hidden) {
+			display: block;
+		}
+		#intro_pause_toggle:focus-visible {
+			outline: 2px solid #22c55e;
+			outline-offset: 2px;
+		}
+		#intro_pause_toggle.intro-paused {
+			border-color: #eab308;
+			box-shadow: 0 0 0 1px #eab308;
+		}
+
+		/* Carousel mode: compact in-flow clock above slides */
 		@media (max-width: 1279px) {
-			#clock.clock--mobile-hidden {
-				display: none !important;
-			}
-
-			#clock.clock--floating {
-				position: fixed;
-				bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
-				right: max(0.75rem, env(safe-area-inset-right, 0px));
-				left: auto;
-				top: auto;
-				z-index: 50;
-				width: max-content;
-				max-width: min(10.5rem, 42vw);
-				padding: 0.35rem 0.5rem 0.45rem;
+			#intro_animation.intro--carousel-mode #clock {
+				flex-shrink: 0;
+				padding: 0.35rem 0.5rem 0.4rem;
 				gap: 0.125rem;
-				box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55);
-				border-radius: 0.375rem;
 			}
 
-			#clock.clock--floating .clock-block-heading {
+			#intro_animation.intro--carousel-mode #clock .clock-block-heading {
 				display: none;
 			}
 
-			#clock.clock--floating .clock-date-row {
+			#intro_animation.intro--carousel-mode #clock .clock-date-row {
 				padding-bottom: 0.2rem;
 				margin-bottom: 0;
 				gap: 0.25rem;
 				align-items: baseline;
+				border-bottom-width: 1px;
 			}
 
-			#clock.clock--floating #clock_month {
+			#intro_animation.intro--carousel-mode #clock_month {
 				font-size: 0.65rem;
 				line-height: 1.1;
 			}
 
-			#clock.clock--floating #clock_day {
+			#intro_animation.intro--carousel-mode #clock_day {
 				font-size: 1.125rem;
 				line-height: 1;
 			}
 
-			#clock.clock--floating #clock_ordinal {
+			#intro_animation.intro--carousel-mode #clock_ordinal {
 				font-size: 0.55rem;
 			}
 
-			#clock.clock--floating #clock_time {
+			#intro_animation.intro--carousel-mode #clock_time {
 				font-size: 1.35rem;
 				margin-left: auto;
 				margin-right: auto;
 			}
 
-			#clock.clock--floating .clock-time-row {
+			#intro_animation.intro--carousel-mode #clock .clock-time-row {
 				padding-top: 0.1rem;
 			}
+
+			#intro_slides_track {
+				-webkit-overflow-scrolling: touch;
+			}
+		}
+
+		/* Carousel: show connector lines; slide inner must not clip overflow */
+		#intro_animation.intro--carousel-mode #intro_slides_track .intro-slide > div:first-child {
+			overflow: visible !important;
+		}
+
+		#intro_animation.intro--carousel-mode .intro-pipe-connector {
+			display: block !important;
+			pointer-events: none;
+			z-index: 25;
+			overflow: visible !important;
+		}
+
+		#intro_animation.intro--carousel-mode #website,
+		#intro_animation.intro--carousel-mode #inputs,
+		#intro_animation.intro--carousel-mode #schedules,
+		#intro_animation.intro--carousel-mode #calendar,
+		#intro_animation.intro--carousel-mode #outputs {
+			overflow-x: visible;
+			position: relative;
+		}
+
+		/* Website → inputs: horizontal, middle right (all breakpoints in carousel) */
+		#intro_animation.intro--carousel-mode #website_to_inputs {
+			display: block !important;
+		}
+		#intro_animation.intro--carousel-mode #website_to_inputs_mobile {
+			display: none !important;
+		}
+
+		/* Inputs → schedules: horizontal along top-right edge */
+		#intro_animation.intro--carousel-mode #inputs_to_schedules {
+			display: block !important;
+			top: 3rem !important;
+			right: -32px !important;
+			left: auto !important;
+			transform: translateY(-50%) !important;
+		}
+		#intro_animation.intro--carousel-mode #inputs_to_schedules_mobile {
+			display: none !important;
+		}
+
+		/* Calendar → outputs & outputs → platforms: horizontal middle right */
+		#intro_animation.intro--carousel-mode #calendar_to_outputs {
+			display: block !important;
+		}
+		#intro_animation.intro--carousel-mode #calendar_to_outputs_mobile {
+			display: none !important;
+		}
+		#intro_animation.intro--carousel-mode #outputs_to_platforms {
+			display: block !important;
+		}
+		#intro_animation.intro--carousel-mode #outputs_to_platforms_mobile {
+			display: none !important;
+		}
+
+		.intro-slide-panel {
+			flex: 1 1 0%;
+			min-height: 0;
+			min-width: 0;
+			overflow-y: auto;
+		}
+
+		/* Below xl: cap total height at the viewport; do not stretch to fill 100dvh */
+		@media (max-width: 1279px) {
+			.animation_and_timeline {
+				max-height: 100dvh;
+				overflow-y: auto;
+			}
+
+			#intro_animation.intro--carousel-mode {
+				flex: 0 1 auto;
+				width: 100%;
+			}
+
+			#intro_slides_track {
+				flex: 0 1 auto;
+				align-items: stretch;
+				min-height: 11rem;
+			}
+
+			#intro_slides_track .intro-slide {
+				min-height: 11rem;
+			}
+
+			/* Slides (except sched/cal inner layout): inner fills slide height */
+			#intro_slides_track .intro-slide:not(.intro-slide--sched-cal) > div:first-child {
+				flex: 1 1 auto;
+				min-height: 0;
+				width: 100%;
+			}
+
+			#intro_slides_track .intro-slide:not(.intro-slide--sched-cal) > div.flex-col > .intro-slide-panel {
+				flex: 1 1 0% !important;
+				min-height: 0;
+			}
+
+			#intro_slides_track .intro-slide:not(.intro-slide--sched-cal) > div.flex-row > .intro-slide-panel {
+				flex: 1 1 0% !important;
+				min-height: 0;
+				align-self: stretch;
+			}
+
+			/* Website: posts area grows to fill panel */
+			#intro_animation.intro--carousel-mode #website.intro-slide-panel {
+				display: flex;
+				flex-direction: column;
+				overflow-x: visible;
+				overflow-y: hidden;
+				min-height: 0;
+			}
+
+			#intro_animation.intro--carousel-mode #website .website_posts {
+				flex: 1 1 auto;
+				min-height: 0;
+				overflow-y: auto;
+			}
+
+			#intro_animation.intro--carousel-mode #inputs.intro-slide-panel {
+				display: flex;
+				flex-direction: column;
+				min-height: 0;
+			}
+
+			/* Schedules + calendar: full natural height, no inner scrollbars on calendar */
+			#intro_slides_track .intro-slide--sched-cal {
+				max-height: none;
+			}
+
+			#intro_slides_track .intro-slide--sched-cal > div:first-child {
+				flex: 1 1 auto;
+				min-height: 0;
+				width: 100%;
+				justify-content: flex-start;
+			}
+
+			#intro_animation.intro--carousel-mode #schedules.intro-slide-panel {
+				flex: 0 0 auto !important;
+				overflow: visible !important;
+				min-height: 0;
+			}
+
+			#intro_animation.intro--carousel-mode #calendar.intro-slide-panel {
+				flex: 0 0 auto !important;
+				overflow: visible !important;
+				min-height: 0;
+			}
+
+			#intro_animation.intro--carousel-mode #calendar .grid {
+				gap: 0.35rem;
+			}
+
+			#intro_animation.intro--carousel-mode #calendar .section_title {
+				margin-bottom: 0.25rem;
+			}
+
+			#intro_animation.intro--carousel-mode .schedule_daily {
+				font-size: 0.8rem;
+				line-height: 1.25;
+			}
+
+			#intro_animation.intro--carousel-mode .schedule_daily .w-32 {
+				width: 5rem;
+				min-width: 5rem;
+				padding-left: 0.35rem;
+				padding-right: 0.35rem;
+				font-size: 0.65rem;
+			}
+
+			/* Schedule + calendar slide: keep both panels fully visible (not opacity-30 / GSAP dim). */
+			#intro_animation.intro--carousel-mode #schedules,
+			#intro_animation.intro--carousel-mode #calendar {
+				opacity: 1 !important;
+			}
+
+			#intro_animation.intro--carousel-mode #calendar .grid > div {
+				opacity: 1 !important;
+			}
+		}
+
+		/* Carousel: show every input / output / platform row (not only md+). */
+		#intro_animation.intro--carousel-mode #inputs [id^='input_'] {
+			display: flex !important;
+			gap: 0.5rem;
+		}
+
+		#intro_animation.intro--carousel-mode #outputs [id^='output_'] {
+			display: flex !important;
+			gap: 0.5rem;
+		}
+
+		#intro_animation.intro--carousel-mode #platforms [id^='platform_'] {
+			display: flex !important;
+			gap: 0.5rem;
 		}
 	</style>
 
 	<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
 	<script>
 		let introRunId = 0;
+		let introPaused = false;
+		const pipeStreamIntervals = new Set();
 
 		const clockState = { t: 9 * 60 };
+
+		function clearAllPipeStreamIntervals() {
+			pipeStreamIntervals.forEach((id) => clearInterval(id));
+			pipeStreamIntervals.clear();
+		}
+
+		function syncIntroPauseToggle() {
+			const btn = document.getElementById('intro_pause_toggle');
+			if (!btn) return;
+			const pauseIcon = btn.querySelector('.intro-pause-icon');
+			const playIcon = btn.querySelector('.intro-play-icon');
+			if (pauseIcon && playIcon) {
+				pauseIcon.classList.toggle('hidden', introPaused);
+				playIcon.classList.toggle('hidden', !introPaused);
+				pauseIcon.setAttribute('aria-hidden', introPaused ? 'true' : 'false');
+				playIcon.setAttribute('aria-hidden', introPaused ? 'false' : 'true');
+			}
+			btn.setAttribute('aria-pressed', introPaused ? 'true' : 'false');
+			btn.setAttribute('aria-label', introPaused ? 'Resume intro animation' : 'Pause intro animation');
+			btn.classList.toggle('intro-paused', introPaused);
+		}
+
+		function setIntroPaused(paused) {
+			introPaused = paused;
+			if (paused) {
+				clearAllPipeStreamIntervals();
+				gsap.globalTimeline.pause();
+			} else {
+				gsap.globalTimeline.resume();
+				const stage =
+					document.querySelector('#timeline .timeline-btn.timeline-active')?.dataset.stage;
+				if (stage) {
+					requestAnimationFrame(() => {
+						requestAnimationFrame(() => scrollIntroToStage(stage));
+					});
+				}
+			}
+			syncIntroPauseToggle();
+		}
+
+		function resumeIntroIfPaused() {
+			if (introPaused) setIntroPaused(false);
+		}
 
 		function bumpIntroRunId() {
 			introRunId += 1;
@@ -490,10 +676,147 @@
 			if (timeEl) timeEl.textContent = formatClockFromTotalMinutes(clockState.t);
 		}
 
-		function setTimelineActive(stageId) {
+		function setTimelineActive(stageId, opts = {}) {
+			const syncCarousel = opts.scroll !== false && !introPaused;
 			document.querySelectorAll('#timeline .timeline-btn').forEach((btn) => {
 				btn.classList.toggle('timeline-active', btn.dataset.stage === stageId);
 			});
+			if (syncCarousel) {
+				requestAnimationFrame(() => {
+					requestAnimationFrame(() => scrollIntroToStage(stageId));
+				});
+			}
+		}
+
+		let introLayoutKey = '';
+
+		function getIntroLayoutKey() {
+			const w = window.innerWidth;
+			if (w >= 1280) return 'xl';
+			if (w >= 768) return 'tablet';
+			return 'mobile';
+		}
+
+		function stageToSlideIndex(stage, layoutKey) {
+			if (layoutKey === 'xl') return null;
+			if (layoutKey === 'mobile') {
+				const m = {
+					website_posts:    0,
+					import_data:      1,
+					schedule_calendar: 2,
+					send_webhook:     3,
+					run_automation:   4
+				};
+				return m[stage] ?? 0;
+			}
+			if (stage === 'website_posts' || stage === 'import_data') return 0;
+			if (stage === 'schedule_calendar') return 1;
+			return 2;
+		}
+
+		function slideIndexToStage(index, layoutKey) {
+			if (layoutKey === 'mobile') {
+				const s = ['website_posts', 'import_data', 'schedule_calendar', 'send_webhook', 'run_automation'];
+				return s[Math.max(0, Math.min(s.length - 1, index))];
+			}
+			if (layoutKey === 'tablet') {
+				const s = ['import_data', 'schedule_calendar', 'run_automation'];
+				return s[Math.max(0, Math.min(s.length - 1, index))];
+			}
+			return 'website_posts';
+		}
+
+		function scrollIntroToStage(stage, opts = {}) {
+			const layoutKey = getIntroLayoutKey();
+			if (layoutKey === 'xl') return;
+			const track = document.getElementById('intro_slides_track');
+			if (!track) return;
+			const idx = stageToSlideIndex(stage, layoutKey);
+			if (idx == null) return;
+			const w = track.clientWidth;
+			if (w <= 0) return;
+			track.scrollTo({ left: idx * w, behavior: opts.instant ? 'auto' : 'smooth' });
+		}
+
+		function applyIntroLayout(opts = {}) {
+			const root = document.getElementById('intro_animation');
+			const track = document.getElementById('intro_slides_track');
+			if (!root || !track) return;
+
+			const layoutKey = getIntroLayoutKey();
+			if (introLayoutKey === layoutKey && !opts.force) return;
+
+			abortIntroScene();
+
+			const panelIds = ['website', 'inputs', 'schedules', 'calendar', 'outputs', 'platforms'];
+			const panels = {};
+			panelIds.forEach((id) => {
+				const el = document.getElementById(id);
+				if (el) panels[id] = el;
+			});
+
+			panelIds.forEach((id) => {
+				const el = panels[id];
+				if (!el) return;
+				el.classList.remove('intro-slide-panel');
+			});
+
+			track.replaceChildren();
+			const clock = document.getElementById('clock');
+			if (!clock) return;
+
+			if (layoutKey === 'xl') {
+				root.classList.remove('intro--carousel-mode');
+				const order = ['website', 'inputs', 'schedules', 'calendar', 'clock', 'outputs', 'platforms'];
+				order.forEach((id) => {
+					const el = id === 'clock' ? clock : panels[id];
+					if (el) root.appendChild(el);
+				});
+				root.appendChild(track);
+				introLayoutKey = layoutKey;
+				return;
+			}
+
+			root.classList.add('intro--carousel-mode');
+			root.appendChild(clock);
+			root.appendChild(track);
+
+			function addSlide(innerClass, ids, slideExtraClass = '') {
+				const slide = document.createElement('div');
+				slide.className = [
+					'intro-slide box-border flex min-h-0 w-full min-w-full shrink-0 snap-center flex-col',
+					slideExtraClass
+				]
+					.join(' ')
+					.trim();
+				const inner = document.createElement('div');
+				inner.className = innerClass;
+				ids.forEach((id) => {
+					const el = panels[id];
+					if (!el) return;
+					el.classList.add('intro-slide-panel');
+					inner.appendChild(el);
+				});
+				slide.appendChild(inner);
+				track.appendChild(slide);
+			}
+
+			const schedCalInner = 'flex w-full min-w-0 flex-col gap-2 items-stretch';
+			const panelColInner = 'flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden';
+
+			if (layoutKey === 'mobile') {
+				addSlide(panelColInner, ['website']);
+				addSlide(panelColInner, ['inputs']);
+				addSlide(schedCalInner, ['schedules', 'calendar'], 'intro-slide--sched-cal');
+				addSlide(panelColInner, ['outputs']);
+				addSlide(panelColInner, ['platforms']);
+			} else {
+				addSlide('flex min-h-0 min-w-0 flex-1 flex-row gap-2 overflow-hidden', ['website', 'inputs']);
+				addSlide(schedCalInner, ['schedules', 'calendar'], 'intro-slide--sched-cal');
+				addSlide('flex min-h-0 min-w-0 flex-1 flex-row gap-2 overflow-hidden', ['outputs', 'platforms']);
+			}
+
+			introLayoutKey = layoutKey;
 		}
 
 		function pipeLineLength(line) {
@@ -522,30 +845,36 @@
 			}
 		}
 
-		function getPipeForViewport(desktopId, mobileId) {
-			return window.matchMedia('(min-width: 1280px)').matches
-				? document.getElementById(desktopId)
-				: document.getElementById(mobileId);
+		function introCarouselMode() {
+			return document.getElementById('intro_animation')?.classList.contains('intro--carousel-mode');
 		}
 
 		function getWebsiteToInputsSvg() {
+			if (introCarouselMode()) return document.getElementById('website_to_inputs');
 			return window.matchMedia('(min-width: 768px)').matches
 				? document.getElementById('website_to_inputs')
 				: document.getElementById('website_to_inputs_mobile');
 		}
 
 		function getInputsToSchedulesSvg() {
-			return getPipeForViewport('inputs_to_schedules', 'inputs_to_schedules_mobile');
+			if (window.matchMedia('(min-width: 1280px)').matches)
+				return document.getElementById('inputs_to_schedules');
+			if (introCarouselMode()) return document.getElementById('inputs_to_schedules');
+			return document.getElementById('inputs_to_schedules_mobile');
 		}
 
 		function getCalendarToOutputsSvg() {
-			return getPipeForViewport('calendar_to_outputs', 'calendar_to_outputs_mobile');
+			if (window.matchMedia('(min-width: 1280px)').matches)
+				return document.getElementById('calendar_to_outputs');
+			if (introCarouselMode()) return document.getElementById('calendar_to_outputs');
+			return document.getElementById('calendar_to_outputs_mobile');
 		}
 
 		function getOutputsToPlatformsSvg() {
-			return window.matchMedia('(min-width: 768px)').matches
-				? document.getElementById('outputs_to_platforms')
-				: document.getElementById('outputs_to_platforms_mobile');
+			if (window.matchMedia('(min-width: 768px)').matches)
+				return document.getElementById('outputs_to_platforms');
+			if (introCarouselMode()) return document.getElementById('outputs_to_platforms');
+			return document.getElementById('outputs_to_platforms_mobile');
 		}
 
 		function removeAllPipePixels() {
@@ -720,19 +1049,26 @@
 				onStreamStart?.();
 				const startTime = performance.now();
 				if (onComplete) {
-					setTimeout(() => {
+					gsap.delayedCall(STREAM_DUR, () => {
 						if (runId !== introRunId) return;
 						onComplete();
-					}, STREAM_DUR * 1000);
+					});
 				}
 
 				const intervalId = setInterval(() => {
+					if (introPaused) {
+						clearInterval(intervalId);
+						pipeStreamIntervals.delete(intervalId);
+						return;
+					}
 					if (runId !== introRunId) {
 						clearInterval(intervalId);
+						pipeStreamIntervals.delete(intervalId);
 						return;
 					}
 					if (performance.now() - startTime > STREAM_DUR * 1000) {
 						clearInterval(intervalId);
+						pipeStreamIntervals.delete(intervalId);
 						return;
 					}
 
@@ -766,6 +1102,7 @@
 						}
 					);
 				}, SPAWN_INTERVAL);
+				pipeStreamIntervals.add(intervalId);
 			}
 
 			if (streamOnly) {
@@ -833,6 +1170,9 @@
 				return;
 			}
 			const keepGreen = opts.keepGreen === true;
+			if (opts.resetBorderBeforeFlash === true) {
+				gsap.set(el, { clearProps: 'borderColor' });
+			}
 			const baseBorder = getComputedStyle(el).borderColor;
 			gsap.fromTo(
 				el,
@@ -989,34 +1329,79 @@
 			);
 		}
 
-		function pipeStreamPair(calSvg, outSvg, onDone) {
-			const runId = introRunId;
-			let n    = 0;
-			const need = (calSvg ? 1 : 0) + (outSvg ? 1 : 0);
-			if (need === 0) {
-				onDone();
-				return;
-			}
-			const gate = () => {
-				if (runId !== introRunId) return;
-				if (++n >= need) onDone();
-			};
-			if (calSvg) animatePipe(calSvg, 0, { streamOnly: true, onComplete: gate });
-			if (outSvg) {
-				animatePipe(outSvg, 0, {
-					streamOnly:    true,
-					onComplete:    gate,
-					onStreamStart: flashPlatformBoxesInOrder
-				});
-			}
-		}
-
 		/** Milestone days for the five scheduled posts (Feb 1, 8, 15, 22, 29). */
 		const PUBLISH_DAYS = [1, 8, 15, 22, 29];
 
+		/** Show schedule/calendar slide, then step clock/calendar day-by-day (carousel follows timeline). */
+		function goToScheduleCalendarThenAdvance(runId, fromD, toD, onComplete) {
+			setTimelineActive('schedule_calendar');
+			advanceFebruaryDays(fromD, toD, () => {
+				if (runId !== introRunId) return;
+				onComplete?.();
+			});
+		}
+
 		/**
-		 * After calendar chips are visible: Feb 1 full publish, then step days 1→8→15→22→29
-		 * with stream-only rounds on 8th, 15th, 22nd, 29th.
+		 * Full send → automate wave for one post (timeline + pipes + platforms flash).
+		 * After posts[0]..posts[3], loops back to schedule/calendar while days advance to the next milestone,
+		 * then repeats. After posts[4] (Feb 29), stops on automate with no further advance.
+		 */
+		function runFullSendAutomateWave(runId, posts, postIndex, calP, outP, makeEl) {
+			if (runId !== introRunId) return;
+			if (postIndex < 0 || postIndex >= posts.length) return;
+
+			setTimelineActive('send_webhook');
+
+			flashCalendarPostChip(posts[postIndex], () => {
+				if (runId !== introRunId) return;
+				flashBorderGreen(
+					makeEl,
+					() => {
+						if (runId !== introRunId) return;
+						animatePipe(calP, 0, {
+							onComplete: () => {
+								if (runId !== introRunId) return;
+								gsap.to('#platforms', {
+									opacity:    1,
+									duration:   0.35,
+									ease:       'power2.out',
+									onComplete: () => {
+										if (runId !== introRunId) return;
+										setTimelineActive('run_automation');
+										animatePipe(outP, 0, {
+											onDrawStart: flashPlatformBoxesInOrder,
+											onComplete:  () => {
+												if (runId !== introRunId) return;
+												if (postIndex >= posts.length - 1) return;
+												goToScheduleCalendarThenAdvance(
+													runId,
+													PUBLISH_DAYS[postIndex],
+													PUBLISH_DAYS[postIndex + 1],
+													() =>
+														runFullSendAutomateWave(
+															runId,
+															posts,
+															postIndex + 1,
+															calP,
+															outP,
+															makeEl
+														)
+												);
+											}
+										});
+									}
+								});
+							}
+						});
+					},
+					{ keepGreen: true, resetBorderBeforeFlash: true }
+				);
+			});
+		}
+
+		/**
+		 * After calendar chips are visible: Feb 1 full publish, then for each next post
+		 * schedule/calendar (clock advances) → send → automate, until all five complete.
 		 */
 		function runPublishSequence() {
 			const runId = introRunId;
@@ -1028,23 +1413,6 @@
 			const makeEl = document.querySelector('#output_make');
 
 			applyCalendarDay(1);
-
-			function runStreamRound(postIndex) {
-				if (runId !== introRunId) return;
-				if (postIndex >= posts.length) return;
-				flashCalendarPostChip(posts[postIndex], () => {
-					if (runId !== introRunId) return;
-					pipeStreamPair(calP, outP, () => {
-						if (runId !== introRunId) return;
-						if (postIndex + 1 >= posts.length) return;
-						advanceFebruaryDays(
-							PUBLISH_DAYS[postIndex],
-							PUBLISH_DAYS[postIndex + 1],
-							() => runStreamRound(postIndex + 1)
-						);
-					});
-				});
-			}
 
 			gsap.to('#outputs', {
 				opacity:    1,
@@ -1072,7 +1440,9 @@
 													onDrawStart: flashPlatformBoxesInOrder,
 													onComplete:  () => {
 														if (runId !== introRunId) return;
-														advanceFebruaryDays(1, 8, () => runStreamRound(1));
+														goToScheduleCalendarThenAdvance(runId, 1, 8, () =>
+															runFullSendAutomateWave(runId, posts, 1, calP, outP, makeEl)
+														);
 													}
 												});
 											}
@@ -1080,38 +1450,21 @@
 									}
 								});
 							},
-							{ keepGreen: true }
+							{ keepGreen: true, resetBorderBeforeFlash: true }
 						);
 					});
 				}
 			});
 		}
 
-		/** Continue from Feb 8 stream round (checkpoint automation_entry is Feb 1 + first pipes done). */
+		/** Continue from automation_entry (Feb 8, first wave done): run send→automate loop from post 1. */
 		function runAutomationFromSecondPost() {
 			const runId = introRunId;
-			setTimelineActive('run_automation');
 			const posts = [...document.querySelectorAll('#calendar .calendar_animated_post')];
 			const calP  = getCalendarToOutputsSvg();
 			const outP  = getOutputsToPlatformsSvg();
-
-			function runStreamRound(postIndex) {
-				if (runId !== introRunId) return;
-				if (postIndex >= posts.length) return;
-				flashCalendarPostChip(posts[postIndex], () => {
-					if (runId !== introRunId) return;
-					pipeStreamPair(calP, outP, () => {
-						if (runId !== introRunId) return;
-						if (postIndex + 1 >= posts.length) return;
-						advanceFebruaryDays(
-							PUBLISH_DAYS[postIndex],
-							PUBLISH_DAYS[postIndex + 1],
-							() => runStreamRound(postIndex + 1)
-						);
-					});
-				});
-			}
-			runStreamRound(1);
+			const makeEl = document.querySelector('#output_make');
+			runFullSendAutomateWave(runId, posts, 1, calP, outP, makeEl);
 		}
 
 		/**
@@ -1302,6 +1655,7 @@
 			}
 
 			function playFromStage(stage) {
+				resumeIntroIfPaused();
 				abortIntroScene();
 				const rid = introRunId;
 
@@ -1341,43 +1695,75 @@
 				btn.addEventListener('click', () => playFromStage(btn.dataset.stage));
 			});
 
-			gsap.delayedCall(0, () => playFromStage('website_posts'));
-
-			/* Mobile: corner clock only mid–intro_animation; otherwise clock is hidden (never in-flow in the grid) */
-			const clockFloatMq = window.matchMedia('(max-width: 1279px)');
-			function updateClockFloatState() {
-				const clock = document.getElementById('clock');
-				const intro = document.getElementById('intro_animation');
-				if (!clock || !intro) return;
-				if (!clockFloatMq.matches) {
-					clock.classList.remove('clock--floating', 'clock--mobile-hidden');
-					return;
-				}
-				const r = intro.getBoundingClientRect();
-				const vh = window.innerHeight;
-				const inView = r.bottom > 0 && r.top < vh;
-				const reachedEnd = r.bottom <= vh + 2;
-				if (inView && !reachedEnd) {
-					clock.classList.add('clock--floating');
-					clock.classList.remove('clock--mobile-hidden');
-				} else {
-					clock.classList.remove('clock--floating');
-					clock.classList.add('clock--mobile-hidden');
-				}
+			const pauseToggle = document.getElementById('intro_pause_toggle');
+			if (pauseToggle) {
+				pauseToggle.addEventListener('click', () => setIntroPaused(!introPaused));
+				syncIntroPauseToggle();
 			}
-			window.addEventListener('scroll', updateClockFloatState, { passive: true });
-			window.addEventListener('resize', updateClockFloatState);
-			clockFloatMq.addEventListener('change', updateClockFloatState);
-			updateClockFloatState();
-			gsap.delayedCall(0.05, updateClockFloatState);
+
+			applyIntroLayout({ force: true });
+
+			const track = document.getElementById('intro_slides_track');
+			if (track) {
+				let scrollEndTimer;
+				track.addEventListener(
+					'scroll',
+					() => {
+						if (getIntroLayoutKey() === 'xl') return;
+						window.clearTimeout(scrollEndTimer);
+						scrollEndTimer = window.setTimeout(() => {
+							const w = track.clientWidth;
+							if (w <= 0) return;
+							const i = Math.round(track.scrollLeft / w);
+							setTimelineActive(slideIndexToStage(i, getIntroLayoutKey()), { scroll: false });
+						}, 80);
+					},
+					{ passive: true }
+				);
+			}
+
+			let resizeTimer;
+			window.addEventListener('resize', () => {
+				window.clearTimeout(resizeTimer);
+				resizeTimer = window.setTimeout(() => {
+					const before = introLayoutKey;
+					const stage =
+						document.querySelector('#timeline .timeline-btn.timeline-active')?.dataset.stage ||
+						'website_posts';
+					const keyNow = getIntroLayoutKey();
+					if (keyNow !== before) {
+						applyIntroLayout();
+						playFromStage(stage);
+					} else if (keyNow !== 'xl') {
+						scrollIntroToStage(stage, { instant: true });
+					}
+				}, 150);
+			});
+
+			gsap.delayedCall(0, () => playFromStage('website_posts'));
 		});
 	</script>
 
-<div class="animation_and_timeline flex flex-col gap-8 bg-black">
+<div class="animation_and_timeline flex flex-col gap-2 max-xl:gap-2 xl:gap-8 bg-black xl:min-h-0">
 
-	<div id="intro_animation" class="intro_animation grid auto-rows-auto grid-cols-1 md:grid-cols-2 xl:grid-cols-7 xl:grid-rows-3 gap-8 font-md-thermochrome p-4 text-white ">
+	<div id="intro_animation" class="intro_animation font-md-thermochrome text-white max-xl:flex max-xl:flex-col max-xl:min-h-0 max-xl:gap-2 p-2 max-xl:p-2 xl:grid xl:auto-rows-auto xl:grid-cols-7 xl:grid-rows-3 xl:gap-8 xl:p-4">
 
-		<div id="website" class="md:col-span-1 xl:row-span-3 xl:h-full bg-neutral-200 border border-neutral-800 relative">
+		<div id="clock" class="shrink-0 bg-neutral-200 p-4 pb-0 border border-neutral-100 flex flex-col gap-2 text-neutral-800 md:col-span-2 xl:col-span-1 xl:col-start-6 xl:row-start-1">
+			<div class="clock-block-heading section_title text-2xl mb-4">CLOCK</div>
+			<div class="clock-date-row w-full flex border-b border-neutral-700">
+				<div id="clock_month" class="month text-xl w-full">January</div>
+				<div id="clock_day" class="day text-3xl">30</div>
+				<div id="clock_ordinal" class="ordinal text-sm">th</div>
+			</div>
+
+			<div class="clock-time-row w-full flex">
+				<div id="clock_time" class="time text-5xl m-auto text-green-700">09:00</div>
+			</div>
+		</div>
+
+		<div id="intro_slides_track" class="flex min-h-0 min-w-0 flex-row overflow-x-auto overflow-y-hidden snap-x snap-mandatory xl:hidden" aria-label="Animation stages"></div>
+
+		<div id="website" class="min-h-0 min-w-0 md:col-span-1 xl:row-span-3 xl:h-full bg-neutral-200 border border-neutral-800 relative">
 
 			<div class="website_header bg-neutral-200 h-6 p-1">
 				<svg role="img" class="w-4 h-4 fill-green-500" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>WordPress</title><path d="M21.469 6.825c.84 1.537 1.318 3.3 1.318 5.175 0 3.979-2.156 7.456-5.363 9.325l3.295-9.527c.615-1.54.82-2.771.82-3.864 0-.405-.026-.78-.07-1.11m-7.981.105c.647-.03 1.232-.105 1.232-.105.582-.075.514-.93-.067-.899 0 0-1.755.135-2.88.135-1.064 0-2.85-.15-2.85-.15-.585-.03-.661.855-.075.885 0 0 .54.061 1.125.09l1.68 4.605-2.37 7.08L5.354 6.9c.649-.03 1.234-.1 1.234-.1.585-.075.516-.93-.065-.896 0 0-1.746.138-2.874.138-.2 0-.438-.008-.69-.015C4.911 3.15 8.235 1.215 12 1.215c2.809 0 5.365 1.072 7.286 2.833-.046-.003-.091-.009-.141-.009-1.06 0-1.812.923-1.812 1.914 0 .89.513 1.643 1.06 2.531.411.72.89 1.643.89 2.977 0 .915-.354 1.994-.821 3.479l-1.075 3.585-3.9-11.61.001.014zM12 22.784c-1.059 0-2.081-.153-3.048-.437l3.237-9.406 3.315 9.087c.024.053.05.101.078.149-1.12.393-2.325.609-3.582.609M1.211 12c0-1.564.336-3.05.935-4.39L7.29 21.709C3.694 19.96 1.212 16.271 1.211 12M12 0C5.385 0 0 5.385 0 12s5.385 12 12 12 12-5.385 12-12S18.615 0 12 0"/></svg>
@@ -1431,10 +1817,10 @@
 
 			</div>
 
-			<svg id="website_to_inputs" class="website_to_inputs stroke-green-500 opacity-0 pointer-events-none hidden md:block" xmlns="http://www.w3.org/2000/svg" width="32" height="16" style="position:absolute; top:50%; right:-32px; transform:translateY(-50%); overflow:visible;">
+			<svg id="website_to_inputs" class="intro-pipe-connector website_to_inputs stroke-green-500 opacity-0 pointer-events-none hidden md:block" xmlns="http://www.w3.org/2000/svg" width="32" height="16" style="position:absolute; top:50%; right:-32px; transform:translateY(-50%); overflow:visible;">
 				<line class="pipe-line" x1="0" y1="8" x2="32" y2="8" stroke-width="1"/>
 			</svg>
-			<svg id="website_to_inputs_mobile" class="website_to_inputs block stroke-green-500 opacity-0 pointer-events-none md:hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="32" style="position:absolute; left:50%; top:100%; transform:translateX(-50%); overflow:visible;">
+			<svg id="website_to_inputs_mobile" class="intro-pipe-connector website_to_inputs block stroke-green-500 opacity-0 pointer-events-none md:hidden " xmlns="http://www.w3.org/2000/svg" width="16" height="32" style="position:absolute; left:50%; top:100%; transform:translateX(-50%); overflow:visible;">
 				<line class="pipe-line" x1="8" y1="0" x2="8" y2="32" stroke-width="1"/>
 			</svg>
 
@@ -1442,7 +1828,7 @@
 
 
 
-		<div id="inputs" class="md:col-span-1 xl:row-span-3 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
+		<div id="inputs" class="min-h-0 min-w-0 md:col-span-1 xl:row-span-3 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
 			<div class="section_title text-2xl">INPUTS</div>
 			
 			<div id="input_wordpress" class="border border-neutral-700 p-2 flex gap-2 bg-neutral-800 h-full">
@@ -1491,13 +1877,13 @@
 				<p class="text-md my-auto">Callbacks</p>
 			</div>
 
-			<svg id="inputs_to_schedules" class="line stroke-green-500 opacity-0 pointer-events-none hidden xl:block" xmlns="http://www.w3.org/2000/svg"
+			<svg id="inputs_to_schedules" class="intro-pipe-connector line stroke-green-500 opacity-0 pointer-events-none hidden xl:block" xmlns="http://www.w3.org/2000/svg"
 				width="32" height="16"
 				style="position:absolute; top:16.666%; right:-32px; transform:translateY(-50%); overflow:visible;">
 				<line class="pipe-line" x1="0" y1="8" x2="32" y2="8"
 					stroke-width="1"/>
 			</svg>
-			<svg id="inputs_to_schedules_mobile" class="line block stroke-green-500 opacity-0 pointer-events-none xl:hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="32"
+			<svg id="inputs_to_schedules_mobile" class="intro-pipe-connector line block stroke-green-500 opacity-0 pointer-events-none xl:hidden z-50" xmlns="http://www.w3.org/2000/svg" width="16" height="32"
 				style="position:absolute; left:50%; top:100%; transform:translateX(-50%); overflow:visible;">
 				<line class="pipe-line" x1="8" y1="0" x2="8" y2="32" stroke-width="1"/>
 			</svg>
@@ -1506,7 +1892,7 @@
 
 
 
-		<div id="schedules" class="md:col-span-2 xl:col-span-3 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
+		<div id="schedules" class="min-h-0 min-w-0 md:col-span-2 xl:col-span-3 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
 			<div class="section_title text-2xl">SCHEDULES</div>
 
 			<div id="schedule_daily_inspiration" class="schedule_daily border border-neutral-700 px-4 py-2 flex gap-4 bg-neutral-800 xl:text-2xl">
@@ -1521,7 +1907,7 @@
 				<div class="w-full m-auto text-center">0 17 * * 5</div>
 			</div>
 
-			<svg id="schedules_to_calendar" class="line stroke-green-500 opacity-0" xmlns="http://www.w3.org/2000/svg"
+			<svg id="schedules_to_calendar" class="intro-pipe-connector line stroke-green-500 opacity-0" xmlns="http://www.w3.org/2000/svg"
 				width="16" height="32"
 				style="position:absolute; bottom:-32px; left:50%; transform:translateX(-50%); overflow:visible;">
 				<line class="pipe-line" x1="8" y1="0" x2="8" y2="32"
@@ -1531,7 +1917,7 @@
 
 
 
-		<div id="calendar" class="md:col-span-2 xl:col-span-3 xl:row-span-2 xl:col-start-3 xl:row-start-2 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
+		<div id="calendar" class="min-h-0 min-w-0 md:col-span-2 xl:col-span-3 xl:row-span-2 xl:col-start-3 xl:row-start-2 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
 			<div class="section_title text-2xl">CALENDAR</div>
 
 			<div class="grid grid-cols-8 gap-4 auto-rows-auto max-xl:h-auto xl:grid-rows-5 xl:h-full">
@@ -1702,35 +2088,20 @@
 
 			</div>
 
-			<svg id="calendar_to_outputs" class="line stroke-green-500 opacity-0 pointer-events-none hidden xl:block" xmlns="http://www.w3.org/2000/svg"
+			<svg id="calendar_to_outputs" class="intro-pipe-connector line stroke-green-500 opacity-0 pointer-events-none hidden xl:block" xmlns="http://www.w3.org/2000/svg"
 				width="32" height="16"
 				style="position:absolute; top:50%; right:-32px; transform:translateY(-50%); overflow:visible;">
 				<line class="pipe-line" x1="0" y1="8" x2="32" y2="8"
 					stroke-width="1"/>
 			</svg>
-			<svg id="calendar_to_outputs_mobile" class="line absolute left-1/2 top-full -translate-x-1/2 md:left-[calc((100%-2rem)/4)] stroke-green-500 opacity-0 pointer-events-none xl:hidden overflow-visible" xmlns="http://www.w3.org/2000/svg" width="16" height="32">
+			<svg id="calendar_to_outputs_mobile" class="intro-pipe-connector line absolute left-1/2 top-full -translate-x-1/2 md:left-[calc((100%-2rem)/4)] stroke-green-500 opacity-0 pointer-events-none xl:hidden overflow-visible" xmlns="http://www.w3.org/2000/svg" width="16" height="32">
 				<line class="pipe-line" x1="8" y1="0" x2="8" y2="32" stroke-width="1"/>
 			</svg>
 		</div>
 
 
 
-		<div id="clock" class="clock--mobile-hidden md:col-span-2 xl:col-span-1 xl:col-start-6 xl:row-start-1 bg-neutral-200 p-4 pb-0 border border-neutral-100 flex flex-col gap-2 text-neutral-800">
-			<div class="clock-block-heading section_title text-2xl mb-4">CLOCK</div>
-			<div class="clock-date-row w-full flex border-b border-neutral-700">
-				<div id="clock_month" class="month text-xl w-full">January</div>
-				<div id="clock_day" class="day text-3xl">30</div>
-				<div id="clock_ordinal" class="ordinal text-sm">th</div>
-			</div>
-
-			<div class="clock-time-row w-full flex">
-				<div id="clock_time" class="time text-5xl m-auto text-green-700">09:00</div>
-			</div>
-		</div>
-		
-
-
-		<div id="outputs" class="md:col-span-1 xl:row-span-2 xl:col-start-6 xl:row-start-2 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
+		<div id="outputs" class="min-h-0 min-w-0 md:col-span-1 xl:row-span-2 xl:col-start-6 xl:row-start-2 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 relative opacity-30">
 			<div class="section_title text-2xl">OUTPUTS</div>
 			<div id="output_make" class="border border-neutral-700 p-2 flex gap-2 bg-neutral-800 h-full">
 				<svg role="img" class="w-8 h-8 fill-white my-auto" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Make</title><path fill="#6D00CC" d="M13.38 3.498c-.27 0-.511.19-.566.465L9.85 18.986a.578.578 0 0 0 .453.678l4.095.826a.58.58 0 0 0 .682-.455l2.963-15.021a.578.578 0 0 0-.453-.678l-4.096-.826a.589.589 0 0 0-.113-.012zm-5.876.098a.576.576 0 0 0-.516.318L.062 17.697a.575.575 0 0 0 .256.774l3.733 1.877a.578.578 0 0 0 .775-.258l6.926-13.781a.577.577 0 0 0-.256-.776L7.762 3.658a.571.571 0 0 0-.258-.062zm11.74.115a.576.576 0 0 0-.576.576v15.426c0 .318.258.578.576.578h4.178a.58.58 0 0 0 .578-.578V4.287a.578.578 0 0 0-.578-.576Z"/></svg>
@@ -1759,20 +2130,20 @@
 				<p class="text-md my-auto">Webhooks</p>
 			</div>
 
-			<svg id="outputs_to_platforms" class="line stroke-green-500 opacity-0 pointer-events-none hidden md:block" xmlns="http://www.w3.org/2000/svg"
+			<svg id="outputs_to_platforms" class="intro-pipe-connector line stroke-green-500 opacity-0 pointer-events-none hidden md:block" xmlns="http://www.w3.org/2000/svg"
 				width="32" height="16"
 				style="position:absolute; top:50%; right:-32px; transform:translateY(-50%); overflow:visible;">
 				<line class="pipe-line" x1="0" y1="8" x2="32" y2="8"
 					stroke-width="1"/>
 			</svg>
-			<svg id="outputs_to_platforms_mobile" class="line block stroke-green-500 opacity-0 pointer-events-none md:hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="32"
+			<svg id="outputs_to_platforms_mobile" class="intro-pipe-connector line block stroke-green-500 opacity-0 pointer-events-none md:hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="32"
 				style="position:absolute; left:50%; top:100%; transform:translateX(-50%); overflow:visible;">
 				<line class="pipe-line" x1="8" y1="0" x2="8" y2="32" stroke-width="1"/>
 			</svg>
 
 		</div>
 
-		<div id="platforms" class="md:col-span-1 xl:row-span-3 xl:col-start-7 xl:row-start-1 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 opacity-30">
+		<div id="platforms" class="min-h-0 min-w-0 md:col-span-1 xl:row-span-3 xl:col-start-7 xl:row-start-1 bg-neutral-900 p-4 border border-neutral-800 flex flex-col gap-4 opacity-30">
 			<div class="section_title text-2xl">PLATFORMS</div>
 
 			<div id="platform_youtube" class="border border-neutral-700 p-2 flex gap-2 bg-neutral-800 h-full">
@@ -1843,12 +2214,16 @@
 		</div>
 	</div>
 
-	<div id="timeline" class="flex p-2 xl:p-4 w-full text-white m-auto gap-1 xl:gap-4 justify-center flex-wrap">
+	<div id="timeline" class="flex shrink-0 p-1 max-xl:p-1 xl:p-4 w-full text-white m-auto gap-1 xl:gap-4 justify-center flex-wrap max-xl:pb-[max(0.25rem,env(safe-area-inset-bottom))]">
 		<button type="button" class="timeline-btn border border-neutral-700 p-1 xl:p-4 text-sm xl:text-md bg-neutral-800 min-w-[7rem]" data-stage="website_posts">Content</button>
 		<button type="button" class="timeline-btn border border-neutral-700 p-1 xl:p-4 text-sm xl:text-md bg-neutral-800 min-w-[7rem]" data-stage="import_data">Import</button>
 		<button type="button" class="timeline-btn border border-neutral-700 p-1 xl:p-4 text-sm xl:text-md bg-neutral-800 min-w-[7rem]" data-stage="schedule_calendar">Schedule Calendar</button>
 		<button type="button" class="timeline-btn border border-neutral-700 p-1 xl:p-4 text-sm xl:text-md bg-neutral-800 min-w-[7rem]" data-stage="send_webhook">Send</button>
 		<button type="button" class="timeline-btn border border-neutral-700 p-1 xl:p-4 text-sm xl:text-md bg-neutral-800 min-w-[7rem]" data-stage="run_automation">Automate</button>
+		<button type="button" id="intro_pause_toggle" class=" p-2 xl:p-3 min-w-[2.75rem] min-h-[2.75rem] xl:min-w-[3.25rem] xl:min-h-[3.25rem] shrink-0" aria-pressed="false" aria-label="Pause intro animation">
+			<svg class="intro-pause-icon w-5 h-5 xl:w-6 xl:h-6 fill-neutral-700" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+			<svg class="intro-play-icon hidden w-5 h-5 xl:w-6 xl:h-6 fill-current" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5v14l11-7L8 5z"/></svg>
+		</button>
 	</div>
 </div>
 

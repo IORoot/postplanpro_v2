@@ -138,7 +138,7 @@ function getDb(): Database.Database {
 			}[];
 			const setColor = db.prepare('UPDATE post SET color = ? WHERE id = ?');
 			for (const row of postsMissingColor) {
-				setColor.run('#ffffff', row.id);
+				setColor.run('#fafafa', row.id);
 			}
 			const legacyColorMap: Record<string, string> = {
 				'#fecaca': '#fee2e2',

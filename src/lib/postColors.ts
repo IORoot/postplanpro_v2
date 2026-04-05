@@ -1,8 +1,8 @@
-/** Default post colour when none is set (e.g. new posts). */
-export const DEFAULT_POST_COLOR = '#ffffff';
+/** Default post colour when none is set (e.g. new posts). Tailwind neutral-50. */
+export const DEFAULT_POST_COLOR = '#fafafa';
 
-/** Light grey background when a post is created manually without a colour selected. */
-export const DEFAULT_MANUAL_POST_COLOR = '#F4F4F0';
+/** Light grey background when a post is created manually without a colour selected. Tailwind neutral-100. */
+export const DEFAULT_MANUAL_POST_COLOR = '#f5f5f5';
 
 export const TAILWIND_POST_COLORS = [
 	'#fee2e2', // red-100
