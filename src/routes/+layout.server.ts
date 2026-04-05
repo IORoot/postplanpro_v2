@@ -1,13 +1,12 @@
 import type { Session } from '@auth/sveltekit';
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { getDatabase } from '$lib/db/index.js';
 import type { LayoutServerLoad } from './$types';
 
-const appVersion = JSON.parse(
-	readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../package.json'), 'utf8')
-).version as string;
+// Must not use import.meta.url + relative path: SSR bundle lives under
+// .svelte-kit/output/server/entries/... so ../../package.json points at the wrong place and breaks vite build.
+const appVersion = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')).version as string;
 
 function sqliteIso(value: Date): string {
 	return value.toISOString().slice(0, 19);
