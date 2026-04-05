@@ -3,26 +3,29 @@
 
 	let { children } = $props();
 	let open = $state(false);
+
+	const homeActive = $derived(
+		$page.url.pathname === '/' || $page.url.pathname === '/welcome'
+	);
 </script>
 
 <svelte:head>
 	<title>PostPlan – Schedule and send posts to your webhooks</title>
 </svelte:head>
 
-<!-- Site header -->
 <header
 	class="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur supports-[backdrop-filter]:bg-[var(--surface)]/80"
 >
 	<div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-		<a href="/welcome" class="flex items-center gap-2">
+		<a href="/" class="flex items-center gap-2">
 			<img src="/logo.svg" alt="PostPlan" class="h-9 w-auto" />
 			<span class="text-xl font-semibold text-[var(--text)]">PostPlan<span class="text-[var(--primary)]">Pro</span></span>
 		</a>
 
 		<nav class="hidden items-center gap-8 md:flex" aria-label="Main">
 			<a
-				href="/welcome"
-				class="text-sm font-medium transition-colors { $page.url.pathname === '/welcome' ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]' }"
+				href="/"
+				class="text-sm font-medium transition-colors { homeActive ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]' }"
 			>
 				Home
 			</a>
@@ -32,7 +35,7 @@
 			>
 				Technical details
 			</a>
-			<a href="/welcome#pricing" class="text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
+			<a href="/#pricing" class="text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
 				Pricing
 			</a>
 			<div class="flex items-center gap-3">
@@ -51,7 +54,6 @@
 			</div>
 		</nav>
 
-		<!-- Mobile menu button -->
 		<button
 			type="button"
 			class="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--text)] md:hidden"
@@ -74,9 +76,9 @@
 	{#if open}
 		<div class="border-t border-[var(--border)] bg-[var(--surface)] px-4 py-4 md:hidden">
 			<nav class="flex flex-col gap-2" aria-label="Mobile">
-				<a href="/welcome" class="rounded-lg px-3 py-2 text-sm font-medium text-[var(--text)]">Home</a>
+				<a href="/" class="rounded-lg px-3 py-2 text-sm font-medium text-[var(--text)]">Home</a>
 				<a href="/welcome/technical" class="rounded-lg px-3 py-2 text-sm font-medium text-[var(--text)]">Technical details</a>
-				<a href="/welcome#pricing" class="rounded-lg px-3 py-2 text-sm font-medium text-[var(--text)]">Pricing</a>
+				<a href="/#pricing" class="rounded-lg px-3 py-2 text-sm font-medium text-[var(--text)]">Pricing</a>
 				<a href="/auth/login" class="rounded-lg px-3 py-2 text-sm font-medium text-[var(--text-muted)]">Log in</a>
 				<a href="/auth/login" class="btn-primary mt-2 rounded-lg px-3 py-2 text-center text-sm font-semibold text-white">Sign up</a>
 			</nav>
@@ -88,12 +90,11 @@
 	{@render children()}
 </main>
 
-<!-- Footer -->
 <footer class="border-t border-[var(--border)] bg-[var(--surface)]">
 	<div class="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
 		<div class="grid gap-10 lg:grid-cols-3">
 			<div>
-				<a href="/welcome" class="flex items-center gap-2">
+				<a href="/" class="flex items-center gap-2">
 					<img src="/logo.svg" alt="PostPlan" class="h-8 w-auto" />
 					<span class="text-lg font-semibold text-[var(--text)]">PostPlan</span>
 				</a>
@@ -104,7 +105,7 @@
 			<div>
 				<h3 class="text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">Product</h3>
 				<ul class="mt-3 space-y-2">
-					<li><a href="/welcome#pricing" class="text-sm text-[var(--text)] hover:text-[var(--primary)]">Pricing</a></li>
+					<li><a href="/#pricing" class="text-sm text-[var(--text)] hover:text-[var(--primary)]">Pricing</a></li>
 					<li><a href="/welcome/technical" class="text-sm text-[var(--text)] hover:text-[var(--primary)]">Technical details</a></li>
 					<li><a href="/auth/login" class="text-sm text-[var(--text)] hover:text-[var(--primary)]">Log in</a></li>
 					<li><a href="/auth/login" class="text-sm text-[var(--text)] hover:text-[var(--primary)]">Sign up</a></li>
@@ -113,13 +114,7 @@
 			<div>
 				<h3 class="text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">Newsletter</h3>
 				<p class="mt-3 text-sm text-[var(--text-muted)]">Get product updates and tips. No spam.</p>
-				<!-- Mailchimp embed: replace action with your Mailchimp form action URL -->
-				<form
-					action="#"
-					method="post"
-					class="mt-3 flex gap-2"
-					aria-label="Newsletter signup"
-				>
+				<form action="#" method="post" class="mt-3 flex gap-2" aria-label="Newsletter signup">
 					<input
 						type="email"
 						name="EMAIL"

@@ -3,6 +3,7 @@
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import { load as layoutLoad } from '../../src/routes/+layout.server.js';
+import { isRedirect } from '@sveltejs/kit';
 import { load as welcomeLoad } from '../../src/routes/welcome/+page.server.js';
 import { GET as stagesGET } from '../../src/routes/api/posts/[id]/stages/+server.js';
 import { getDatabase } from '$lib/db/index.js';
@@ -50,9 +51,15 @@ describe('+layout.server load', () => {
 });
 
 describe('welcome/+page.server', () => {
-	it('load returns empty object', async () => {
-		const r = await welcomeLoad(mockRequestEvent({ userId: null }, 'http://test/welcome') as Parameters<typeof welcomeLoad>[0]);
-		expect(r).toEqual({});
+	it('redirects /welcome to /', async () => {
+		try {
+			await welcomeLoad(mockRequestEvent({ userId: null }, 'http://test/welcome') as Parameters<typeof welcomeLoad>[0]);
+			expect.fail('expected redirect');
+		} catch (e) {
+			expect(isRedirect(e)).toBe(true);
+			expect((e as { status: number; location: string }).status).toBe(308);
+			expect((e as { location: string }).location).toBe('/');
+		}
 	});
 });
 

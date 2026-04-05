@@ -8,7 +8,7 @@ const STORAGE_KEY = 'postplan-theme';
 let pathnameForThemeMerge = '';
 
 function forcePublicDarkShell(pathname: string): boolean {
-	return pathname.startsWith('/welcome') || pathname.startsWith('/auth');
+	return pathname === '/' || pathname.startsWith('/welcome') || pathname.startsWith('/auth');
 }
 
 function applyHtmlDarkClass(themeValue: Theme) {

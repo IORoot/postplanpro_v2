@@ -4,7 +4,9 @@ import { redirect, type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { getDatabase } from '$lib/db/index.js';
 
-const PUBLIC_PATHS = ['/welcome', '/auth/login'];
+function isMarketingPublicPath(pathname: string): boolean {
+	return pathname === '/' || pathname.startsWith('/welcome');
+}
 
 /** Immutable build assets and dev tooling — never need session; skipping avoids extra /auth/session work. */
 function skipAuthStabilization(pathname: string): boolean {
@@ -43,13 +45,13 @@ const appAuthGuard: Handle = async ({ event, resolve }) => {
 	if (!event.route.id) return resolve(event);
 
 	const isAuthRoute = pathname.startsWith('/auth');
-	const isPublicRoute = PUBLIC_PATHS.includes(pathname);
+	const isPublicMarketing = isMarketingPublicPath(pathname);
 	const isCronRoute = pathname.startsWith('/api/cron/send-due-posts');
 	const isCallbackRoute = pathname.startsWith('/api/callbacks/');
 	const isStripeWebhook = pathname === '/api/stripe/webhook';
 
-	// Blocked users: redirect to welcome (except for welcome and auth)
-	if (session?.user?.id && !isPublicRoute && !isAuthRoute && !isCronRoute && !isCallbackRoute && !isStripeWebhook) {
+	// Blocked users: redirect to /blocked (except marketing, auth, and webhooks)
+	if (session?.user?.id && !isPublicMarketing && !isAuthRoute && !isCronRoute && !isCallbackRoute && !isStripeWebhook) {
 		const db = getDatabase();
 		const row = db
 			.prepare('SELECT tier FROM user WHERE id = ?')
@@ -61,15 +63,15 @@ const appAuthGuard: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	if (!session && !isAuthRoute && !isPublicRoute && !isCronRoute && !isCallbackRoute && !isStripeWebhook) {
-		throw redirect(303, '/welcome');
+	if (!session && !isAuthRoute && !isPublicMarketing && !isCronRoute && !isCallbackRoute && !isStripeWebhook) {
+		throw redirect(303, '/');
 	}
 	// Allow POST actions on /auth/login (e.g. signout), but keep GET redirected.
 	if (session && pathname === '/auth/login' && event.request.method === 'GET') {
 		throw redirect(303, '/calendar');
 	}
-	// Logged-in user on welcome: send to calendar
-	if (session && pathname === '/welcome' && event.request.method === 'GET') {
+	// Logged-in user on marketing home: send to calendar (/welcome redirects to / for guests)
+	if (session && (pathname === '/' || pathname === '/welcome') && event.request.method === 'GET') {
 		throw redirect(303, '/calendar');
 	}
 
@@ -79,7 +81,7 @@ const appAuthGuard: Handle = async ({ event, resolve }) => {
 /** SSR: match client-side forced dark shell for marketing + auth (see setPathnameForThemeMerge). */
 const ssrPublicDarkShell: Handle = async ({ event, resolve }) => {
 	const p = event.url.pathname;
-	const useDark = p.startsWith('/welcome') || p.startsWith('/auth');
+	const useDark = p === '/' || p.startsWith('/welcome') || p.startsWith('/auth');
 	return resolve(event, {
 		transformPageChunk: ({ html, done }) => {
 			if (!useDark || !done) return html;

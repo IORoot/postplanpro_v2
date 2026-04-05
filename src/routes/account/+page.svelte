@@ -241,7 +241,7 @@
 					<h2 class="text-base font-semibold text-[var(--text)]">Log out</h2>
 					<p class="mt-1 text-sm text-[var(--text-muted)]">Sign out of PostPlan on this device.</p>
 					<form method="POST" action="/auth/login?/signout" class="mt-4">
-						<input type="hidden" name="options.redirectTo" value="/welcome" />
+						<input type="hidden" name="options.redirectTo" value="/" />
 						<button
 							type="submit"
 							class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px]"

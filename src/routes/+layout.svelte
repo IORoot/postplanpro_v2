@@ -7,8 +7,13 @@
 	import { initTheme, setPathnameForThemeMerge } from '$lib/stores/theme.js';
 	import { toggleSidebar } from '$lib/stores/sidebar.js';
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import MarketingSiteChrome from '$lib/components/MarketingSiteChrome.svelte';
 
 	let { children } = $props();
+
+	function isMarketingPath(pathname: string): boolean {
+		return pathname === '/' || pathname.startsWith('/welcome');
+	}
 
 	onMount(() => {
 		setPathnameForThemeMerge(get(page).url.pathname);
@@ -26,12 +31,12 @@
 </svelte:head>
 
 <div class="min-h-screen bg-[var(--bg)]">
-	{#if !$page.url.pathname.startsWith('/auth') && !$page.url.pathname.startsWith('/welcome') && $page.url.pathname !== '/blocked'}
+	{#if !$page.url.pathname.startsWith('/auth') && !isMarketingPath($page.url.pathname) && $page.url.pathname !== '/blocked'}
 		<Sidebar />
 	{/if}
 
 	<!-- Mobile menu button -->
-	{#if !$page.url.pathname.startsWith('/auth') && !$page.url.pathname.startsWith('/welcome') && $page.url.pathname !== '/blocked'}
+	{#if !$page.url.pathname.startsWith('/auth') && !isMarketingPath($page.url.pathname) && $page.url.pathname !== '/blocked'}
 		<button
 			type="button"
 			class="fixed z-30 flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow transition-[transform,background-color] [transition-duration:var(--motion-instant)] [transition-timing-function:var(--ease-out-quart)] hover:bg-[var(--surface-hover)] active:scale-95 md:hidden"
@@ -46,11 +51,13 @@
 	{/if}
 
 	<main
-		class="min-h-screen { ($page.url.pathname.startsWith('/auth') || $page.url.pathname.startsWith('/welcome') || $page.url.pathname === '/blocked') ? 'bg-[var(--bg)]' : 'bg-[var(--sidebar-bg)] md:pl-[280px]' }"
+		class="min-h-screen { ($page.url.pathname.startsWith('/auth') || isMarketingPath($page.url.pathname) || $page.url.pathname === '/blocked') ? 'bg-[var(--bg)]' : 'bg-[var(--sidebar-bg)] md:pl-[280px]' }"
 	>
-		{#if $page.url.pathname.startsWith('/welcome')}
+		{#if isMarketingPath($page.url.pathname)}
 			<div class="w-full">
-				{@render children()}
+				<MarketingSiteChrome>
+					{@render children()}
+				</MarketingSiteChrome>
 			</div>
 		{:else if $page.url.pathname.startsWith('/auth') || $page.url.pathname === '/blocked'}
 			<div class="mx-auto max-w-md px-4 pb-8 pt-10">

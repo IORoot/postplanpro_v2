@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Auth', () => {
-	test('unauthenticated user is redirected to welcome', async ({ page }) => {
+	test('unauthenticated user sees marketing home at /', async ({ page }) => {
 		await page.goto('/');
-		await expect(page).toHaveURL(/\/welcome/);
+		await expect(page).toHaveURL('/');
 	});
 
-	test('welcome page has pricing section with all three plan tiers', async ({ page }) => {
-		await page.goto('/welcome');
-		await expect(page).toHaveURL('/welcome');
+	test('home page has pricing section with all three plan tiers', async ({ page }) => {
+		await page.goto('/');
+		await expect(page).toHaveURL('/');
 		const pricing = page.locator('#pricing');
 		await expect(pricing).toBeVisible();
 		// Plan names appear as headings in the card-based pricing layout
@@ -23,16 +23,16 @@ test.describe('Auth', () => {
 		await expect(page.getByRole('heading', { name: /sign in|login/i })).toBeVisible();
 	});
 
-	test('protected paths redirect to welcome when unauthenticated', async ({ page }) => {
+	test('protected paths redirect to / when unauthenticated', async ({ page }) => {
 		for (const path of ['/posts', '/calendar', '/schedules', '/settings', '/inputs', '/inputs/webhooks', '/outputs', '/reports', '/account']) {
 			await page.goto(path);
-			await expect(page).toHaveURL(/\/welcome/);
+			await expect(page).toHaveURL('/');
 		}
 	});
 
 	test('admin path redirects when unauthenticated', async ({ page }) => {
 		await page.goto('/users');
-		await expect(page).toHaveURL(/\/welcome/);
+		await expect(page).toHaveURL('/');
 	});
 });
 

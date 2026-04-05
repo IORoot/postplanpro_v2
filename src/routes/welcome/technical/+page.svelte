@@ -277,7 +277,7 @@
 			<a href="/auth/login" class="btn-primary inline-flex rounded-lg px-6 py-3 text-base font-semibold text-white">
 				Get started free
 			</a>
-			<a href="/welcome#pricing" class="inline-flex rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-3 text-base font-medium text-[var(--text)] hover:bg-[var(--surface-hover)]">
+			<a href="/#pricing" class="inline-flex rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-3 text-base font-medium text-[var(--text)] hover:bg-[var(--surface-hover)]">
 				View pricing
 			</a>
 		</div>
