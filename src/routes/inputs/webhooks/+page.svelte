@@ -1,6 +1,7 @@
 <script lang="ts">
 	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import InboundAuthTokenCard from '$lib/components/InboundAuthTokenCard.svelte';
+	import { showInputAnimations } from '$lib/stores/uiPrefs.js';
 
 	let { data, form } = $props();
 
@@ -16,6 +17,7 @@
 	description="Inbound import webhook: send JSON to create posts from Make.com, n8n, or your own scripts. Same webhook token as post notifications under Callbacks in this sidebar."
 />
 
+{#if $showInputAnimations}
 <div class="mt-6">
 	<h2 class="text-sm font-medium text-[var(--text-muted)]">How imports flow</h2>
 	<div
@@ -29,6 +31,7 @@
 		></iframe>
 	</div>
 </div>
+{/if}
 
 <InboundAuthTokenCard callbackTokenMasked={data.callbackTokenMasked} {form}>
 	{#snippet help()}

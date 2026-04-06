@@ -5,6 +5,7 @@
 	import { get } from 'svelte/store';
 	import { page } from '$app/stores';
 	import { initTheme, setPathnameForThemeMerge } from '$lib/stores/theme.js';
+	import { initUiPrefs } from '$lib/stores/uiPrefs.js';
 	import { toggleSidebar } from '$lib/stores/sidebar.js';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import MarketingSiteChrome from '$lib/components/MarketingSiteChrome.svelte';
@@ -18,6 +19,7 @@
 	onMount(() => {
 		setPathnameForThemeMerge(get(page).url.pathname);
 		initTheme();
+		initUiPrefs();
 	});
 
 	afterNavigate(({ to }) => {

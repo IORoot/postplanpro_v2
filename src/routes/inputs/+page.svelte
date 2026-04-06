@@ -7,6 +7,7 @@
 	import RssImporter from './importers/RssImporter.svelte';
 	import CsvImporter from './importers/CsvImporter.svelte';
 	import InboundAuthTokenCard from '$lib/components/InboundAuthTokenCard.svelte';
+	import { showInputAnimations } from '$lib/stores/uiPrefs.js';
 
 	let { data, form } = $props();
 
@@ -72,16 +73,18 @@
 
 {#if section === 'callbacks'}
 			<section class="mt-8" id="inputs-callbacks">
+			{#if $showInputAnimations}
 				<div class="mt-6">
 					<div class="mt-3 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
 						<iframe
 							title="Animated diagram: post notification callback loop"
-						class="block h-[min(52vh,520px)] w-full min-h-[320px] border-0"
-						src="/animation_import_callbacks.html"
+							class="block h-[420px] w-full border-0"
+							src="/animation_import_callbacks.html"
 							loading="eager"
 						></iframe>
 					</div>
 				</div>
+			{/if}
 
 				<InboundAuthTokenCard callbackTokenMasked={data.callbackTokenMasked} {form}>
 					{#snippet help()}
@@ -207,38 +210,36 @@
 				</div>
 			</section>
 	{:else}
-		{#if section === 'cms' && selectedSource === null}
+	{#if $showInputAnimations && selectedSource === null}
+		{#if section === 'cms'}
 			<div class="mt-4 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
 				<iframe
 					title="Animated diagram: CMS import flow"
-					class="block h-[min(52vh,480px)] w-full min-h-[320px] border-0"
+					class="block h-[420px] w-full border-0"
 					src="/animation_import_cms.html"
 					loading="eager"
 				></iframe>
 			</div>
-		{/if}
-
-		{#if section === 'spreadsheets' && selectedSource === null}
+		{:else if section === 'spreadsheets'}
 			<div class="mt-4 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
 				<iframe
 					title="Animated diagram: Spreadsheet import flow"
-					class="block h-[min(52vh,480px)] w-full min-h-[320px] border-0"
+					class="block h-[420px] w-full border-0"
 					src="/animation_import_spreadsheets.html"
 					loading="eager"
 				></iframe>
 			</div>
-		{/if}
-
-		{#if section === 'feeds' && selectedSource === null}
+		{:else if section === 'feeds'}
 			<div class="mt-4 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
 				<iframe
 					title="Animated diagram: RSS/Atom feed import flow"
-					class="block h-[min(52vh,480px)] w-full min-h-[320px] border-0"
+					class="block h-[420px] w-full border-0"
 					src="/animation_import_feeds.html"
 					loading="eager"
 				></iframe>
 			</div>
 		{/if}
+	{/if}
 
 		<p class="page-lead">
 				{#if selectedSource === 'wordpress'}
