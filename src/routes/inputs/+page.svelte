@@ -206,8 +206,41 @@
 					</div>
 				</div>
 			</section>
-		{:else}
-			<p class="page-lead">
+	{:else}
+		{#if section === 'cms' && selectedSource === null}
+			<div class="mt-4 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
+				<iframe
+					title="Animated diagram: CMS import flow"
+					class="block h-[min(52vh,480px)] w-full min-h-[320px] border-0"
+					src="/animation_import_cms.html"
+					loading="eager"
+				></iframe>
+			</div>
+		{/if}
+
+		{#if section === 'spreadsheets' && selectedSource === null}
+			<div class="mt-4 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
+				<iframe
+					title="Animated diagram: Spreadsheet import flow"
+					class="block h-[min(52vh,480px)] w-full min-h-[320px] border-0"
+					src="/animation_import_spreadsheets.html"
+					loading="eager"
+				></iframe>
+			</div>
+		{/if}
+
+		{#if section === 'feeds' && selectedSource === null}
+			<div class="mt-4 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
+				<iframe
+					title="Animated diagram: RSS/Atom feed import flow"
+					class="block h-[min(52vh,480px)] w-full min-h-[320px] border-0"
+					src="/animation_import_feeds.html"
+					loading="eager"
+				></iframe>
+			</div>
+		{/if}
+
+		<p class="page-lead">
 				{#if selectedSource === 'wordpress'}
 					Import posts from a WordPress site's REST API. Discover post types, map fields, then import.
 				{:else if selectedSource === 'squarespace'}

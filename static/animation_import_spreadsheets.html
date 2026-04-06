@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Spreadsheet Import Demo</title>
+		<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+		<style>
+			@font-face {
+				font-family: 'MD Thermochrome';
+				src: url('/fonts/MDThermochrome0.3-Medium.otf') format('opentype');
+				font-weight: 500;
+				font-style: normal;
+				font-display: swap;
+			}
+			:root { --font-md-thermochrome: 'MD Thermochrome', ui-sans-serif, system-ui, sans-serif; }
+			.font-md-thermochrome { font-family: var(--font-md-thermochrome); }
+			.intro-pipe-connector { z-index: 20; }
+			#ss_carousel_track { transition: transform 0.45s cubic-bezier(0.33, 1, 0.68, 1); }
+			@media (min-width: 768px) {
+				#ss_carousel_track { transition: none; transform: none !important; }
+			}
+			@media (prefers-reduced-motion: reduce) {
+				#ss_carousel_track { transition: none !important; }
+			}
+		</style>
+
+		<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+	</head>
+
+	<body class="p-2 xl:p-3 font-sans antialiased bg-black">
+	<div id="ss_root" class="font-md-thermochrome text-white flex flex-col gap-0">
+
+		<div id="ss_top_row" class="min-w-0 max-md:block md:grid md:grid-cols-3 md:items-start md:gap-3 xl:gap-4">
+
+			<div id="ss_carousel_viewport" class="max-md:w-full max-md:overflow-hidden md:contents touch-pan-y">
+				<div id="ss_carousel_track" class="flex max-md:w-[300%] md:contents max-md:will-change-transform">
+
+			<!-- ── SLIDE 1: SPREADSHEET ── -->
+			<div class="ss-slide max-md:w-[33.333%] max-md:shrink-0 max-md:box-border max-md:pr-2 md:contents">
+			<div id="ss_source"
+				class="min-w-0 bg-neutral-900 border border-neutral-800 px-2 py-2.5 xl:px-3 xl:py-3 flex flex-col gap-2 relative max-md:min-h-[240px]">
+
+				<div class="text-lg xl:text-xl leading-tight mb-0.5">SPREADSHEET</div>
+
+				<!-- CSV mini table — all rows highlight at once on import -->
+				<div class="border border-neutral-700 px-2 py-1.5 bg-neutral-800 shrink-0 min-w-0">
+					<div class="grid grid-cols-3 gap-1 text-xs xl:text-sm text-neutral-400 font-medium border-b border-neutral-600 pb-1 mb-1">
+						<span>Date</span><span>Title</span><span>Status</span>
+					</div>
+					<div id="ss_row_0" class="grid grid-cols-3 gap-1 text-xs xl:text-sm py-0.5 rounded">
+						<span class="text-neutral-400">Feb 1</span>
+						<span class="truncate">Launch post</span>
+						<span class="text-neutral-500">draft</span>
+					</div>
+					<div id="ss_row_1" class="grid grid-cols-3 gap-1 text-xs xl:text-sm py-0.5 rounded">
+						<span class="text-neutral-400">Feb 8</span>
+						<span class="truncate">Digest #12</span>
+						<span class="text-neutral-500">draft</span>
+					</div>
+					<div id="ss_row_2" class="grid grid-cols-3 gap-1 text-xs xl:text-sm py-0.5 rounded">
+						<span class="text-neutral-400">Feb 15</span>
+						<span class="truncate">How-to guide</span>
+						<span class="text-neutral-500">draft</span>
+					</div>
+				</div>
+
+				<!-- pipe right → Inputs -->
+				<svg id="ss_pipe_src_in" class="intro-pipe-connector max-md:hidden opacity-0 pointer-events-none"
+					xmlns="http://www.w3.org/2000/svg" width="36" height="14"
+					style="position:absolute; top:50%; right:-36px; transform:translateY(-50%); overflow:visible;">
+					<line class="pipe-line" x1="0" y1="7" x2="16" y2="7" stroke="#22c55e" stroke-width="1.5" fill="none"/>
+				</svg>
+			</div>
+			</div>
+
+			<!-- ── SLIDE 2: INPUTS ── -->
+			<div class="ss-slide max-md:w-[33.333%] max-md:shrink-0 max-md:box-border max-md:pr-2 md:contents">
+			<div id="ss_inputs"
+				class="min-w-0 bg-neutral-900 border border-neutral-800 px-2 py-2.5 xl:px-3 xl:py-3 flex flex-col gap-2 relative max-md:min-h-[240px]">
+
+				<div class="text-lg xl:text-xl leading-tight mb-0.5">INPUTS</div>
+
+				<!-- CSV / Spreadsheet — active, flashes on import -->
+				<div id="ss_input_csv" class="border border-neutral-700 px-2 py-1.5 flex gap-2 bg-neutral-800 shrink-0 min-w-0">
+					<svg class="w-5 h-5 shrink-0 my-auto" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<path fill="#22c55e" d="M1 2a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2zm1 0v3h3V2H2zm4 0v3h3V2H6zm4 0v3h3V2h-3zM2 6v3h3V6H2zm4 0v3h3V6H6zm4 0v3h3V6h-3zM2 10v3h3v-3H2zm4 0v3h3v-3H6zm4 0v3h3v-3h-3z"/>
+					</svg>
+					<p class="text-sm xl:text-base my-auto min-w-0 truncate leading-tight">CSV / Spreadsheet</p>
+				</div>
+
+				<!-- WebHooks — dimmed -->
+				<div class="border border-neutral-700 px-2 py-1.5 flex gap-2 bg-neutral-800 opacity-25 shrink-0 min-w-0">
+					<svg class="w-5 h-5 shrink-0 fill-white my-auto" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+						<path fill="#E71E62" d="M4.66659 14C3.74436 14 2.95836 13.6749 2.30859 13.0246C1.65881 12.3744 1.3337 11.5884 1.33325 10.6666C1.33325 9.85554 1.58614 9.14731 2.09192 8.54198C2.5977 7.93665 3.2337 7.55598 3.99992 7.39998V8.78331C3.61103 8.91665 3.2917 9.15554 3.04192 9.49998C2.79214 9.84443 2.66703 10.2333 2.66659 10.6666C2.66659 11.2222 2.86103 11.6944 3.24992 12.0833C3.63881 12.4722 4.11103 12.6666 4.66659 12.6666C5.22214 12.6666 5.69436 12.4722 6.08325 12.0833C6.47214 11.6944 6.66659 11.2222 6.66659 10.6666V9.99998H10.5833C10.6721 9.89998 10.7806 9.81931 10.9086 9.75798C11.0366 9.69665 11.1781 9.6662 11.3333 9.66665C11.611 9.66665 11.8473 9.76398 12.0419 9.95865C12.2366 10.1533 12.3337 10.3893 12.3333 10.6666C12.3328 10.944 12.2357 11.1802 12.0419 11.3753C11.8481 11.5704 11.6119 11.6675 11.3333 11.6666C11.1777 11.6666 11.0359 11.6362 10.9079 11.5753C10.7799 11.5144 10.6719 11.4338 10.5839 11.3333H7.93325C7.7777 12.1 7.39703 12.7362 6.79125 13.242C6.18547 13.7478 5.47725 14.0004 4.66659 14ZM11.3333 14C10.711 14 10.1473 13.8473 9.64192 13.542C9.13659 13.2366 8.73925 12.8338 8.44992 12.3333H10.2333C10.3888 12.4444 10.561 12.5278 10.7499 12.5833C10.9388 12.6389 11.1333 12.6666 11.3333 12.6666C11.8888 12.6666 12.361 12.4722 12.7499 12.0833C13.1388 11.6944 13.3333 11.2222 13.3333 10.6666C13.3333 10.1111 13.1388 9.63887 12.7499 9.24998C12.361 8.86109 11.8888 8.66665 11.3333 8.66665C11.111 8.66665 10.9055 8.69731 10.7166 8.75865C10.5277 8.81998 10.3499 8.91154 10.1833 9.03331L8.14992 5.64998C7.91659 5.60554 7.72214 5.49442 7.56659 5.31665C7.41103 5.13887 7.33325 4.9222 7.33325 4.66665C7.33325 4.38887 7.43059 4.15287 7.62525 3.95865C7.81992 3.76442 8.05592 3.66709 8.33325 3.66665C8.61059 3.6662 8.84681 3.76354 9.04192 3.95865C9.23703 4.15376 9.33414 4.38976 9.33325 4.66665V4.80865C9.33325 4.84731 9.32214 4.89442 9.29992 4.94998L10.7499 7.38331C10.8388 7.36109 10.9333 7.34731 11.0333 7.34198C11.1333 7.33665 11.2333 7.33376 11.3333 7.33331C12.2555 7.33331 13.0417 7.65843 13.6919 8.30865C14.3421 8.95887 14.667 9.74487 14.6666 10.6666C14.6661 11.5884 14.341 12.3746 13.6913 13.0253C13.0415 13.676 12.2555 14.0009 11.3333 14ZM4.66659 11.6666C4.38881 11.6666 4.15281 11.5695 3.95859 11.3753C3.76436 11.1811 3.66703 10.9449 3.66659 10.6666C3.66659 10.4222 3.74436 10.2111 3.89992 10.0333C4.05547 9.85554 4.24436 9.73887 4.46659 9.68331L6.03325 7.08331C5.71103 6.78331 5.45814 6.42509 5.27459 6.00865C5.09103 5.5922 4.99947 5.14487 4.99992 4.66665C4.99992 3.74442 5.32503 2.95842 5.97525 2.30865C6.62547 1.65887 7.41147 1.33376 8.33325 1.33331C9.25503 1.33287 10.0413 1.65798 10.6919 2.30865C11.3426 2.95931 11.6675 3.74531 11.6666 4.66665H10.3333C10.3333 4.11109 10.1388 3.63887 9.74992 3.24998C9.36103 2.86109 8.88881 2.66665 8.33325 2.66665C7.7777 2.66665 7.30547 2.86109 6.91659 3.24998C6.5277 3.63887 6.33325 4.11109 6.33325 4.66665C6.33325 5.14442 6.4777 5.56398 6.76659 5.92531C7.05547 6.28665 7.42214 6.51709 7.86659 6.61665L5.61659 10.3666C5.63881 10.4222 5.65281 10.4722 5.65859 10.5166C5.66436 10.5611 5.66703 10.6111 5.66659 10.6666C5.66659 10.9444 5.56947 11.1806 5.37525 11.3753C5.18103 11.57 4.94481 11.6671 4.66659 11.6666Z"/>
+					</svg>
+					<p class="text-sm xl:text-base my-auto min-w-0 truncate leading-tight">WebHooks</p>
+				</div>
+
+				<!-- Callbacks — dimmed -->
+				<div class="border border-neutral-700 px-2 py-1.5 flex gap-2 bg-neutral-800 opacity-25 shrink-0 min-w-0">
+					<svg class="w-5 h-5 shrink-0 fill-white my-auto" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+						<path fill="white" d="M1.33333 16H13.3333V14.6666H14.6667V2.66665H13.3333V1.33331H1.33333V2.66665H0V14.6666H1.33333V16ZM5.33333 13.3333V12H4V10.6666H2.66667V9.33331H4V7.99998H5.33333V6.66665H6.66667V7.99998H5.33333V9.33331H10.6667V5.33331H8V3.99998H10.6667V5.33331H12V9.33331H10.6667V10.6666H5.33333V12H6.66667V13.3333H5.33333Z"/>
+					</svg>
+					<p class="text-sm xl:text-base my-auto min-w-0 truncate leading-tight">Callbacks</p>
+				</div>
+
+				<!-- pipe right → Schedules/Calendar column -->
+				<svg id="ss_pipe_in_sched" class="intro-pipe-connector max-md:hidden opacity-0 pointer-events-none"
+					xmlns="http://www.w3.org/2000/svg" width="36" height="14"
+					style="position:absolute; top:50%; right:-36px; transform:translateY(-50%); overflow:visible;">
+					<line class="pipe-line" x1="0" y1="7" x2="16" y2="7" stroke="#22c55e" stroke-width="1.5" fill="none"/>
+				</svg>
+			</div>
+			</div>
+
+			<!-- ── SLIDE 3: SCHEDULES + CALENDAR (stacked) ── -->
+			<div class="ss-slide max-md:w-[33.333%] max-md:shrink-0 max-md:box-border max-md:pr-2 md:contents">
+			<div class="min-w-0 flex flex-col gap-3 xl:gap-4">
+
+				<!-- SCHEDULES panel -->
+				<div id="ss_schedules"
+					class="min-w-0 bg-neutral-900 border border-neutral-800 px-2 py-2.5 xl:px-3 xl:py-3 flex flex-col gap-2 relative">
+
+					<div class="text-lg xl:text-xl leading-tight mb-0.5">SCHEDULES</div>
+
+					<div id="ss_sched_0" class="border border-neutral-700 px-2 py-1.5 flex gap-2 bg-neutral-800 shrink-0 min-w-0 opacity-0">
+						<div class="flex-1 min-w-0 truncate text-sm xl:text-base leading-tight my-auto">📋 Sheet Imports</div>
+						<div class="shrink-0 bg-green-900 border border-green-700 px-1.5 py-0.5 text-xs leading-tight my-auto">daily</div>
+					</div>
+
+					<div id="ss_sched_1" class="border border-neutral-700 px-2 py-1.5 flex gap-2 bg-neutral-800 shrink-0 min-w-0 opacity-0">
+						<div class="flex-1 min-w-0 truncate text-sm xl:text-base leading-tight my-auto">🗓 Content Calendar</div>
+						<div class="shrink-0 bg-green-900 border border-green-700 px-1.5 py-0.5 text-xs leading-tight my-auto">weekly</div>
+					</div>
+
+					<!-- pipe down → Calendar -->
+					<svg id="ss_pipe_sched_cal" class="intro-pipe-connector opacity-0 pointer-events-none"
+						xmlns="http://www.w3.org/2000/svg" width="14" height="36"
+						style="position:absolute; bottom:-36px; left:50%; transform:translateX(-50%); overflow:visible;">
+						<line class="pipe-line" x1="7" y1="0" x2="7" y2="16" stroke="#22c55e" stroke-width="1.5" fill="none"/>
+					</svg>
+				</div>
+
+				<!-- CALENDAR panel -->
+				<div id="ss_calendar"
+					class="min-w-0 bg-neutral-900 border border-neutral-800 p-2 xl:p-3 flex flex-col gap-2 relative max-md:min-h-[200px]">
+
+					<div class="text-lg xl:text-xl leading-tight mb-0.5">CALENDAR</div>
+
+					<div id="ss_post_0" class="border border-neutral-700 p-2 bg-neutral-800 flex flex-col gap-1.5 opacity-0">
+						<div class="text-sm xl:text-base text-neutral-400 leading-tight">Feb 1</div>
+						<div class="px-2 py-1 text-sm xl:text-base leading-tight bg-green-900 border border-green-700 font-medium">Launch post</div>
+					</div>
+
+					<div id="ss_post_1" class="border border-neutral-700 p-2 bg-neutral-800 flex flex-col gap-1.5 opacity-0">
+						<div class="text-sm xl:text-base text-neutral-400 leading-tight">Feb 8</div>
+						<div class="px-2 py-1 text-sm xl:text-base leading-tight bg-green-900 border border-green-700 font-medium">Digest #12</div>
+					</div>
+
+					<div id="ss_post_2" class="border border-neutral-700 p-2 bg-neutral-800 flex flex-col gap-1.5 opacity-0">
+						<div class="text-sm xl:text-base text-neutral-400 leading-tight">Feb 15</div>
+						<div class="px-2 py-1 text-sm xl:text-base leading-tight bg-green-900 border border-green-700 font-medium">How-to guide</div>
+					</div>
+
+			</div>
+
+		</div>
+		</div>
+
+				</div>
+			</div>
+
+		<!-- Mobile: slide indicators -->
+	<div id="ss_carousel_dots" class="max-md:flex md:hidden items-center justify-center gap-2 py-2">
+		<button type="button" data-ss-dot="0" class="ss-dot h-2.5 w-2.5 rounded-full bg-neutral-600 transition-colors ring-offset-2 ring-offset-black focus:outline-none focus:ring-2 focus:ring-green-500/60" aria-label="Spreadsheet"></button>
+		<button type="button" data-ss-dot="1" class="ss-dot h-2.5 w-2.5 rounded-full bg-neutral-600 transition-colors ring-offset-2 ring-offset-black focus:outline-none focus:ring-2 focus:ring-green-500/60" aria-label="Inputs"></button>
+		<button type="button" data-ss-dot="2" class="ss-dot h-2.5 w-2.5 rounded-full bg-neutral-600 transition-colors ring-offset-2 ring-offset-black focus:outline-none focus:ring-2 focus:ring-green-500/60" aria-label="Schedules & Calendar"></button>
+	</div>
+	</div><!-- /ss_root -->
+
+	<script>
+		document.addEventListener('DOMContentLoaded', () => {
+
+			const DRAW_DUR   = 0.5;
+			const STREAM_DUR = 0.9;
+			const PAUSE      = 3.0;
+
+			const pipeStreamIntervals = new Set();
+			let waveGen = 0;
+
+			const mqCarousel = window.matchMedia('(max-width: 767px)');
+			function isCarouselMode() { return mqCarousel.matches; }
+
+			let carouselIndex = 0;
+			const SLIDE_SRC = 0, SLIDE_IN = 1, SLIDE_SCHED = 2;
+
+			function updateDots() {
+				document.querySelectorAll('#ss_carousel_dots .ss-dot').forEach((dot) => {
+					const i = Number(dot.getAttribute('data-ss-dot'));
+					const on = i === carouselIndex;
+					dot.classList.toggle('bg-green-500', on);
+					dot.classList.toggle('bg-neutral-600', !on);
+					dot.classList.toggle('scale-125', on);
+				});
+			}
+
+			function goTo(i, animate = true) {
+				if (!isCarouselMode()) return;
+				const track = document.getElementById('ss_carousel_track');
+				if (!track) return;
+				carouselIndex = Math.max(0, Math.min(2, i));
+				if (!animate) track.style.transition = 'none';
+				track.style.transform = `translateX(-${carouselIndex * 25}%)`;
+				if (!animate) { track.offsetHeight; track.style.transition = ''; }
+				updateDots();
+			}
+
+			function syncLayout() {
+				const track = document.getElementById('ss_carousel_track');
+				if (!track) return;
+				if (!isCarouselMode()) { track.style.transform = ''; carouselIndex = 0; updateDots(); }
+				else goTo(carouselIndex, false);
+			}
+
+			function pipeLen(el) {
+				if (!el) return 0;
+				if (el.getTotalLength) return el.getTotalLength();
+				const x1 = el.x1?.baseVal?.value ?? 0, x2 = el.x2?.baseVal?.value ?? 0;
+				const y1 = el.y1?.baseVal?.value ?? 0, y2 = el.y2?.baseVal?.value ?? 0;
+				return Math.hypot(x2 - x1, y2 - y1);
+			}
+
+			function resetLineSvg(svgEl, visible) {
+				if (!svgEl) return;
+				svgEl.querySelectorAll('.pipe-stream-pixel').forEach(n => n.remove());
+				const line = svgEl.querySelector('.pipe-line');
+				if (!line) return;
+				const len = pipeLen(line);
+				gsap.set(line, { strokeDasharray: len, strokeDashoffset: visible ? 0 : len, opacity: 1 });
+				svgEl.classList.toggle('opacity-0', !visible);
+				svgEl.classList.toggle('opacity-100', visible);
+			}
+
+			function clearStreams() {
+				pipeStreamIntervals.forEach(id => clearInterval(id));
+				pipeStreamIntervals.clear();
+				document.querySelectorAll('.pipe-stream-pixel').forEach(n => n.remove());
+				gsap.killTweensOf('.pipe-line');
+			}
+
+			function flashBorder(el, color, tl, position = '+=0') {
+				if (!el || !tl) return;
+				const base = getComputedStyle(el).borderColor;
+				tl.fromTo(el, { borderColor: base }, {
+					borderColor: color, repeat: 3, yoyo: true, duration: 0.12, ease: 'power2.inOut'
+				}, position);
+			}
+
+			function drawAndStream(masterTl, svgEl, gen, color, skipDraw) {
+				if (isCarouselMode()) {
+					masterTl.to({}, { duration: (skipDraw ? 0 : DRAW_DUR) + STREAM_DUR });
+					return;
+				}
+				const line = svgEl?.querySelector('.pipe-line');
+				if (!line) { masterTl.to({}, { duration: (skipDraw ? 0 : DRAW_DUR) + STREAM_DUR }); return; }
+
+				const len = pipeLen(line);
+				const dx  = Math.abs((line.x2?.baseVal?.value ?? 0) - (line.x1?.baseVal?.value ?? 0));
+				const dy  = Math.abs((line.y2?.baseVal?.value ?? 0) - (line.y1?.baseVal?.value ?? 0));
+				const vert = dy > dx;
+				const PW = vert ? 3 : 4, PH = vert ? 4 : 3, SPD = 0.18, INT = 55;
+				const x0 = (line.x1?.baseVal?.value ?? 0) - PW / 2;
+				const y0 = (line.y1?.baseVal?.value ?? 0) - PH / 2;
+				const tp = vert ? 'y' : 'x';
+				const td = len - (vert ? PH : PW);
+				const glow = vert ? `drop-shadow(0 3px 5px ${color})` : `drop-shadow(3px 0 5px ${color})`;
+
+				if (!skipDraw) {
+					masterTl.call(() => {
+						if (gen !== waveGen) return;
+						svgEl.querySelectorAll('.pipe-stream-pixel').forEach(n => n.remove());
+						svgEl.classList.remove('opacity-0'); svgEl.classList.add('opacity-100');
+						gsap.set(line, { strokeDasharray: len, strokeDashoffset: len, opacity: 1 });
+					});
+					masterTl.to(line, { strokeDashoffset: 0, duration: DRAW_DUR, ease: 'power2.inOut' });
+				}
+
+				masterTl.call(() => {
+					if (gen !== waveGen) return;
+					const t0 = performance.now();
+					const id = setInterval(() => {
+						if (gen !== waveGen || performance.now() - t0 > STREAM_DUR * 1000) {
+							clearInterval(id); pipeStreamIntervals.delete(id); return;
+						}
+						const px = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+						px.classList.add('pipe-stream-pixel');
+						px.setAttribute('width', PW); px.setAttribute('height', PH);
+						px.setAttribute('x', x0); px.setAttribute('y', y0);
+						px.setAttribute('fill', color); px.setAttribute('rx', '1');
+						svgEl.appendChild(px);
+						gsap.fromTo(px, { [tp]: 0, opacity: 1 }, {
+							[tp]: td, duration: SPD, ease: 'none',
+							filter: `blur(1px) ${glow}`,
+							onComplete() { if (svgEl.contains(px)) svgEl.removeChild(px); }
+						});
+					}, INT);
+					pipeStreamIntervals.add(id);
+				});
+				masterTl.to({}, { duration: STREAM_DUR });
+			}
+
+			function resetAll() {
+				clearStreams();
+				['ss_pipe_src_in', 'ss_pipe_in_sched', 'ss_pipe_sched_cal'].forEach(id => {
+					resetLineSvg(document.getElementById(id), false);
+				});
+				gsap.set('#ss_input_csv', { clearProps: 'borderColor' });
+				gsap.set(['#ss_sched_0', '#ss_sched_1'], { opacity: 0 });
+				gsap.set(['#ss_post_0', '#ss_post_1', '#ss_post_2'], { opacity: 0 });
+				// Reset row highlights
+				for (let i = 0; i < 3; i++) {
+					const r = document.getElementById(`ss_row_${i}`);
+					if (r) gsap.set(r, { clearProps: 'backgroundColor,color' });
+				}
+			}
+
+			function runCycle() {
+				waveGen++;
+				const gen = waveGen;
+				resetAll();
+
+				if (isCarouselMode()) goTo(SLIDE_SRC, false);
+
+				const tl = gsap.timeline({
+					defaults: { ease: 'power2.out' },
+					onComplete: () => gsap.delayedCall(PAUSE, runCycle)
+				});
+
+				// Highlight all spreadsheet rows at once (bulk read)
+				tl.call(() => {
+					if (gen !== waveGen) return;
+					if (isCarouselMode()) goTo(SLIDE_SRC);
+					for (let i = 0; i < 3; i++) {
+						const r = document.getElementById(`ss_row_${i}`);
+						if (r) gsap.fromTo(r,
+							{ backgroundColor: 'transparent' },
+							{ backgroundColor: 'rgba(34,197,94,0.18)', repeat: 1, yoyo: true, duration: 0.2, ease: 'power2.inOut',
+							  onComplete: () => gsap.set(r, { clearProps: 'backgroundColor' }) }
+						);
+					}
+				}, null, '+=0.3');
+
+				tl.to({}, { duration: 0.6 });
+
+				// Source → Inputs pipe
+				drawAndStream(tl, document.getElementById('ss_pipe_src_in'), gen, '#22c55e', false);
+
+				tl.call(() => {
+					if (gen !== waveGen) return;
+					if (isCarouselMode()) goTo(SLIDE_IN);
+				});
+
+				// Flash Inputs CSV row
+				flashBorder(document.getElementById('ss_input_csv'), '#22c55e', tl, '+=0');
+
+				// Inputs → Schedules pipe
+				drawAndStream(tl, document.getElementById('ss_pipe_in_sched'), gen, '#22c55e', false);
+
+				tl.call(() => {
+					if (gen !== waveGen) return;
+					if (isCarouselMode()) goTo(SLIDE_SCHED);
+				});
+
+				// Schedules appear (all at once)
+				tl.to('#ss_sched_0', { opacity: 1, duration: 0.25 }, '+=0.1');
+				tl.to('#ss_sched_1', { opacity: 1, duration: 0.25 }, '<0.1');
+
+				flashBorder(document.getElementById('ss_sched_0'), '#22c55e', tl, '+=0.15');
+
+				// Schedules → Calendar pipe (vertical)
+				drawAndStream(tl, document.getElementById('ss_pipe_sched_cal'), gen, '#22c55e', false);
+
+				// All calendar posts appear rapidly
+				tl.to('#ss_post_0', { opacity: 1, duration: 0.3 }, '+=0.1');
+				tl.to('#ss_post_1', { opacity: 1, duration: 0.3 }, '<0.15');
+				tl.to('#ss_post_2', { opacity: 1, duration: 0.3 }, '<0.15');
+
+				flashBorder(document.getElementById('ss_post_0'), '#22c55e', tl, '+=0.15');
+				flashBorder(document.getElementById('ss_post_1'), '#22c55e', tl, '+=0.1');
+				flashBorder(document.getElementById('ss_post_2'), '#22c55e', tl, '+=0.1');
+
+				// Calendar → Platforms pipe
+			}
+
+			document.querySelectorAll('#ss_carousel_dots .ss-dot').forEach((dot) => {
+				dot.addEventListener('click', () => goTo(Number(dot.getAttribute('data-ss-dot'))));
+			});
+
+			const vp = document.getElementById('ss_carousel_viewport');
+			if (vp) {
+				let swipeX = 0;
+				vp.addEventListener('touchstart', e => { swipeX = e.touches[0].clientX; }, { passive: true });
+				vp.addEventListener('touchend', e => {
+					if (!isCarouselMode()) return;
+					const dx = e.changedTouches[0].clientX - swipeX;
+					if (dx < -48) goTo(carouselIndex + 1);
+					else if (dx > 48) goTo(carouselIndex - 1);
+				}, { passive: true });
+			}
+
+			mqCarousel.addEventListener('change', syncLayout);
+			window.addEventListener('resize', syncLayout);
+
+			updateDots();
+			if (isCarouselMode()) goTo(SLIDE_SRC, false);
+			runCycle();
+		});
+	</script>
+
+	</body>
+</html>
