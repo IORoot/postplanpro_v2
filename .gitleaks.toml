@@ -1,0 +1,12 @@
+# Extends built-in rules; add allowlists for known doc/test false positives.
+# https://github.com/gitleaks/gitleaks/blob/master/README.md#configuration
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Doc curl examples: X-Callback-Token with YOUR_* placeholder (UI copy-paste snippets)"
+regexTarget = "line"
+regexes = [
+  '''X-Callback-Token:\s*YOUR_[A-Z_]+''',
+]
