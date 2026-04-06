@@ -847,7 +847,7 @@
 				<div class="content-card mt-4 rounded-xl p-6 shadow-sm">
 					<h2 class="text-base font-semibold text-[var(--text)]">Input animations</h2>
 					<p class="mt-1 text-sm text-[var(--text-muted)]">
-						Show or hide the animated diagrams at the top of each Inputs page. Your choice is remembered in this browser.
+						Show or hide the animated diagrams on Inputs and Outputs pages. Your choice is remembered in this browser.
 					</p>
 					<div class="mt-4 flex flex-wrap items-center gap-4">
 						<p class="text-sm text-[var(--text)]">

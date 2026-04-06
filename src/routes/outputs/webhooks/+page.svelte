@@ -2,6 +2,7 @@
 	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import { showInputAnimations } from '$lib/stores/uiPrefs.js';
 
 	let { data, form } = $props();
 
@@ -25,14 +26,21 @@
 </svelte:head>
 
 <PageSectionHeading
-	title="Outputs"
+	title="Webhooks"
 	description="Webhook endpoints for scheduled posts. Each can have an API key (x-make-apikey) and optional HTTP headers."
 />
 
 <section class="mt-8" id="outputs-webhooks">
-	<div class="mb-6 w-full overflow-hidden rounded-xl bg-[var(--surface)]">
-		<img src="/Send.svg" alt="Outputs: send content to webhooks" class="block h-auto max-w-full object-contain" />
-	</div>
+	{#if $showInputAnimations}
+		<div class="mb-6 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
+			<iframe
+				title="Animated diagram: calendar to webhook output flow"
+				class="block h-[420px] w-full border-0"
+				src="/animation_output_webhooks.html"
+				loading="eager"
+			></iframe>
+		</div>
+	{/if}
 
 	{#if (form as { error?: string })?.error}
 		<div
