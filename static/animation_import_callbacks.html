@@ -17,6 +17,13 @@
 			:root { --font-md-thermochrome: 'MD Thermochrome', ui-sans-serif, system-ui, sans-serif; }
 			.font-md-thermochrome { font-family: var(--font-md-thermochrome); }
 			.intro-pipe-connector { z-index: 20; }
+			#cb_carousel_track { transition: transform 0.45s cubic-bezier(0.33, 1, 0.68, 1); }
+			@media (min-width: 768px) {
+				#cb_carousel_track { transition: none; transform: none !important; }
+			}
+			@media (prefers-reduced-motion: reduce) {
+				#cb_carousel_track { transition: none !important; }
+			}
 		</style>
 
 		<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
@@ -25,12 +32,16 @@
 	<body class="p-2 xl:p-3 font-sans antialiased bg-black">
 	<div id="cb_root" class="font-md-thermochrome text-white flex flex-col gap-0">
 
-		<!-- ── Top row: four equal columns (25% each) ───────────────────── -->
-		<div id="cb_top_row" class="grid grid-cols-4 items-stretch gap-3 xl:gap-4 min-w-0">
+		<!-- ── Top: desktop = 4 columns; mobile = horizontal carousel ───── -->
+		<div id="cb_top_row" class="min-w-0 max-md:block md:grid md:grid-cols-4 md:items-stretch md:gap-3 xl:gap-4">
 
+			<div id="cb_carousel_viewport" class="max-md:w-full max-md:overflow-hidden md:contents touch-pan-y">
+				<div id="cb_carousel_track" class="flex max-md:w-[400%] md:contents max-md:will-change-transform">
+
+			<div class="cb-slide max-md:w-[25%] max-md:shrink-0 max-md:box-border max-md:pr-2 md:contents">
 			<!-- ── 1. INPUTS ────────────────────────────────────────────────── -->
 			<div id="cb_inputs"
-				class="min-w-0 bg-neutral-900 border border-neutral-800 px-2 py-2.5 xl:px-3 xl:py-3 flex flex-col gap-2 relative h-full min-h-0">
+				class="min-w-0 bg-neutral-900 border border-neutral-800 px-2 py-2.5 xl:px-3 xl:py-3 flex flex-col gap-2 relative md:h-full min-h-0 max-md:min-h-[240px]">
 
 				<div class="text-lg xl:text-xl leading-tight mb-0.5">INPUTS</div>
 
@@ -58,16 +69,18 @@
 				</div>
 
 				<!-- pipe right → Calendar -->
-				<svg id="pipe_inputs_to_cal" class="intro-pipe-connector opacity-0 pointer-events-none"
+				<svg id="pipe_inputs_to_cal" class="intro-pipe-connector max-md:hidden opacity-0 pointer-events-none"
 					xmlns="http://www.w3.org/2000/svg" width="36" height="14"
 					style="position:absolute; top:50%; right:-36px; transform:translateY(-50%); overflow:visible;">
 					<line class="pipe-line" x1="0" y1="7" x2="16" y2="7" stroke="#22c55e" stroke-width="1.5" fill="none"/>
 				</svg>
 			</div>
+			</div>
 
+			<div class="cb-slide max-md:w-[25%] max-md:shrink-0 max-md:box-border max-md:pr-2 md:contents">
 			<!-- ── 2. CALENDAR ───────────────────────────────────────────────── -->
 			<div id="cb_calendar"
-				class="min-w-0 bg-neutral-900 border border-neutral-800 p-2 xl:p-3 flex flex-col gap-2 relative h-full min-h-0">
+				class="min-w-0 bg-neutral-900 border border-neutral-800 p-2 xl:p-3 flex flex-col gap-2 relative md:h-full min-h-0 max-md:min-h-[280px]">
 
 				<div class="text-lg xl:text-xl leading-tight mb-0.5">CALENDAR</div>
 
@@ -91,16 +104,18 @@
 				</div>
 
 				<!-- pipe right → Outputs -->
-				<svg id="pipe_cal_to_out" class="intro-pipe-connector opacity-0 pointer-events-none"
+				<svg id="pipe_cal_to_out" class="intro-pipe-connector max-md:hidden opacity-0 pointer-events-none"
 					xmlns="http://www.w3.org/2000/svg" width="36" height="14"
 					style="position:absolute; top:50%; right:-36px; transform:translateY(-50%); overflow:visible;">
 					<line class="pipe-line" x1="0" y1="7" x2="16" y2="7" stroke="#22c55e" stroke-width="1.5" fill="none"/>
 				</svg>
 			</div>
+			</div>
 
+			<div class="cb-slide max-md:w-[25%] max-md:shrink-0 max-md:box-border max-md:pr-2 md:contents">
 			<!-- ── 3. OUTPUTS (same list as animation_responsive.html) ─────────── -->
 			<div id="cb_output"
-				class="min-w-0 bg-neutral-900 border border-neutral-800 p-2 xl:p-3 flex flex-col gap-2 relative h-full min-h-0">
+				class="min-w-0 bg-neutral-900 border border-neutral-800 p-2 xl:p-3 flex flex-col gap-2 relative md:h-full min-h-0 max-md:min-h-[280px]">
 
 				<div class="text-lg xl:text-xl leading-tight shrink-0">OUTPUTS</div>
 
@@ -134,16 +149,18 @@
 				</div>
 
 				<!-- pipe right → Platforms -->
-				<svg id="pipe_out_to_plat" class="intro-pipe-connector opacity-0 pointer-events-none"
+				<svg id="pipe_out_to_plat" class="intro-pipe-connector max-md:hidden opacity-0 pointer-events-none"
 					xmlns="http://www.w3.org/2000/svg" width="36" height="14"
 					style="position:absolute; top:50%; right:-36px; transform:translateY(-50%); overflow:visible;">
 					<line class="pipe-line" x1="0" y1="7" x2="16" y2="7" stroke="#22c55e" stroke-width="1.5" fill="none"/>
 				</svg>
 			</div>
+			</div>
 
+			<div class="cb-slide max-md:w-[25%] max-md:shrink-0 max-md:box-border max-md:pr-2 md:contents">
 			<!-- ── 4. PLATFORMS (icons match animation_responsive.html) ───────── -->
 			<div id="cb_platforms"
-				class="min-w-0 bg-neutral-900 border border-neutral-800 p-2.5 xl:p-3 flex flex-col gap-2 relative h-full min-h-0 overflow-x-hidden">
+				class="min-w-0 bg-neutral-900 border border-neutral-800 p-2.5 xl:p-3 flex flex-col gap-2 relative md:h-full min-h-0 overflow-x-hidden max-md:min-h-[280px]">
 
 				<div class="text-lg xl:text-xl leading-tight shrink-0">PLATFORMS</div>
 
@@ -201,10 +218,22 @@
 				</div>
 
 			</div>
+			</div>
+
+				</div>
+			</div>
+
+			<!-- Mobile: slide indicators -->
+			<div id="cb_carousel_dots" class="max-md:flex md:hidden items-center justify-center gap-2 py-2">
+				<button type="button" data-cb-dot="0" class="cb-dot h-2.5 w-2.5 rounded-full bg-neutral-600 transition-colors ring-offset-2 ring-offset-black focus:outline-none focus:ring-2 focus:ring-green-500/60" aria-label="Inputs"></button>
+				<button type="button" data-cb-dot="1" class="cb-dot h-2.5 w-2.5 rounded-full bg-neutral-600 transition-colors ring-offset-2 ring-offset-black focus:outline-none focus:ring-2 focus:ring-green-500/60" aria-label="Calendar"></button>
+				<button type="button" data-cb-dot="2" class="cb-dot h-2.5 w-2.5 rounded-full bg-neutral-600 transition-colors ring-offset-2 ring-offset-black focus:outline-none focus:ring-2 focus:ring-green-500/60" aria-label="Outputs"></button>
+				<button type="button" data-cb-dot="3" class="cb-dot h-2.5 w-2.5 rounded-full bg-neutral-600 transition-colors ring-offset-2 ring-offset-black focus:outline-none focus:ring-2 focus:ring-green-500/60" aria-label="Platforms"></button>
+			</div>
 		</div>
 
-		<!-- ── Return pipe: spans the full width below, from Platforms back to Inputs ── -->
-		<div id="pipe_return_wrap" style="position:relative; height:40px; pointer-events:none;">
+		<!-- ── Return pipe: desktop only (layout is horizontal on mobile) ── -->
+		<div id="pipe_return_wrap" class="hidden md:block" style="position:relative; height:40px; pointer-events:none;">
 			<svg id="pipe_return_svg" xmlns="http://www.w3.org/2000/svg"
 				style="position:absolute; top:0; left:0; width:100%; height:100%; overflow:visible;">
 				<path id="pipe_return_path" class="pipe-line" fill="none"
@@ -225,6 +254,54 @@
 
 			const pipeStreamIntervals = new Set();
 			let waveGen = 0;
+
+			const mqCarousel = window.matchMedia('(max-width: 767px)');
+			function isCarouselMode() {
+				return mqCarousel.matches;
+			}
+
+			let carouselIndex = 0;
+			const SLIDE_INPUTS = 0;
+			const SLIDE_CALENDAR = 1;
+			const SLIDE_OUTPUTS = 2;
+			const SLIDE_PLATFORMS = 3;
+
+			function updateCarouselDots() {
+				if (!isCarouselMode()) return;
+				document.querySelectorAll('#cb_carousel_dots .cb-dot').forEach((dot) => {
+					const i = Number(dot.getAttribute('data-cb-dot'));
+					const on = i === carouselIndex;
+					dot.classList.toggle('bg-green-500', on);
+					dot.classList.toggle('bg-neutral-600', !on);
+					dot.classList.toggle('scale-125', on);
+				});
+			}
+
+			function goToCarouselSlide(i, animate = true) {
+				if (!isCarouselMode()) return;
+				const track = document.getElementById('cb_carousel_track');
+				if (!track) return;
+				carouselIndex = Math.max(0, Math.min(3, i));
+				if (!animate) track.style.transition = 'none';
+				track.style.transform = `translateX(-${carouselIndex * 25}%)`;
+				if (!animate) {
+					track.offsetHeight;
+					track.style.transition = '';
+				}
+				updateCarouselDots();
+			}
+
+			function syncCarouselLayout() {
+				const track = document.getElementById('cb_carousel_track');
+				if (!track) return;
+				if (!isCarouselMode()) {
+					track.style.transform = '';
+					carouselIndex = 0;
+					updateCarouselDots();
+				} else {
+					goToCarouselSlide(carouselIndex, false);
+				}
+			}
 
 			/* ── generic helpers ─────────────────────────────────────────────── */
 
@@ -264,6 +341,10 @@
 
 			/* Draw a straight-line pipe SVG then stream pixels along it */
 			function drawAndStream(masterTl, svgEl, gen, color, skipDraw) {
+				if (isCarouselMode()) {
+					masterTl.to({}, { duration: (skipDraw ? 0 : DRAW_DUR) + STREAM_DUR });
+					return;
+				}
 				const line = svgEl?.querySelector('.pipe-line');
 				if (!line) { masterTl.to({}, { duration: (skipDraw ? 0 : DRAW_DUR) + STREAM_DUR }); return; }
 
@@ -314,6 +395,10 @@
 
 			/* Draw/stream the return path (SVG <path> element) */
 			function drawAndStreamPath(masterTl, gen, skipDraw) {
+				if (isCarouselMode()) {
+					masterTl.to({}, { duration: (skipDraw ? 0 : DRAW_DUR * 1.4) + STREAM_DUR });
+					return;
+				}
 				const svg  = document.getElementById('pipe_return_svg');
 				const path = document.getElementById('pipe_return_path');
 				if (!path) { masterTl.to({}, { duration: (skipDraw ? 0 : DRAW_DUR) + STREAM_DUR }); return; }
@@ -372,6 +457,7 @@
 
 			/* ── Build the U-bend return path from Platforms bottom → down → left → Inputs bottom ── */
 			function buildReturnPath() {
+				if (isCarouselMode()) return;
 				const platEl   = document.getElementById('cb_platforms');
 				const inputsEl = document.getElementById('cb_inputs');
 				const wrapEl   = document.getElementById('pipe_return_wrap');
@@ -447,6 +533,7 @@
 				const gen = waveGen;
 				buildReturnPath();
 				resetAll();
+				if (isCarouselMode()) goToCarouselSlide(SLIDE_CALENDAR, false);
 
 				const pipeCtoO   = document.getElementById('pipe_cal_to_out');
 				const pipeOtoP   = document.getElementById('pipe_out_to_plat');
@@ -468,6 +555,7 @@
 					// Show "sending…" on the post
 					tl.call(() => {
 						if (gen !== waveGen) return;
+						if (isCarouselMode()) goToCarouselSlide(SLIDE_CALENDAR);
 						if (statusEl) {
 							statusEl.textContent = '⏳ sending…';
 							statusEl.className = 'text-xs xl:text-sm leading-tight text-neutral-500';
@@ -481,6 +569,11 @@
 					// Calendar → Outputs pipe
 					drawAndStream(tl, pipeCtoO, gen, '#22c55e', i > 0);
 
+					tl.call(() => {
+						if (gen !== waveGen) return;
+						if (isCarouselMode()) goToCarouselSlide(SLIDE_OUTPUTS);
+					});
+
 					// Make.com row — flash when flow hits outputs (after pipe)
 					flashBorder(outputMakeEl, '#6d28d9', tl, '+=0');
 
@@ -492,6 +585,11 @@
 					// Outputs → Platforms pipe
 					drawAndStream(tl, pipeOtoP, gen, '#22c55e', i > 0);
 
+					tl.call(() => {
+						if (gen !== waveGen) return;
+						if (isCarouselMode()) goToCarouselSlide(SLIDE_PLATFORMS);
+					});
+
 					// Instagram published
 					flashBorder(instagramEl, '#FF0069', tl, '+=0');
 					tl.to({}, { duration: 0.25 });
@@ -502,11 +600,21 @@
 					// Return pipe: Platforms → down → left → Inputs
 					drawAndStreamPath(tl, gen, i > 0);
 
+					tl.call(() => {
+						if (gen !== waveGen) return;
+						if (isCarouselMode()) goToCarouselSlide(SLIDE_INPUTS);
+					});
+
 					// Callbacks input — webhook received
 					flashBorder(callbacksEl, '#22c55e', tl, '+=0');
 
 					// Inputs → Calendar update pipe
 					drawAndStream(tl, pipeItoC, gen, '#22c55e', i > 0);
+
+					tl.call(() => {
+						if (gen !== waveGen) return;
+						if (isCarouselMode()) goToCarouselSlide(SLIDE_CALENDAR);
+					});
 
 					// Update post status in calendar
 					tl.call(() => {
@@ -521,7 +629,32 @@
 				}
 			}
 
-			window.addEventListener('resize', buildReturnPath);
+			document.querySelectorAll('#cb_carousel_dots .cb-dot').forEach((dot) => {
+				dot.addEventListener('click', () => goToCarouselSlide(Number(dot.getAttribute('data-cb-dot'))));
+			});
+
+			const vp = document.getElementById('cb_carousel_viewport');
+			if (vp) {
+				let swipeX = 0;
+				vp.addEventListener('touchstart', (e) => {
+					swipeX = e.touches[0].clientX;
+				}, { passive: true });
+				vp.addEventListener('touchend', (e) => {
+					if (!isCarouselMode()) return;
+					const dx = e.changedTouches[0].clientX - swipeX;
+					if (dx < -48) goToCarouselSlide(carouselIndex + 1);
+					else if (dx > 48) goToCarouselSlide(carouselIndex - 1);
+				}, { passive: true });
+			}
+
+			mqCarousel.addEventListener('change', syncCarouselLayout);
+			window.addEventListener('resize', () => {
+				buildReturnPath();
+				syncCarouselLayout();
+			});
+
+			updateCarouselDots();
+			if (isCarouselMode()) goToCarouselSlide(SLIDE_CALENDAR, false);
 			runCycle();
 		});
 	</script>

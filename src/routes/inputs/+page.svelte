@@ -34,30 +34,49 @@
 			!(form as { squarespace_discovered?: boolean })?.squarespace_discovered &&
 			!(form as { csv_import_id?: string })?.csv_import_id
 	);
+
+	const pageHeadingTitle = $derived.by(() => {
+		switch (section) {
+			case 'callbacks':
+				return 'Callbacks';
+			case 'spreadsheets':
+				return 'Spreadsheets';
+			case 'feeds':
+				return 'Feeds';
+			case 'cms':
+			default:
+				return 'CMS';
+		}
+	});
+
+	const pageHeadingDescription = $derived.by(() => {
+		switch (section) {
+			case 'callbacks':
+				return 'Post notification webhooks: tell PostPlan when a sent post reaches a stage in Make.com (or similar).';
+			case 'spreadsheets':
+				return 'Import posts from CSV files. Upload a spreadsheet, set delimiter and headers, map columns to PostPlan fields, and create posts in bulk.';
+			case 'feeds':
+				return 'Import posts from RSS or Atom feeds. Add a feed URL, map entries to your post model, and pull items into PostPlan.';
+			case 'cms':
+			default:
+				return 'Import posts from WordPress, Squarespace, or other CMS sources. Connect your site, discover content, map fields, and import into PostPlan.';
+		}
+	});
 </script>
 
 <svelte:head>
-	<title>Inputs – PostPlan</title>
+	<title>{pageHeadingTitle} – Inputs – PostPlan</title>
 </svelte:head>
 
-<PageSectionHeading
-	title="Inputs"
-	description="Import from CMS, spreadsheets, and feeds. Post notification callbacks live under Callbacks; import webhook under Webhooks in the sidebar."
-/>
+<PageSectionHeading title={pageHeadingTitle} description={pageHeadingDescription} />
 
 {#if section === 'callbacks'}
 			<section class="mt-8" id="inputs-callbacks">
-				<h2 class="text-lg font-medium text-[var(--text)]">Callbacks</h2>
-				<p class="mt-1 text-sm text-[var(--text-muted)]">
-					Post notification webhooks: tell PostPlan when a sent post reaches a stage in Make.com (or similar).
-				</p>
-
 				<div class="mt-6">
-					<h3 class="text-sm font-medium text-[var(--text-muted)]">How callbacks flow</h3>
 					<div class="mt-3 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
 						<iframe
 							title="Animated diagram: post notification callback loop"
-						class="block h-[min(52vh,620px)] w-full min-h-[320px] border-0"
+						class="block h-[min(52vh,520px)] w-full min-h-[320px] border-0"
 						src="/animation_import_callbacks.html"
 							loading="eager"
 						></iframe>
