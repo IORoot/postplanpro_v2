@@ -1,5 +1,9 @@
 <script lang="ts">
-	import FeatureSectionAnimation from '$lib/components/FeatureSectionAnimation.svelte';
+	import TechnicalScreenshotGallery from '$lib/components/TechnicalScreenshotGallery.svelte';
+	import type { TechnicalShot } from '$lib/components/TechnicalScreenshotGallery.svelte';
+	import screenshotManifest from './screenshots.manifest.json';
+
+	const shots = screenshotManifest as Record<string, TechnicalShot[]>;
 
 	const planTableRows = [
 		{ benefit: 'Posts sent per month', free: '20', pro: '500', enterprise: 'Unlimited' },
@@ -118,6 +122,9 @@
 		<p class="mt-3 max-w-2xl text-sm text-[var(--text-muted)]" style="line-height: 1.6;">
 			All plans include every feature. The only differences are the monthly usage quotas and access to admin and billing capabilities.
 		</p>
+		<div class="mt-8 max-w-4xl">
+			<TechnicalScreenshotGallery items={shots.plans ?? []} />
+		</div>
 		<div class="mt-8 overflow-x-auto">
 			<table class="w-full min-w-[640px] border-collapse rounded-xl border border-[var(--border)] bg-[var(--surface)]">
 				<thead>
@@ -147,7 +154,10 @@
 <section id="sending" class="border-b border-[var(--border)] bg-[var(--surface)] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
 	<div class="mx-auto max-w-6xl">
 		<h2 class="text-2xl font-semibold tracking-tight text-[var(--text)]" style="letter-spacing: -0.02em;">How sending works</h2>
-		<div class="mt-6 grid gap-12 lg:grid-cols-2 lg:gap-16 items-start">
+		<div class="mt-6 max-w-4xl">
+			<TechnicalScreenshotGallery items={shots.sending ?? []} />
+		</div>
+		<div class="mt-10 grid gap-12 lg:grid-cols-2 lg:gap-16 items-start">
 			<div class="space-y-5 text-sm text-[var(--text-muted)]" style="line-height: 1.75;">
 				<p>
 					PostPlan runs a cron job every minute that queries for posts whose <code class="rounded bg-[var(--bg)] px-1 py-0.5 font-mono text-xs text-[var(--text)]">scheduled_at</code> timestamp is in the past and whose status is <code class="rounded bg-[var(--bg)] px-1 py-0.5 font-mono text-xs text-[var(--text)]">scheduled</code>. For each matching post it builds the outbound JSON payload by merging: the post's own fields (title, body, custom fields), the schedule's custom fields if a schedule is assigned, the account's global variables, and — if a JSON override is set — replacing all of the above with the override JSON entirely. The result is sent as an HTTP POST to the output webhook's URL with the configured headers.
@@ -208,7 +218,10 @@
 <section id="limits" class="border-b border-[var(--border)] bg-[var(--bg)] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
 	<div class="mx-auto max-w-6xl">
 		<h2 class="text-2xl font-semibold tracking-tight text-[var(--text)]" style="letter-spacing: -0.02em;">Limits model</h2>
-		<div class="mt-6 grid gap-8 lg:grid-cols-3">
+		<div class="mt-6 max-w-4xl">
+			<TechnicalScreenshotGallery items={shots.limits ?? []} />
+		</div>
+		<div class="mt-10 grid gap-8 lg:grid-cols-3">
 			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
 				<h3 class="text-sm font-semibold text-[var(--text)]">Posts per month</h3>
 				<p class="mt-3 text-sm text-[var(--text-muted)]" style="line-height: 1.7;">
@@ -233,9 +246,14 @@
 
 <!-- 7 Feature sections — alternating layout with shared animations -->
 {#each sections as s, idx}
+	{@const secShots = shots[String(s.n)] ?? []}
 	<section class="border-b border-[var(--border)] {idx % 2 === 0 ? 'bg-[var(--surface)]' : 'bg-[var(--bg)]'} px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
 		<div class="mx-auto max-w-6xl">
-			<div class="grid items-start gap-12 lg:grid-cols-2 lg:gap-16 {idx % 2 === 1 ? 'lg:[&>*:first-child]:order-last' : ''}">
+			<div
+				class="grid items-start gap-12 {secShots.length > 0
+					? `lg:grid-cols-2 lg:gap-16 ${idx % 2 === 1 ? 'lg:[&>*:first-child]:order-last' : ''}`
+					: ''}"
+			>
 				<!-- Text column -->
 				<div>
 					<p class="text-xs font-medium uppercase tracking-widest text-[var(--primary)]">{s.eyebrow}</p>
@@ -255,10 +273,12 @@
 						{@html s.body}
 					</p>
 				</div>
-				<!-- Animation column -->
-				<div class="overflow-hidden rounded-xl border border-[var(--border)] aspect-[4/3] lg:sticky lg:top-24">
-					<FeatureSectionAnimation section={s.n} class="w-full h-full" />
-				</div>
+				<!-- Interface screenshots -->
+				{#if secShots.length > 0}
+					<div class="lg:sticky lg:top-24">
+						<TechnicalScreenshotGallery items={secShots} />
+					</div>
+				{/if}
 			</div>
 		</div>
 	</section>

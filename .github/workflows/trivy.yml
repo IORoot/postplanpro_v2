@@ -8,6 +8,8 @@ on:
 permissions:
   contents: read
   security-events: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: trivy-${{ github.workflow }}-${{ github.ref }}
@@ -36,8 +38,9 @@ jobs:
             | sudo tar -xzf - -C /usr/local/bin trivy
           trivy --version
 
-      - name: Run Trivy fs scan
+      - name: Run Trivy fs scan (SARIF + JSON)
         run: |
+          set -eux
           trivy fs \
             --severity CRITICAL,HIGH,MEDIUM \
             --ignore-unfixed \
@@ -45,6 +48,29 @@ jobs:
             --exit-code 0 \
             --output trivy-results.sarif \
             .
+          trivy fs \
+            --severity CRITICAL,HIGH,MEDIUM \
+            --ignore-unfixed \
+            --format json \
+            --exit-code 0 \
+            --output trivy-results.json \
+            .
+
+      - name: Fetch HTML report template
+        run: |
+          set -eux
+          curl -sSfL "https://raw.githubusercontent.com/aquasecurity/trivy/v${TRIVY_VERSION}/contrib/html.tpl" -o html.tpl
+
+      - name: Build static site for GitHub Pages
+        run: |
+          set -eux
+          mkdir -p trivy-pages
+          trivy convert \
+            --format template \
+            --template @html.tpl \
+            --output trivy-pages/index.html \
+            trivy-results.json
+          cp trivy-results.json trivy-pages/trivy-results.json
 
       - name: Upload Trivy SARIF to code scanning
         uses: github/codeql-action/upload-sarif@v4
@@ -58,5 +84,36 @@ jobs:
         if: always()
         with:
           name: trivy-results
-          path: trivy-results.sarif
+          path: |
+            trivy-results.sarif
+            trivy-results.json
           if-no-files-found: ignore
+
+      # Publishes the Trivy HTML report + JSON to GitHub Pages (default branch only).
+      - name: Setup Pages
+        if: success() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: success() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: trivy-pages
+
+  deploy-trivy-pages:
+    name: Deploy Trivy report to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: trivy
+    if: success() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages-trivy
+      cancel-in-progress: false
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
