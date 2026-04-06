@@ -16,6 +16,20 @@
 	description="Inbound import webhook: send JSON to create posts from Make.com, n8n, or your own scripts. Same webhook token as post notifications under Callbacks in this sidebar."
 />
 
+<div class="mt-6">
+	<h2 class="text-sm font-medium text-[var(--text-muted)]">How imports flow</h2>
+	<div
+		class="mt-3 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm"
+	>
+		<iframe
+			title="Animated diagram: webhook import from spreadsheet to calendar"
+			class="block h-[min(34vh,400px)] w-full min-h-[200px] border-0"
+			src="/animation_import_webhook.html"
+			loading="eager"
+		></iframe>
+	</div>
+</div>
+
 <InboundAuthTokenCard callbackTokenMasked={data.callbackTokenMasked} {form}>
 	{#snippet help()}
 		<p class="mt-0">
@@ -38,9 +52,6 @@
 	</p>
 	<div class="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
 		<div class="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-			<div class="my-3 overflow-hidden rounded-lg bg-[var(--surface)]">
-				<img src="/Callback_Import.svg" alt="Import webhook setup" class="block h-auto object-contain" />
-			</div>
 			<p class="mb-2 text-xs font-medium text-[var(--text-muted)]">Webhook URL</p>
 			{#if data.importCallbackUrl}
 				<div class="flex flex-wrap items-center gap-2">

@@ -52,6 +52,18 @@
 					Post notification webhooks: tell PostPlan when a sent post reaches a stage in Make.com (or similar).
 				</p>
 
+				<div class="mt-6">
+					<h3 class="text-sm font-medium text-[var(--text-muted)]">How callbacks flow</h3>
+					<div class="mt-3 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
+						<iframe
+							title="Animated diagram: post notification callback loop"
+						class="block h-[min(52vh,620px)] w-full min-h-[320px] border-0"
+						src="/animation_import_callbacks.html"
+							loading="eager"
+						></iframe>
+					</div>
+				</div>
+
 				<InboundAuthTokenCard callbackTokenMasked={data.callbackTokenMasked} {form}>
 					{#snippet help()}
 						<p class="mt-0">
@@ -70,9 +82,6 @@
 					<h3 class="text-base font-medium text-[var(--text)]">Post notification callbacks</h3>
 					<div class="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
 						<div class="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-							<div class="my-3 overflow-hidden rounded-lg bg-[var(--surface)]">
-								<img src="/Callback_Notification.svg" alt="Post notification callback setup" class="block h-auto object-contain" />
-							</div>
 							<p class="mb-2 text-xs font-medium text-[var(--text-muted)]">Callback URL</p>
 							{#if data.callbackUrl}
 								<div class="flex flex-wrap items-center gap-2">

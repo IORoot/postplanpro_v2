@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Playground</title>
+		<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+		<style>
+			@font-face {
+				font-family: 'MD Thermochrome';
+				src: url('/fonts/MDThermochrome0.3-Medium.otf') format('opentype');
+				font-weight: 500;
+				font-style: normal;
+				font-display: swap;
+			}
+			:root {
+				--font-md-thermochrome: 'MD Thermochrome', ui-sans-serif, system-ui, sans-serif;
+			}
+			.font-md-thermochrome {
+				font-family: var(--font-md-thermochrome);
+			}
+			.wrapper {
+				background-color: #ddd;
+				padding: 16px;
+			}
+			.spreadsheet_table {
+				box-shadow: inset 0 0 0 1px rgb(64 64 64 / 0.12);
+			}
+			.spreadsheet_table th,
+			.spreadsheet_table td {
+				border: 1px solid rgb(163 163 163 / 0.9);
+			}
+			.intro-pipe-connector {
+				z-index: 20;
+			}
+		</style>
+
+
+		<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+
+
+	</head>
+
+	<body class="p-1.5 max-xl:p-1.5 xl:p-2 font-sans antialiased">
+
+	
+	<div class="animation flex flex-col gap-1.5 max-xl:gap-1.5 xl:gap-2 bg-black xl:min-h-0">
+
+	<div id="intro_animation" class="intro_animation font-md-thermochrome text-white max-xl:flex max-xl:flex-col max-xl:min-h-0 max-xl:gap-1.5 p-1.5 max-xl:p-1.5 xl:grid xl:grid-cols-8 xl:grid-rows-[auto_auto_auto] xl:gap-2 xl:p-2">
+
+		<div id="spreadsheet" class="min-h-0 min-w-0 md:col-span-1 xl:col-span-2 xl:row-span-3 xl:h-full bg-neutral-200 border border-neutral-800 relative">
+
+			<div class="h-full min-h-[6.5rem] overflow-auto p-1.5 xl:p-2">
+				<table class="spreadsheet_table w-full min-w-0 table-fixed border-collapse text-left text-[11px] font-sans text-neutral-900 xl:text-xs">
+					<colgroup>
+						<col class="w-10" />
+						<col class="w-[26%]" />
+						<col class="w-[34%]" />
+						<col />
+					</colgroup>
+					<thead>
+						<tr class="bg-neutral-300/90">
+							<th scope="col" class="px-1 py-0.5 text-center text-[9px] xl:text-[10px] font-semibold uppercase tracking-wide text-neutral-600">#</th>
+							<th scope="col" class="px-1 py-0.5 text-[9px] xl:text-[10px] font-semibold uppercase tracking-wide text-neutral-600">Title</th>
+							<th scope="col" class="px-1 py-0.5 text-[9px] xl:text-[10px] font-semibold uppercase tracking-wide text-neutral-600">Caption</th>
+							<th scope="col" class="px-1 py-0.5 text-[9px] xl:text-[10px] font-semibold uppercase tracking-wide text-neutral-600">Image URL</th>
+						</tr>
+					</thead>
+					<tbody class="bg-white/70">
+						<tr class="spreadsheet-data-row hover:bg-emerald-50/60"><td class="px-1 py-0.5 text-center tabular-nums text-neutral-500">1</td><td class="px-1 py-0.5 font-medium">First Post!</td><td class="px-1 py-0.5 text-neutral-700">Hi there!</td><td class="break-all px-1 py-0.5 align-top font-mono text-[9px] xl:text-[10px] leading-snug text-neutral-600">https://mywebsite.com/image1.jpg</td></tr>
+						<tr class="spreadsheet-data-row hover:bg-emerald-50/60"><td class="px-1 py-0.5 text-center tabular-nums text-neutral-500">2</td><td class="px-1 py-0.5 font-medium">Weekly digest</td><td class="px-1 py-0.5 text-neutral-700">This week's highlights from the team.</td><td class="break-all px-1 py-0.5 align-top font-mono text-[9px] xl:text-[10px] leading-snug text-neutral-600">https://cdn.example.com/photos/digest-cover.webp</td></tr>
+						<tr class="spreadsheet-data-row hover:bg-emerald-50/60"><td class="px-1 py-0.5 text-center tabular-nums text-neutral-500">3</td><td class="px-1 py-0.5 font-medium">Product launch</td><td class="px-1 py-0.5 text-neutral-700">We're live - grab the early-bird perks.</td><td class="break-all px-1 py-0.5 align-top font-mono text-[9px] xl:text-[10px] leading-snug text-neutral-600">https://images.site.com/launch-hero.png</td></tr>
+						<tr class="spreadsheet-data-row hover:bg-emerald-50/60"><td class="px-1 py-0.5 text-center tabular-nums text-neutral-500">4</td><td class="px-1 py-0.5 font-medium">Behind the scenes</td><td class="px-1 py-0.5 text-neutral-700">A quick studio tour before Friday's drop.</td><td class="break-all px-1 py-0.5 align-top font-mono text-[9px] xl:text-[10px] leading-snug text-neutral-600">https://blog.io/media/bts-jan.jpg</td></tr>
+						<tr class="spreadsheet-data-row hover:bg-emerald-50/60"><td class="px-1 py-0.5 text-center tabular-nums text-neutral-500">5</td><td class="px-1 py-0.5 font-medium">Customer story</td><td class="px-1 py-0.5 text-neutral-700">How Alex scaled content without burning out.</td><td class="break-all px-1 py-0.5 align-top font-mono text-[9px] xl:text-[10px] leading-snug text-neutral-600">https://assets.co/cases/alex-header.jpg</td></tr>
+					</tbody>
+				</table>
+			</div>
+
+			<svg id="spreadsheet_to_inputs" class="intro-pipe-connector spreadsheet_to_inputs opacity-0 pointer-events-none hidden md:block" xmlns="http://www.w3.org/2000/svg" width="32" height="16" style="position:absolute; top:50%; right:-32px; transform:translateY(-50%); overflow:visible;">
+				<line class="pipe-line" x1="0" y1="8" x2="16" y2="8" stroke="#22c55e" stroke-width="1" fill="none"/>
+			</svg>
+			<svg id="spreadsheet_to_inputs_mobile" class="intro-pipe-connector spreadsheet_to_inputs opacity-0 pointer-events-none md:hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="32" style="position:absolute; left:50%; top:100%; transform:translateX(-50%); overflow:visible;">
+				<line class="pipe-line" x1="8" y1="0" x2="8" y2="16" stroke="#22c55e" stroke-width="1" fill="none"/>
+			</svg>
+
+		</div>
+
+
+
+		<div id="inputs" class="inputs-panel min-h-0 min-w-0 md:col-span-1 xl:col-span-1 xl:row-span-3 bg-neutral-900 px-1.5 py-1.5 xl:px-2 xl:py-2 border border-neutral-800 flex flex-col gap-1 xl:gap-1.5 relative">
+			<div class="section_title text-sm xl:text-base leading-tight">INPUTS</div>
+			
+			<div id="input_wordpress" class="border border-neutral-700 px-1.5 py-1 flex gap-1.5 bg-neutral-800 shrink-0">
+				<svg role="img" class="w-5 h-5 shrink-0 fill-white my-auto" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>WordPress</title><path d="M21.469 6.825c.84 1.537 1.318 3.3 1.318 5.175 0 3.979-2.156 7.456-5.363 9.325l3.295-9.527c.615-1.54.82-2.771.82-3.864 0-.405-.026-.78-.07-1.11m-7.981.105c.647-.03 1.232-.105 1.232-.105.582-.075.514-.93-.067-.899 0 0-1.755.135-2.88.135-1.064 0-2.85-.15-2.85-.15-.585-.03-.661.855-.075.885 0 0 .54.061 1.125.09l1.68 4.605-2.37 7.08L5.354 6.9c.649-.03 1.234-.1 1.234-.1.585-.075.516-.93-.065-.896 0 0-1.746.138-2.874.138-.2 0-.438-.008-.69-.015C4.911 3.15 8.235 1.215 12 1.215c2.809 0 5.365 1.072 7.286 2.833-.046-.003-.091-.009-.141-.009-1.06 0-1.812.923-1.812 1.914 0 .89.513 1.643 1.06 2.531.411.72.89 1.643.89 2.977 0 .915-.354 1.994-.821 3.479l-1.075 3.585-3.9-11.61.001.014zM12 22.784c-1.059 0-2.081-.153-3.048-.437l3.237-9.406 3.315 9.087c.024.053.05.101.078.149-1.12.393-2.325.609-3.582.609M1.211 12c0-1.564.336-3.05.935-4.39L7.29 21.709C3.694 19.96 1.212 16.271 1.211 12M12 0C5.385 0 0 5.385 0 12s5.385 12 12 12 12-5.385 12-12S18.615 0 12 0"/></svg>
+				<p class="text-xs my-auto leading-tight truncate">Wordpress</p>
+			</div>
+
+			<div id="input_squarespace" class="border border-neutral-700 px-1.5 py-1 hidden md:flex gap-1.5 bg-neutral-800 shrink-0">
+				<svg role="img" class="w-5 h-5 shrink-0 fill-white my-auto" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Squarespace</title><path d="M22.655 8.719c-1.802-1.801-4.726-1.801-6.564 0l-7.351 7.35c-.45.45-.45 1.2 0 1.65.45.449 1.2.449 1.65 0l7.351-7.351c.899-.899 2.362-.899 3.264 0 .9.9.9 2.364 0 3.264l-7.239 7.239c.9.899 2.362.899 3.263 0l5.589-5.589c1.836-1.838 1.836-4.763.037-6.563zm-2.475 2.437c-.451-.45-1.201-.45-1.65 0l-7.354 7.389c-.9.899-2.361.899-3.262 0-.45-.45-1.2-.45-1.65 0s-.45 1.2 0 1.649c1.801 1.801 4.726 1.801 6.564 0l7.351-7.35c.449-.487.449-1.239.001-1.688zm-2.439-7.35c-1.801-1.801-4.726-1.801-6.564 0l-7.351 7.351c-.45.449-.45 1.199 0 1.649s1.2.45 1.65 0l7.395-7.351c.9-.899 2.371-.899 3.27 0 .451.45 1.201.45 1.65 0 .421-.487.421-1.199-.029-1.649h-.021zm-2.475 2.437c-.45-.45-1.2-.45-1.65 0l-7.351 7.389c-.899.9-2.363.9-3.265 0-.9-.899-.9-2.363 0-3.264l7.239-7.239c-.9-.9-2.362-.9-3.263 0L1.35 8.719c-1.8 1.8-1.8 4.725 0 6.563 1.801 1.801 4.725 1.801 6.564 0l7.35-7.351c.451-.488.451-1.238 0-1.688h.002z"/></svg>
+				<p class="text-xs my-auto leading-tight truncate">Squarespace</p>
+			</div>
+
+			<div id="input_csv" class="hidden border border-neutral-700 px-1.5 py-1 md:flex md:gap-1.5 bg-neutral-800 shrink-0">
+				<svg class="w-5 h-5 shrink-0 fill-white my-auto" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M3.83325 10H5.83325V9.00002H4.16659V7.00002H5.83325V6.00002H3.83325C3.64436 6.00002 3.48614 6.06402 3.35859 6.19202C3.23103 6.32002 3.16703 6.47824 3.16659 6.66669V9.33335C3.16659 9.52224 3.23059 9.68069 3.35859 9.80869C3.48659 9.93669 3.64481 10.0005 3.83325 10ZM6.43325 10H8.43325C8.62214 10 8.78059 9.93602 8.90859 9.80802C9.03659 9.68002 9.10036 9.5218 9.09992 9.33335V8.33335C9.09992 8.14446 9.03592 7.96935 8.90792 7.80802C8.77992 7.64669 8.6217 7.56624 8.43325 7.56669H7.43325V7.00002H9.09992V6.00002H7.09992C6.91103 6.00002 6.75281 6.06402 6.62525 6.19202C6.4977 6.32002 6.4337 6.47824 6.43325 6.66669V7.66669C6.43325 7.85558 6.49725 8.02513 6.62525 8.17535C6.75325 8.32558 6.91147 8.40047 7.09992 8.40002H8.09992V9.00002H6.43325V10ZM10.8333 10H11.8333L12.9999 6.00002H11.9999L11.3333 8.30002L10.6666 6.00002H9.66659L10.8333 10ZM2.66659 13.3334C2.29992 13.3334 1.98614 13.2029 1.72525 12.942C1.46436 12.6811 1.3337 12.3671 1.33325 12V4.00002C1.33325 3.63335 1.46392 3.31958 1.72525 3.05869C1.98659 2.7978 2.30036 2.66713 2.66659 2.66669H13.3333C13.6999 2.66669 14.0139 2.79735 14.2753 3.05869C14.5366 3.32002 14.667 3.6338 14.6666 4.00002V12C14.6666 12.3667 14.5361 12.6807 14.2753 12.942C14.0144 13.2034 13.7004 13.3338 13.3333 13.3334H2.66659Z" fill="white"/>
+				</svg>
+					
+				<p class="text-xs my-auto leading-tight truncate">CSV</p>
+			</div>
+
+			<div id="input_json" class="hidden border border-neutral-700 px-1.5 py-1 md:flex md:gap-1.5 bg-neutral-800 shrink-0">
+				<svg class="w-5 h-5 shrink-0 fill-white my-auto" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M3.16675 10H4.33341C4.5223 10 4.68075 9.93602 4.80875 9.80802C4.93675 9.68002 5.00053 9.5218 5.00008 9.33335V6.50002C5.00008 6.35558 4.95275 6.23624 4.85808 6.14202C4.76341 6.0478 4.64408 6.00046 4.50008 6.00002C4.35608 5.99958 4.23675 6.04691 4.14208 6.14202C4.04741 6.23713 4.00008 6.35646 4.00008 6.50002V9.16669H3.33341V8.75002C3.33341 8.6278 3.29453 8.5278 3.21675 8.45002C3.13897 8.37224 3.03897 8.33335 2.91675 8.33335C2.79453 8.33335 2.69453 8.37224 2.61675 8.45002C2.53897 8.5278 2.50008 8.6278 2.50008 8.75002V9.33335C2.50008 9.52224 2.56408 9.68069 2.69208 9.80869C2.82008 9.93669 2.9783 10.0005 3.16675 10ZM6.11675 10H7.11675C7.30564 10 7.46408 9.93602 7.59208 9.80802C7.72008 9.68002 7.78386 9.5218 7.78341 9.33335V8.33335C7.78341 8.14446 7.71942 7.98624 7.59141 7.85869C7.46342 7.73113 7.30519 7.66713 7.11675 7.66669H6.28341V6.83335H6.95008C6.95008 6.92224 6.98341 7.00002 7.05008 7.06669C7.11675 7.13335 7.19453 7.16669 7.28341 7.16669H7.36675C7.48897 7.16669 7.58897 7.1278 7.66675 7.05002C7.74453 6.97224 7.78341 6.87224 7.78341 6.75002V6.66669C7.78341 6.4778 7.71942 6.31958 7.59141 6.19202C7.46342 6.06447 7.30541 6.00046 7.11741 6.00002H6.11741C5.92853 6.00002 5.7703 6.06402 5.64275 6.19202C5.51519 6.32002 5.45097 6.47824 5.45008 6.66669V7.66669C5.45008 7.85558 5.51408 8.01402 5.64208 8.14202C5.77008 8.27002 5.9283 8.3338 6.11675 8.33335H6.95008V9.16669H6.28341C6.28341 9.0778 6.25008 9.00002 6.18341 8.93335C6.11675 8.86669 6.03897 8.83335 5.95008 8.83335H5.86675C5.74453 8.83335 5.64453 8.87224 5.56675 8.95002C5.48897 9.0278 5.45008 9.1278 5.45008 9.25002V9.33335C5.45008 9.52224 5.51408 9.68069 5.64208 9.80869C5.77008 9.93669 5.9283 10.0005 6.11675 10ZM9.05008 9.00002V7.00002H9.71675V9.00002H9.05008ZM8.88342 10H9.88342C10.0723 10 10.2307 9.93602 10.3587 9.80802C10.4867 9.68002 10.5505 9.5218 10.5501 9.33335V6.66669C10.5501 6.4778 10.4863 6.31958 10.3587 6.19202C10.2312 6.06447 10.0727 6.00046 9.88342 6.00002H8.88342C8.69453 6.00002 8.5363 6.06402 8.40875 6.19202C8.28119 6.32002 8.21719 6.47824 8.21675 6.66669V9.33335C8.21675 9.52224 8.28075 9.68069 8.40875 9.80869C8.53675 9.93669 8.69497 10.0005 8.88342 10ZM11.8334 8.25002L12.4001 9.73335C12.4334 9.82224 12.4834 9.88891 12.5501 9.93335C12.6167 9.9778 12.6945 10 12.7834 10H12.9167C13.039 10 13.139 9.96113 13.2167 9.88335C13.2945 9.80558 13.3334 9.70558 13.3334 9.58335V6.41669C13.3334 6.29446 13.2945 6.19446 13.2167 6.11669C13.139 6.03891 13.039 6.00002 12.9167 6.00002C12.7945 6.00002 12.6945 6.03891 12.6167 6.11669C12.539 6.19446 12.5001 6.29446 12.5001 6.41669V7.75002L11.9334 6.26669C11.9001 6.1778 11.8501 6.11113 11.7834 6.06669C11.7167 6.02224 11.639 6.00002 11.5501 6.00002H11.4167C11.2945 6.00002 11.1945 6.03891 11.1167 6.11669C11.039 6.19446 11.0001 6.29446 11.0001 6.41669V9.58335C11.0001 9.70558 11.039 9.80558 11.1167 9.88335C11.1945 9.96113 11.2945 10 11.4167 10C11.539 10 11.639 9.96113 11.7167 9.88335C11.7945 9.80558 11.8334 9.70558 11.8334 9.58335V8.25002ZM2.00008 13.3334C1.63341 13.3334 1.31964 13.2029 1.05875 12.942C0.797859 12.6811 0.667192 12.3671 0.666748 12V4.00002C0.666748 3.63335 0.797415 3.31958 1.05875 3.05869C1.32008 2.7978 1.63386 2.66713 2.00008 2.66669H14.0001C14.3667 2.66669 14.6807 2.79735 14.9421 3.05869C15.2034 3.32002 15.3339 3.6338 15.3334 4.00002V12C15.3334 12.3667 15.203 12.6807 14.9421 12.942C14.6812 13.2034 14.3672 13.3338 14.0001 13.3334H2.00008Z" fill="white"/>
+				</svg>	
+				<p class="text-xs my-auto leading-tight truncate">JSON</p>
+			</div>
+
+			<div id="input_rss" class="hidden border border-neutral-700 px-1.5 py-1 md:flex md:gap-1.5 bg-neutral-800 shrink-0">
+				<svg class="w-5 h-5 shrink-0 fill-white my-auto" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M4.12008 10.4267C4.50553 10.4267 4.87519 10.5798 5.14774 10.8524C5.4203 11.1249 5.57341 11.4946 5.57341 11.88C5.57341 12.6667 4.92008 13.3334 4.12008 13.3334C3.33341 13.3334 2.66675 12.6667 2.66675 11.88C2.66675 11.4946 2.81987 11.1249 3.09242 10.8524C3.36497 10.5798 3.73463 10.4267 4.12008 10.4267ZM2.66675 2.96002C5.41793 2.96002 8.05643 4.05292 10.0018 5.9983C11.9472 7.94368 13.0401 10.5822 13.0401 13.3334H11.1534C11.1534 11.0826 10.2593 8.92393 8.66773 7.33238C7.07617 5.74082 4.91755 4.84669 2.66675 4.84669V2.96002ZM2.66675 6.73336C4.41718 6.73336 6.09591 7.42871 7.33365 8.66645C8.57139 9.90419 9.26675 11.5829 9.26675 13.3334H7.38008C7.38008 12.0833 6.8835 10.8844 5.99958 10.0005C5.11566 9.1166 3.9168 8.62002 2.66675 8.62002V6.73336Z" fill="white"/>
+				</svg>
+				<p class="text-xs my-auto leading-tight truncate">RSS</p>
+			</div>
+
+			<div id="input_webhooks" class="border border-neutral-700 px-1.5 py-1 flex gap-1.5 bg-neutral-800 shrink-0">
+				<svg class="w-5 h-5 shrink-0 fill-white my-auto" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M4.66659 14C3.74436 14 2.95836 13.6749 2.30859 13.0246C1.65881 12.3744 1.3337 11.5884 1.33325 10.6666C1.33325 9.85554 1.58614 9.14731 2.09192 8.54198C2.5977 7.93665 3.2337 7.55598 3.99992 7.39998V8.78331C3.61103 8.91665 3.2917 9.15554 3.04192 9.49998C2.79214 9.84443 2.66703 10.2333 2.66659 10.6666C2.66659 11.2222 2.86103 11.6944 3.24992 12.0833C3.63881 12.4722 4.11103 12.6666 4.66659 12.6666C5.22214 12.6666 5.69436 12.4722 6.08325 12.0833C6.47214 11.6944 6.66659 11.2222 6.66659 10.6666V9.99998H10.5833C10.6721 9.89998 10.7806 9.81931 10.9086 9.75798C11.0366 9.69665 11.1781 9.6662 11.3333 9.66665C11.611 9.66665 11.8473 9.76398 12.0419 9.95865C12.2366 10.1533 12.3337 10.3893 12.3333 10.6666C12.3328 10.944 12.2357 11.1802 12.0419 11.3753C11.8481 11.5704 11.6119 11.6675 11.3333 11.6666C11.1777 11.6666 11.0359 11.6362 10.9079 11.5753C10.7799 11.5144 10.6719 11.4338 10.5839 11.3333H7.93325C7.7777 12.1 7.39703 12.7362 6.79125 13.242C6.18547 13.7478 5.47725 14.0004 4.66659 14ZM11.3333 14C10.711 14 10.1473 13.8473 9.64192 13.542C9.13659 13.2366 8.73925 12.8338 8.44992 12.3333H10.2333C10.3888 12.4444 10.561 12.5278 10.7499 12.5833C10.9388 12.6389 11.1333 12.6666 11.3333 12.6666C11.8888 12.6666 12.361 12.4722 12.7499 12.0833C13.1388 11.6944 13.3333 11.2222 13.3333 10.6666C13.3333 10.1111 13.1388 9.63887 12.7499 9.24998C12.361 8.86109 11.8888 8.66665 11.3333 8.66665C11.111 8.66665 10.9055 8.69731 10.7166 8.75865C10.5277 8.81998 10.3499 8.91154 10.1833 9.03331L8.14992 5.64998C7.91659 5.60554 7.72214 5.49442 7.56659 5.31665C7.41103 5.13887 7.33325 4.9222 7.33325 4.66665C7.33325 4.38887 7.43059 4.15287 7.62525 3.95865C7.81992 3.76442 8.05592 3.66709 8.33325 3.66665C8.61059 3.6662 8.84681 3.76354 9.04192 3.95865C9.23703 4.15376 9.33414 4.38976 9.33325 4.66665V4.80865C9.33325 4.84731 9.32214 4.89442 9.29992 4.94998L10.7499 7.38331C10.8388 7.36109 10.9333 7.34731 11.0333 7.34198C11.1333 7.33665 11.2333 7.33376 11.3333 7.33331C12.2555 7.33331 13.0417 7.65843 13.6919 8.30865C14.3421 8.95887 14.667 9.74487 14.6666 10.6666C14.6661 11.5884 14.341 12.3746 13.6913 13.0253C13.0415 13.676 12.2555 14.0009 11.3333 14ZM4.66659 11.6666C4.38881 11.6666 4.15281 11.5695 3.95859 11.3753C3.76436 11.1811 3.66703 10.9449 3.66659 10.6666C3.66659 10.4222 3.74436 10.2111 3.89992 10.0333C4.05547 9.85554 4.24436 9.73887 4.46659 9.68331L6.03325 7.08331C5.71103 6.78331 5.45814 6.42509 5.27459 6.00865C5.09103 5.5922 4.99947 5.14487 4.99992 4.66665C4.99992 3.74442 5.32503 2.95842 5.97525 2.30865C6.62547 1.65887 7.41147 1.33376 8.33325 1.33331C9.25503 1.33287 10.0413 1.65798 10.6919 2.30865C11.3426 2.95931 11.6675 3.74531 11.6666 4.66665H10.3333C10.3333 4.11109 10.1388 3.63887 9.74992 3.24998C9.36103 2.86109 8.88881 2.66665 8.33325 2.66665C7.7777 2.66665 7.30547 2.86109 6.91659 3.24998C6.5277 3.63887 6.33325 4.11109 6.33325 4.66665C6.33325 5.14442 6.4777 5.56398 6.76659 5.92531C7.05547 6.28665 7.42214 6.51709 7.86659 6.61665L5.61659 10.3666C5.63881 10.4222 5.65281 10.4722 5.65859 10.5166C5.66436 10.5611 5.66703 10.6111 5.66659 10.6666C5.66659 10.9444 5.56947 11.1806 5.37525 11.3753C5.18103 11.57 4.94481 11.6671 4.66659 11.6666Z" fill="white"/>
+				</svg>				
+				<p class="text-xs my-auto leading-tight truncate">WebHooks</p>
+			</div>
+
+			<div id="input_callbacks" class="border border-neutral-700 px-1.5 py-1 flex gap-1.5 bg-neutral-800 shrink-0">
+				<svg class="w-5 h-5 shrink-0 fill-white my-auto" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M1.33333 16H13.3333V14.6666H14.6667V2.66665H13.3333V1.33331H1.33333V2.66665H0V14.6666H1.33333V16ZM5.33333 13.3333V12H4V10.6666H2.66667V9.33331H4V7.99998H5.33333V6.66665H6.66667V7.99998H5.33333V9.33331H10.6667V5.33331H8V3.99998H10.6667V5.33331H12V9.33331H10.6667V10.6666H5.33333V12H6.66667V13.3333H5.33333Z" fill="white"/>
+				</svg>					
+				<p class="text-xs my-auto leading-tight truncate">Callbacks</p>
+			</div>
+
+			<svg id="inputs_to_schedules" class="intro-pipe-connector line opacity-0 pointer-events-none hidden xl:block" xmlns="http://www.w3.org/2000/svg"
+				width="32" height="16"
+				style="position:absolute; top:22%; right:-32px; transform:translateY(-50%); overflow:visible;">
+				<line class="pipe-line" x1="0" y1="8" x2="16" y2="8" stroke="#22c55e" stroke-width="1" fill="none"/>
+			</svg>
+			<svg id="inputs_to_schedules_mobile" class="intro-pipe-connector line opacity-0 pointer-events-none xl:hidden z-50" xmlns="http://www.w3.org/2000/svg" width="16" height="32"
+				style="position:absolute; left:50%; top:100%; transform:translateX(-50%); overflow:visible;">
+				<line class="pipe-line" x1="8" y1="0" x2="8" y2="16" stroke="#22c55e" stroke-width="1" fill="none"/>
+			</svg>
+		</div>
+
+
+
+
+		<div id="schedules" class="min-h-0 min-w-0 md:col-span-2 xl:col-span-5 xl:col-start-4 xl:self-start xl:h-fit xl:w-full bg-neutral-900 p-2 border border-neutral-800 flex flex-col gap-1.5 relative shrink-0">
+			<div class="section_title text-sm xl:text-base leading-tight">SCHEDULES</div>
+
+			<div id="schedule_daily_inspiration" class="schedule_daily border border-neutral-700 px-1.5 py-1 flex gap-1.5 bg-neutral-800 text-xs xl:text-sm">
+				<div class="w-full my-auto min-w-0 truncate">⭐️ Weekly Tips</div>
+				<div class="w-24 shrink-0 bg-green-800 px-2 py-0.5 text-center text-xs my-auto">weekly</div>
+				<div class="w-full m-auto text-center text-xs xl:text-sm">Thursday at 12:00</div>
+			</div>
+
+			<div class="schedule_daily border border-neutral-700 px-1.5 py-1 flex gap-1.5 bg-neutral-800 text-xs xl:text-sm">
+				<div class="w-full my-auto min-w-0 truncate">🪚 Website News</div>
+				<div class="w-24 shrink-0 bg-green-800 px-2 py-0.5 text-center text-xs my-auto">cron</div>
+				<div class="w-full m-auto text-center text-xs xl:text-sm">0 17 * * 5</div>
+			</div>
+
+			<svg id="schedules_to_calendar" class="intro-pipe-connector line opacity-0" xmlns="http://www.w3.org/2000/svg"
+				width="16" height="32"
+				style="position:absolute; bottom:-32px; left:50%; transform:translateX(-50%); overflow:visible;">
+				<line class="pipe-line" x1="8" y1="0" x2="8" y2="16" stroke="#22c55e" stroke-width="1" fill="none"/>
+			</svg>
+		</div>
+
+
+
+		<div id="calendar" class="min-h-0 min-w-0 md:col-span-2 xl:col-span-5 xl:row-span-2 xl:col-start-4 xl:row-start-2 bg-neutral-900 p-2 border border-neutral-800 flex flex-col gap-1.5 relative">
+			<div class="section_title text-sm xl:text-base leading-tight">CALENDAR</div>
+
+			<div class="grid grid-cols-8 gap-1 auto-rows-auto max-xl:h-auto xl:grid-rows-5">
+
+				<div id="calendar_jan_27" class="border border-neutral-600 p-0.5 bg-neutral-900 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">27</div>
+				</div>
+				<div id="calendar_jan_28" class="border border-neutral-600 p-0.5 bg-neutral-900 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">28</div>
+				</div>
+				<div id="calendar_jan_29" class="border border-neutral-600 p-0.5 bg-neutral-900 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">29</div>
+				</div>
+				<div id="calendar_jan_30" class="current_date border border-green-500 p-0.5 bg-neutral-900 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">30</div>
+				</div>
+
+				<div id="calendar_feb_1" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex flex-col-reverse gap-0.5 col-span-2">
+					<div class="calendar_animated_post w-full bg-green-800 border border-green-700 py-0.5 px-1 text-[10px] leading-tight opacity-0" data-post-index="0">First Post!</div>
+					<div class="text-right text-[11px] leading-tight">1</div>
+				</div>
+
+				<div id="calendar_feb_2" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full"></div>
+					<div class="text-[11px] leading-tight">2</div>
+				</div>
+
+				<div id="calendar_feb_3" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full"></div>
+					<div class="text-[11px] leading-tight">3</div>
+				</div>
+
+
+				<div id="calendar_feb_4" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">4</div>
+				</div>
+				<div id="calendar_feb_5" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">5</div>
+				</div>
+				<div id="calendar_feb_6" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">6</div>
+				</div>
+				<div id="calendar_feb_7" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">7</div>
+				</div>
+
+				<div id="calendar_feb_8" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex flex-col-reverse gap-0.5 col-span-2">
+					<div class="calendar_animated_post w-full bg-green-800 border border-green-700 py-0.5 px-1 text-[10px] leading-tight opacity-0" data-post-index="1">Weekly digest</div>
+					<div class="text-right text-[11px] leading-tight">8</div>
+				</div>
+
+				<div id="calendar_feb_9" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full"></div>
+					<div class="text-[11px] leading-tight">9</div>
+				</div>
+
+				<div id="calendar_feb_10" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full"></div>
+					<div class="text-[11px] leading-tight">10</div>
+				</div>
+
+
+				<div id="calendar_feb_11" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">11</div>
+				</div>
+				<div id="calendar_feb_12" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">12</div>
+				</div>
+				<div id="calendar_feb_13" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">13</div>
+				</div>
+				<div id="calendar_feb_14" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">14</div>
+				</div>
+
+				<div id="calendar_feb_15" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex flex-col-reverse gap-0.5 col-span-2">
+					<div class="calendar_animated_post w-full bg-green-800 border border-green-700 py-0.5 px-1 text-[10px] leading-tight opacity-0" data-post-index="2">Product launch</div>
+					<div class="text-right text-[11px] leading-tight">15</div>
+				</div>
+
+				<div id="calendar_feb_16" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full"></div>
+					<div class="text-[11px] leading-tight">16</div>
+				</div>
+
+				<div id="calendar_feb_17" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full"></div>
+					<div class="text-[11px] leading-tight">17</div>
+				</div>
+
+
+				<div id="calendar_feb_18" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">18</div>
+				</div>
+				<div id="calendar_feb_19" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">19</div>
+				</div>
+				<div id="calendar_feb_20" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">20</div>
+				</div>
+				<div id="calendar_feb_21" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">21</div>
+				</div>
+
+				<div id="calendar_feb_22" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex flex-col-reverse gap-0.5 col-span-2">
+					<div class="calendar_animated_post w-full bg-green-800 border border-green-700 py-0.5 px-1 text-[10px] leading-tight opacity-0" data-post-index="3">Behind the scenes</div>
+					<div class="text-right text-[11px] leading-tight">22</div>
+				</div>
+
+				<div id="calendar_feb_23" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full"></div>
+					<div class="text-[11px] leading-tight">23</div>
+				</div>
+
+				<div id="calendar_feb_24" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full"></div>
+					<div class="text-[11px] leading-tight">24</div>
+				</div>
+
+
+				<div id="calendar_feb_25" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">25</div>
+				</div>
+				<div id="calendar_feb_26" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">26</div>
+				</div>
+				<div id="calendar_feb_27" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">27</div>
+				</div>
+				<div id="calendar_feb_28" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full p-0.5 text-[10px] leading-tight"></div>
+					<div class="text-[11px] leading-tight">28</div>
+				</div>
+
+				<div id="calendar_feb_29" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex flex-col-reverse gap-0.5 col-span-2">
+					<div class="calendar_animated_post w-full bg-green-800 border border-green-700 py-0.5 px-1 text-[10px] leading-tight opacity-0" data-post-index="4">Customer story</div>
+					<div class="text-right text-[11px] leading-tight">29</div>
+				</div>
+
+				<div id="calendar_feb_30" class="border border-neutral-700 p-0.5 bg-neutral-800 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full"></div>
+					<div class="text-[11px] leading-tight">30</div>
+				</div>
+
+				<div id="calendar_mar_1" class="border border-neutral-600 p-0.5 bg-neutral-900 w-full flex gap-0.5">
+					<div class="hidden xl:block w-full"></div>
+					<div class="text-[11px] leading-tight">1</div>
+				</div>
+
+			</div>
+		</div>
+		
+	</div>
+</div>
+
+	<script>
+		document.addEventListener('DOMContentLoaded', () => {
+			const rows = gsap.utils.toArray('.spreadsheet_table tbody tr.spreadsheet-data-row');
+			const posts = gsap.utils
+				.toArray('.calendar_animated_post')
+				.sort((a, b) => Number(a.dataset.postIndex) - Number(b.dataset.postIndex));
+			const webhooksEl = document.getElementById('input_webhooks');
+			const weeklyTipsEl = document.getElementById('schedule_daily_inspiration');
+
+			const mqMd = window.matchMedia('(min-width: 768px)');
+			const mqXl = window.matchMedia('(min-width: 1280px)');
+
+			const DRAW_DUR = 0.6;
+			const STREAM_DUR = 1;
+			const PAUSE_BETWEEN_CYCLES = 2;
+
+			const pipeStreamIntervals = new Set();
+			let waveGen = 0;
+
+			function spreadsheetPipeSvg() {
+				return mqMd.matches ? document.getElementById('spreadsheet_to_inputs') : document.getElementById('spreadsheet_to_inputs_mobile');
+			}
+
+			function inputsToSchedulesPipeSvg() {
+				return mqXl.matches ? document.getElementById('inputs_to_schedules') : document.getElementById('inputs_to_schedules_mobile');
+			}
+
+			function pipeLineLength(line) {
+				return line.getTotalLength
+					? line.getTotalLength()
+					: Math.hypot(
+							line.x2.baseVal.value - line.x1.baseVal.value,
+							line.y2.baseVal.value - line.y1.baseVal.value
+					  );
+			}
+
+			function resetPipeSvg(svgEl, drawn) {
+				if (!svgEl) return;
+				svgEl.querySelectorAll('.pipe-stream-pixel').forEach((n) => n.remove());
+				const line = svgEl.querySelector('.pipe-line');
+				if (!line) return;
+				const len = pipeLineLength(line);
+				if (drawn) {
+					gsap.set(line, { strokeDasharray: len, strokeDashoffset: 0, opacity: 1 });
+					svgEl.classList.remove('opacity-0');
+					svgEl.classList.add('opacity-100');
+				} else {
+					gsap.set(line, { strokeDasharray: len, strokeDashoffset: len, opacity: 1 });
+					svgEl.classList.remove('opacity-100');
+					svgEl.classList.add('opacity-0');
+				}
+			}
+
+			function allPipeSvgs() {
+				return [
+					document.getElementById('spreadsheet_to_inputs'),
+					document.getElementById('spreadsheet_to_inputs_mobile'),
+					document.getElementById('inputs_to_schedules'),
+					document.getElementById('inputs_to_schedules_mobile'),
+					document.getElementById('schedules_to_calendar')
+				];
+			}
+
+			function clearPipeStreams() {
+				pipeStreamIntervals.forEach((id) => clearInterval(id));
+				pipeStreamIntervals.clear();
+				document.querySelectorAll('.pipe-stream-pixel').forEach((n) => n.remove());
+				gsap.killTweensOf('.pipe-line');
+			}
+
+			function resetAll() {
+				clearPipeStreams();
+				gsap.set(rows, { autoAlpha: 0 });
+				gsap.set('#inputs', { autoAlpha: 0 });
+				gsap.set('#schedules', { autoAlpha: 0 });
+				gsap.set('#calendar', { autoAlpha: 0 });
+				gsap.set(posts, { autoAlpha: 0 });
+				gsap.set([webhooksEl, weeklyTipsEl].filter(Boolean), { clearProps: 'borderColor' });
+				allPipeSvgs().forEach((svg) => resetPipeSvg(svg, false));
+			}
+
+			/** Green border pulse (same approach as animation_responsive.html flashBorderGreen). */
+			function flashBorderGreenTimeline(el, opts = {}) {
+				const tl = gsap.timeline();
+				if (!el) return tl;
+				const keepGreen = opts.keepGreen === true;
+				const baseBorder = getComputedStyle(el).borderColor;
+				tl.fromTo(
+					el,
+					{ borderColor: baseBorder },
+					{
+						borderColor: '#22c55e',
+						repeat: 3,
+						yoyo: true,
+						duration: 0.12,
+						ease: 'power2.inOut',
+						onComplete: () => {
+							if (keepGreen) gsap.set(el, { borderColor: '#22c55e' });
+						}
+					}
+				);
+				return tl;
+			}
+
+			/**
+			 * Draw + travelling pixels on a pipe (ported from animation_responsive.html animatePipe).
+			 * When pipes are disabled (narrow mobile), holds for PIPE_SKIP_DWELL so the timeline stays aligned.
+			 */
+			function appendPipeDrawAndStream(masterTl, svgEl, gen) {
+				if (!svgEl) {
+					masterTl.to({}, { duration: DRAW_DUR + STREAM_DUR });
+					return;
+				}
+
+				const line = svgEl.querySelector('.pipe-line');
+				if (!line) {
+					masterTl.to({}, { duration: DRAW_DUR + STREAM_DUR });
+					return;
+				}
+
+				const lineLen = pipeLineLength(line);
+				const dx = Math.abs(line.x2.baseVal.value - line.x1.baseVal.value);
+				const dy = Math.abs(line.y2.baseVal.value - line.y1.baseVal.value);
+				const isVertical = dy > dx;
+
+				const PIXEL_COLOR = '#22c55e';
+				const PIXEL_LONG = 4;
+				const PIXEL_SHORT = 3;
+				const PIXEL_W = isVertical ? PIXEL_SHORT : PIXEL_LONG;
+				const PIXEL_H = isVertical ? PIXEL_LONG : PIXEL_SHORT;
+				const PIXEL_SPEED = 0.2;
+				const SPAWN_INTERVAL = 60;
+
+				const x0 = line.x1.baseVal.value - PIXEL_W / 2;
+				const y0 = line.y1.baseVal.value - PIXEL_H / 2;
+				const travelProp = isVertical ? 'y' : 'x';
+				const travelDist = lineLen - (isVertical ? PIXEL_H : PIXEL_W);
+
+				masterTl.call(() => {
+					if (gen !== waveGen) return;
+					svgEl.querySelectorAll('.pipe-stream-pixel').forEach((n) => n.remove());
+					svgEl.classList.remove('opacity-0');
+					svgEl.classList.add('opacity-100');
+					gsap.set(line, {
+						strokeDasharray: lineLen,
+						strokeDashoffset: lineLen,
+						opacity: 1
+					});
+				});
+
+				masterTl.to(line, {
+					strokeDashoffset: 0,
+					duration: DRAW_DUR,
+					ease: 'power2.inOut'
+				});
+
+				masterTl.call(() => {
+					if (gen !== waveGen) return;
+					const startTime = performance.now();
+					const intervalId = setInterval(() => {
+						if (gen !== waveGen) {
+							clearInterval(intervalId);
+							pipeStreamIntervals.delete(intervalId);
+							return;
+						}
+						if (performance.now() - startTime > STREAM_DUR * 1000) {
+							clearInterval(intervalId);
+							pipeStreamIntervals.delete(intervalId);
+							return;
+						}
+
+						const px = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+						px.classList.add('pipe-stream-pixel');
+						px.setAttribute('width', PIXEL_W);
+						px.setAttribute('height', PIXEL_H);
+						px.setAttribute('x', x0);
+						px.setAttribute('y', y0);
+						px.setAttribute('fill', PIXEL_COLOR);
+						px.setAttribute('rx', '1');
+						svgEl.appendChild(px);
+
+						const blurFilter = isVertical
+							? 'blur(1px) drop-shadow(0 3px 4px #22c55e)'
+							: 'blur(1px) drop-shadow(3px 0 4px #22c55e)';
+
+						gsap.fromTo(
+							px,
+							{ [travelProp]: 0, opacity: 1 },
+							{
+								[travelProp]: travelDist,
+								duration: PIXEL_SPEED,
+								ease: 'none',
+								filter: blurFilter,
+								onComplete() {
+									if (svgEl.contains(px)) svgEl.removeChild(px);
+								}
+							}
+						);
+					}, SPAWN_INTERVAL);
+					pipeStreamIntervals.add(intervalId);
+				});
+
+				masterTl.to({}, { duration: STREAM_DUR });
+			}
+
+			function runCycle() {
+				waveGen++;
+				const gen = waveGen;
+				resetAll();
+
+				const tl = gsap.timeline({
+					defaults: { ease: 'power2.out' },
+					onComplete: () => {
+						gsap.delayedCall(PAUSE_BETWEEN_CYCLES, runCycle);
+					}
+				});
+
+				tl.to(rows[0], { autoAlpha: 1, duration: 0.35 });
+				tl.to('#inputs', { autoAlpha: 1, duration: 0.45 }, '+=0.18');
+				appendPipeDrawAndStream(tl, spreadsheetPipeSvg(), gen);
+				tl.add(flashBorderGreenTimeline(webhooksEl), '+=0.08');
+				tl.to('#schedules', { autoAlpha: 1, duration: 0.45 }, '+=0.14');
+				appendPipeDrawAndStream(tl, inputsToSchedulesPipeSvg(), gen);
+				tl.add(flashBorderGreenTimeline(weeklyTipsEl), '+=0.08');
+				tl.to('#calendar', { autoAlpha: 1, duration: 0.45 }, '+=0.14');
+				appendPipeDrawAndStream(tl, document.getElementById('schedules_to_calendar'), gen);
+				tl.to(posts[0], { autoAlpha: 1, duration: 0.4 }, '+=0.1');
+
+				for (let i = 1; i < rows.length; i++) {
+					tl.to(rows[i], { autoAlpha: 1, duration: 0.3 }, '+=0.26');
+					tl.add(flashBorderGreenTimeline(webhooksEl), '+=0.06');
+					tl.add(flashBorderGreenTimeline(weeklyTipsEl), '+=0.08');
+					tl.to(posts[i], { autoAlpha: 1, duration: 0.36 }, '+=0.1');
+				}
+			}
+
+			runCycle();
+		});
+	</script>
+
+</body>
+</html>
