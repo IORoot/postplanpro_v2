@@ -36,14 +36,22 @@ jobs:
             | sudo tar -xzf - -C /usr/local/bin trivy
           trivy --version
 
-      - name: Run Trivy fs scan
+      - name: Run Trivy fs scan (SARIF + JSON)
         run: |
+          set -eux
           trivy fs \
             --severity CRITICAL,HIGH,MEDIUM \
             --ignore-unfixed \
             --format sarif \
             --exit-code 0 \
             --output trivy-results.sarif \
+            .
+          trivy fs \
+            --severity CRITICAL,HIGH,MEDIUM \
+            --ignore-unfixed \
+            --format json \
+            --exit-code 0 \
+            --output trivy-results.json \
             .
 
       - name: Upload Trivy SARIF to code scanning
@@ -58,5 +66,7 @@ jobs:
         if: always()
         with:
           name: trivy-results
-          path: trivy-results.sarif
+          path: |
+            trivy-results.sarif
+            trivy-results.json
           if-no-files-found: ignore

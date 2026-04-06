@@ -1,0 +1,123 @@
+{
+  "1": [
+    {
+      "thumb": "/screenshots/thumb/calendar-day.webp",
+      "full": "/screenshots/full/calendar-day.png",
+      "caption": "Calendar — Day view"
+    },
+    {
+      "thumb": "/screenshots/thumb/calendar-week.webp",
+      "full": "/screenshots/full/calendar-week.png",
+      "caption": "Calendar — Week view"
+    },
+    {
+      "thumb": "/screenshots/thumb/calendar-month.webp",
+      "full": "/screenshots/full/calendar-month.png",
+      "caption": "Calendar — Month view"
+    },
+    {
+      "thumb": "/screenshots/thumb/calendar-year.webp",
+      "full": "/screenshots/full/calendar-year.png",
+      "caption": "Calendar — Year view"
+    },
+    {
+      "thumb": "/screenshots/thumb/calendar-agenda.webp",
+      "full": "/screenshots/full/calendar-agenda.png",
+      "caption": "Calendar — Agenda view"
+    },
+    {
+      "thumb": "/screenshots/thumb/calendar-schedule.webp",
+      "full": "/screenshots/full/calendar-schedule.png",
+      "caption": "Calendar — Schedule view"
+    }
+  ],
+  "2": [
+    {
+      "thumb": "/screenshots/thumb/schedules-list.webp",
+      "full": "/screenshots/full/schedules-list.png",
+      "caption": "Schedules — list and recurrence overview"
+    },
+    {
+      "thumb": "/screenshots/thumb/schedule-edit.webp",
+      "full": "/screenshots/full/schedule-edit.png",
+      "caption": "Schedule editor — rules, custom fields, apply to posts"
+    }
+  ],
+  "3": [
+    {
+      "thumb": "/screenshots/thumb/post-list.webp",
+      "full": "/screenshots/full/post-list.png",
+      "caption": "Posts — list, filters, and bulk actions"
+    },
+    {
+      "thumb": "/screenshots/thumb/post-edit.webp",
+      "full": "/screenshots/full/post-edit.png",
+      "caption": "Post editor — payload, schedule, custom fields, JSON override"
+    }
+  ],
+  "4": [
+    {
+      "thumb": "/screenshots/thumb/import-wordpress-wizard.webp",
+      "full": "/screenshots/full/import-wordpress-wizard.png",
+      "caption": "Inputs — WordPress import wizard"
+    },
+    {
+      "thumb": "/screenshots/thumb/import-squarespace-wizard.webp",
+      "full": "/screenshots/full/import-squarespace-wizard.png",
+      "caption": "Inputs — Squarespace import wizard"
+    },
+    {
+      "thumb": "/screenshots/thumb/import-rss-wizard.webp",
+      "full": "/screenshots/full/import-rss-wizard.png",
+      "caption": "Inputs — RSS / Atom feed import"
+    },
+    {
+      "thumb": "/screenshots/thumb/import-csv-wizard.webp",
+      "full": "/screenshots/full/import-csv-wizard.png",
+      "caption": "Inputs — CSV import wizard"
+    },
+    {
+      "thumb": "/screenshots/thumb/import-webhook.webp",
+      "full": "/screenshots/full/import-webhook.png",
+      "caption": "Inputs — inbound import webhook (API)"
+    },
+    {
+      "thumb": "/screenshots/thumb/import-callback.webp",
+      "full": "/screenshots/full/import-callback.png",
+      "caption": "Inputs — post notification callbacks"
+    }
+  ],
+  "5": [
+    {
+      "thumb": "/screenshots/thumb/output-webhooks.webp",
+      "full": "/screenshots/full/output-webhooks.png",
+      "caption": "Outputs — outbound webhooks"
+    },
+    {
+      "thumb": "/screenshots/thumb/output-presets.webp",
+      "full": "/screenshots/full/output-presets.png",
+      "caption": "Outputs — automation presets marketplace"
+    }
+  ],
+  "6": [
+    {
+      "thumb": "/screenshots/thumb/report-statistics.webp",
+      "full": "/screenshots/full/report-statistics.png",
+      "caption": "Reports — statistics"
+    },
+    {
+      "thumb": "/screenshots/thumb/report-request-response.webp",
+      "full": "/screenshots/full/report-request-response.png",
+      "caption": "Reports — request / response log"
+    },
+    {
+      "thumb": "/screenshots/thumb/report-callback-stages.webp",
+      "full": "/screenshots/full/report-callback-stages.png",
+      "caption": "Reports — callback stages"
+    }
+  ],
+  "7": [],
+  "plans": [],
+  "sending": [],
+  "limits": []
+}
