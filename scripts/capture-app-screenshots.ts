@@ -332,10 +332,8 @@ async function main(): Promise<void> {
 		await saveViewportPngWebp(page, 'output-webhooks');
 
 		console.log('Capturing output-presets…');
-		await Promise.all([
-			page.waitForResponse((res) => res.url().includes('scenarios.json') && res.ok(), { timeout: 20_000 }),
-			page.goto(`${BASE_URL}/outputs/presets`, { waitUntil: 'domcontentloaded' })
-		]);
+		await page.goto(`${BASE_URL}/outputs/presets`, { waitUntil: 'domcontentloaded' });
+		await page.waitForSelector('.preset-card, .preset-list-item, .presets-empty', { timeout: 25_000 });
 		await page.waitForTimeout(800);
 		await saveViewportPngWebp(page, 'output-presets');
 

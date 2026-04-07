@@ -1,15 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import type { ScenarioWithPreview } from './+page.server';
 
-	interface Scenario {
-		image: string;
-		title: string;
-		author: string;
-		description: string;
-		link: string;
-		target: 'make' | 'zapier' | 'n8n' | 'ifttt';
-		tags: string[];
-	}
+	type Scenario = ScenarioWithPreview;
 
 	const TARGET_LABELS: Record<string, string> = {
 		make: 'Make',
@@ -18,17 +10,13 @@
 		ifttt: 'IFTTT'
 	};
 
-	let scenarios = $state<Scenario[]>([]);
+	let { data } = $props();
+	const scenarios = $derived(data.scenarios);
 	let search = $state('');
 	let selectedTarget = $state<string>('all');
 	let selectedTags = $state<Set<string>>(new Set());
 	let sortKey = $state<'default' | 'az' | 'za'>('default');
 	let viewMode = $state<'card' | 'list'>('card');
-
-	onMount(async () => {
-		const res = await fetch('/scenarios.json');
-		scenarios = await res.json();
-	});
 
 	const targets = $derived.by(() => {
 		const seen = new Set<string>();
@@ -92,6 +80,17 @@
 
 	function onTagIconError(tag: string) {
 		tagIconErrors = new Set([...tagIconErrors, tag]);
+	}
+
+	/** Make.com og:image failed to load; use inline scenario.image instead */
+	let makePreviewFailed = $state<Set<string>>(new Set());
+
+	function onMakePreviewError(link: string) {
+		makePreviewFailed = new Set([...makePreviewFailed, link]);
+	}
+
+	function useMakePreview(scenario: Scenario): boolean {
+		return !!scenario.makePreviewUrl && !makePreviewFailed.has(scenario.link);
 	}
 </script>
 
@@ -223,7 +222,7 @@
 	<!-- Results -->
 	{#if scenarios.length === 0}
 		<div class="presets-empty">
-			<p>Loading presets…</p>
+			<p>No presets are configured yet.</p>
 		</div>
 	{:else if filtered.length === 0}
 		<div class="presets-empty">
@@ -238,8 +237,19 @@
 				<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 				<div class="preset-card" onclick={() => openScenario(scenario.link)} role="button" tabindex="0"
 					onkeydown={(e) => e.key === 'Enter' && openScenario(scenario.link)}>
-					<div class="preset-card-image">
-						{@html scenario.image}
+					<div class="preset-card-image" class:preset-card-image-preview={useMakePreview(scenario)}>
+						{#if useMakePreview(scenario)}
+							<img
+								class="preset-make-preview"
+								src={scenario.makePreviewUrl}
+								alt=""
+								loading="lazy"
+								decoding="async"
+								onerror={() => onMakePreviewError(scenario.link)}
+							/>
+						{:else}
+							{@html scenario.image}
+						{/if}
 						<div class="preset-target-badge" title={TARGET_LABELS[scenario.target] ?? scenario.target}>
 							<img src={`/${scenario.target}.svg`} alt={TARGET_LABELS[scenario.target] ?? scenario.target} width="20" height="20" />
 						</div>
@@ -277,8 +287,19 @@
 				<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 				<div class="preset-list-item" onclick={() => openScenario(scenario.link)} role="button" tabindex="0"
 					onkeydown={(e) => e.key === 'Enter' && openScenario(scenario.link)}>
-					<div class="preset-list-thumb">
-						{@html scenario.image}
+					<div class="preset-list-thumb" class:preset-list-thumb-preview={useMakePreview(scenario)}>
+						{#if useMakePreview(scenario)}
+							<img
+								class="preset-make-preview"
+								src={scenario.makePreviewUrl}
+								alt=""
+								loading="lazy"
+								decoding="async"
+								onerror={() => onMakePreviewError(scenario.link)}
+							/>
+						{:else}
+							{@html scenario.image}
+						{/if}
 					</div>
 					<div class="preset-list-body">
 						<div class="preset-list-header">
@@ -572,6 +593,18 @@
 		box-sizing: border-box;
 	}
 
+	.preset-card-image-preview {
+		padding: 0;
+		background: #fff;
+	}
+
+	.preset-make-preview {
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		object-position: center;
+	}
+
 	.preset-card-image :global(svg) {
 		width: 100%;
 		height: 100%;
@@ -726,6 +759,15 @@
 	.preset-list-thumb :global(svg) {
 		width: 80px;
 		height: 80px;
+	}
+
+	.preset-list-thumb-preview {
+		padding: 0;
+		background: #fff;
+	}
+
+	.preset-list-thumb .preset-make-preview {
+		object-fit: cover;
 	}
 
 	.preset-list-body {
