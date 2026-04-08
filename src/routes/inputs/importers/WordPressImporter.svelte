@@ -59,6 +59,9 @@
 			? ((form as { post_type_route?: string }).post_type_route || selectedPostTypeRoute || '/wp/v2/posts')
 			: '/wp/v2/posts'
 	);
+	const wpCollectionTotal = $derived(
+		(form as { wp_collection_total?: number | null })?.wp_collection_total ?? null
+	);
 
 	$effect(() => {
 		const f = form as { site_url?: string; auth?: string; post_type_route?: string; include_featured_image?: boolean };
@@ -319,7 +322,10 @@
 							<p class="mt-0.5 text-xs text-[var(--text-muted)]">1-based index of first post</p>
 						</div>
 						<div>
-							<label for="wp_import_count" class="block text-sm font-medium text-[var(--text)]">Number of posts</label>
+							<label for="wp_import_count" class="block text-sm font-medium text-[var(--text)]">
+								Number of posts{#if fetched && wpCollectionTotal != null}
+									<span class="font-normal text-[var(--text-muted)]"> ({wpCollectionTotal})</span>{/if}
+							</label>
 							<input id="wp_import_count" type="number" name="per_page" bind:value={perPage} min="1" max="100" class="mt-1 w-full min-h-[44px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" />
 							<p class="mt-0.5 text-xs text-[var(--text-muted)]">Imports posts {importStart}–{Math.min(100, importStart + perPage - 1)} (start + count ≤ 100)</p>
 						</div>

@@ -512,6 +512,12 @@ export const actions: Actions = {
 			const listUrl = includeFeaturedImage ? `${baseUrl}?per_page=1&page=1&_embed` : `${baseUrl}?per_page=1&page=1`;
 			const res = await fetch(listUrl, { headers });
 			if (!res.ok) return fail(400, { error: `WordPress API error: ${res.status} ${res.statusText}` });
+			const totalHeader = res.headers.get('X-WP-Total');
+			let wp_collection_total: number | null = null;
+			if (totalHeader != null && totalHeader !== '') {
+				const n = parseInt(totalHeader, 10);
+				if (!Number.isNaN(n)) wp_collection_total = n;
+			}
 			const json = (await res.json()) as unknown[];
 			let sample = json[0] ?? null;
 			if (includeFeaturedImage && sample != null && typeof sample === 'object') {
@@ -532,7 +538,8 @@ export const actions: Actions = {
 				post_type_route: postTypeRoute,
 				discovered: true,
 				post_types: postTypes,
-				include_featured_image: includeFeaturedImage
+				include_featured_image: includeFeaturedImage,
+				wp_collection_total
 			};
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : 'Failed to fetch';

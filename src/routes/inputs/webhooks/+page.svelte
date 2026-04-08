@@ -6,6 +6,7 @@
 	let { data, form } = $props();
 
 	let importExampleTab = $state<'json' | 'curl'>('json');
+	let showAnimImportWebhook = $state(true);
 </script>
 
 <svelte:head>
@@ -18,19 +19,28 @@
 />
 
 {#if $showInputAnimations}
-<div class="mt-6">
-	<h2 class="text-sm font-medium text-[var(--text-muted)]">How imports flow</h2>
-	<div
-		class="mt-3 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm"
-	>
-		<iframe
-			title="Animated diagram: webhook import from spreadsheet to calendar"
-			class="block h-[min(34vh,400px)] w-full min-h-[200px] border-0"
-			src="/animation_import_webhook.html"
-			loading="eager"
-		></iframe>
+	<div class="mt-6">
+		<div class="flex items-start justify-between gap-4">
+			<h2 class="text-sm font-medium text-[var(--text-muted)]">How imports flow</h2>
+			<button
+				type="button"
+				onclick={() => (showAnimImportWebhook = !showAnimImportWebhook)}
+				class="shrink-0 text-xs text-[var(--text-muted)] hover:text-[var(--text)] hover:underline"
+			>
+				{showAnimImportWebhook ? 'Hide' : 'Show'} diagram
+			</button>
+		</div>
+		{#if showAnimImportWebhook}
+			<div class="mt-3 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
+				<iframe
+					title="Animated diagram: webhook import from spreadsheet to calendar"
+					class="block h-[min(40vh,520px)] w-full min-h-[200px] border-0"
+					src="/animation_import_webhook.html"
+					loading="eager"
+				></iframe>
+			</div>
+		{/if}
 	</div>
-</div>
 {/if}
 
 <InboundAuthTokenCard callbackTokenMasked={data.callbackTokenMasked} {form}>

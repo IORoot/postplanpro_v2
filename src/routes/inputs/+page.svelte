@@ -25,6 +25,59 @@
 	});
 
 	let postNotificationExampleTab = $state<'json' | 'curl'>('json');
+	let showAnimImportCms = $state(true);
+	let showAnimImportSpreadsheets = $state(true);
+	let showAnimImportFeeds = $state(true);
+	let showAnimImportCallbacks = $state(true);
+
+	const inputDiagramIframe = $derived.by(() => {
+		switch (section) {
+			case 'cms':
+				return {
+					src: '/animation_import_cms.html',
+					title: 'Animated diagram: CMS import flow'
+				};
+			case 'spreadsheets':
+				return {
+					src: '/animation_import_spreadsheets.html',
+					title: 'Animated diagram: Spreadsheet import flow'
+				};
+			case 'feeds':
+				return {
+					src: '/animation_import_feeds.html',
+					title: 'Animated diagram: RSS/Atom feed import flow'
+				};
+			default:
+				return null;
+		}
+	});
+
+	const showCurrentImportSectionDiagram = $derived.by(() => {
+		switch (section) {
+			case 'cms':
+				return showAnimImportCms;
+			case 'spreadsheets':
+				return showAnimImportSpreadsheets;
+			case 'feeds':
+				return showAnimImportFeeds;
+			default:
+				return true;
+		}
+	});
+
+	function toggleCurrentImportSectionDiagram() {
+		switch (section) {
+			case 'cms':
+				showAnimImportCms = !showAnimImportCms;
+				break;
+			case 'spreadsheets':
+				showAnimImportSpreadsheets = !showAnimImportSpreadsheets;
+				break;
+			case 'feeds':
+				showAnimImportFeeds = !showAnimImportFeeds;
+				break;
+		}
+	}
 
 	const showError = $derived(
 		section !== 'callbacks' &&
@@ -75,14 +128,25 @@
 			<section class="mt-8" id="inputs-callbacks">
 			{#if $showInputAnimations}
 				<div class="mt-6">
-					<div class="mt-3 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
-						<iframe
-							title="Animated diagram: post notification callback loop"
-							class="block h-[420px] w-full border-0"
-							src="/animation_import_callbacks.html"
-							loading="eager"
-						></iframe>
+					<div class="flex justify-end">
+						<button
+							type="button"
+							onclick={() => (showAnimImportCallbacks = !showAnimImportCallbacks)}
+							class="text-xs text-[var(--text-muted)] hover:text-[var(--text)] hover:underline"
+						>
+							{showAnimImportCallbacks ? 'Hide' : 'Show'} diagram
+						</button>
 					</div>
+					{#if showAnimImportCallbacks}
+						<div class="mt-2 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
+							<iframe
+								title="Animated diagram: post notification callback loop"
+								class="block h-[520px] w-full border-0"
+								src="/animation_import_callbacks.html"
+								loading="eager"
+							></iframe>
+						</div>
+					{/if}
 				</div>
 			{/if}
 
@@ -210,35 +274,28 @@
 				</div>
 			</section>
 	{:else}
-	{#if $showInputAnimations && selectedSource === null}
-		{#if section === 'cms'}
-			<div class="mt-4 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
-				<iframe
-					title="Animated diagram: CMS import flow"
-					class="block h-[420px] w-full border-0"
-					src="/animation_import_cms.html"
-					loading="eager"
-				></iframe>
+	{#if $showInputAnimations && selectedSource === null && inputDiagramIframe}
+		<div class="mt-4">
+			<div class="flex justify-end">
+				<button
+					type="button"
+					onclick={toggleCurrentImportSectionDiagram}
+					class="text-xs text-[var(--text-muted)] hover:text-[var(--text)] hover:underline"
+				>
+					{showCurrentImportSectionDiagram ? 'Hide' : 'Show'} diagram
+				</button>
 			</div>
-		{:else if section === 'spreadsheets'}
-			<div class="mt-4 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
-				<iframe
-					title="Animated diagram: Spreadsheet import flow"
-					class="block h-[420px] w-full border-0"
-					src="/animation_import_spreadsheets.html"
-					loading="eager"
-				></iframe>
-			</div>
-		{:else if section === 'feeds'}
-			<div class="mt-4 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
-				<iframe
-					title="Animated diagram: RSS/Atom feed import flow"
-					class="block h-[420px] w-full border-0"
-					src="/animation_import_feeds.html"
-					loading="eager"
-				></iframe>
-			</div>
-		{/if}
+			{#if showCurrentImportSectionDiagram}
+				<div class="mt-2 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
+					<iframe
+						title={inputDiagramIframe.title}
+						class="block h-[520px] w-full border-0"
+						src={inputDiagramIframe.src}
+						loading="eager"
+					></iframe>
+				</div>
+			{/if}
+		</div>
 	{/if}
 
 		<p class="page-lead">

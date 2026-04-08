@@ -10,6 +10,7 @@
 	let newWebhook = $state(false);
 	let editingHeaders = $state<{ key: string; value: string }[]>([]);
 	let newWebhookHeaders = $state<{ key: string; value: string }[]>([]);
+	let showAnimOutputWebhooks = $state(true);
 
 	function openEditWebhook(webhook: { id: string; headers?: { key: string; value: string }[] }) {
 		editingWebhookId = webhook.id;
@@ -32,13 +33,26 @@
 
 <section class="mt-8" id="outputs-webhooks">
 	{#if $showInputAnimations}
-		<div class="mb-6 overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
-			<iframe
-				title="Animated diagram: calendar to webhook output flow"
-				class="block h-[420px] w-full border-0"
-				src="/animation_output_webhooks.html"
-				loading="eager"
-			></iframe>
+		<div class="mb-6">
+			<div class="mb-2 flex justify-end">
+				<button
+					type="button"
+					onclick={() => (showAnimOutputWebhooks = !showAnimOutputWebhooks)}
+					class="text-xs text-[var(--text-muted)] hover:text-[var(--text)] hover:underline"
+				>
+					{showAnimOutputWebhooks ? 'Hide' : 'Show'} diagram
+				</button>
+			</div>
+			{#if showAnimOutputWebhooks}
+				<div class="overflow-hidden rounded-lg border border-[var(--border)] bg-black shadow-sm">
+					<iframe
+						title="Animated diagram: calendar to webhook output flow"
+						class="block h-[420px] w-full border-0"
+						src="/animation_output_webhooks.html"
+						loading="eager"
+					></iframe>
+				</div>
+			{/if}
 		</div>
 	{/if}
 
