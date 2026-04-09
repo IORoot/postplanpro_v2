@@ -16,7 +16,8 @@ function parseHeadersJson(json: string | null | undefined): { key: string; value
 	}
 }
 
-export const load: PageServerLoad = async ({ locals }) => {
+/** Shared with `/outputs` when Vitest or test URLs call that route’s `load` directly. */
+export async function loadWebhooksPageData(locals: App.Locals) {
 	const accountId = locals.userId;
 	if (!accountId) return { webhooks: [] };
 	const db = getDatabase();
@@ -41,7 +42,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 			headers: headersByWebhook.get(w.id) ?? []
 		}))
 	};
-};
+}
+
+export const load: PageServerLoad = async ({ locals }) => loadWebhooksPageData(locals);
 
 export const actions: Actions = {
 	createWebhook: async ({ request, locals }) => {

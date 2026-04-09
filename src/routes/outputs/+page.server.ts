@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { load as webhooksLoad, actions } from './webhooks/+page.server.js';
+import { loadWebhooksPageData, actions } from './webhooks/+page.server.js';
 
 export { actions };
 
@@ -15,5 +15,5 @@ export const load: PageServerLoad = async (event) => {
 	if (!isVitest && !isTestUrl) {
 		throw redirect(302, '/outputs/webhooks');
 	}
-	return webhooksLoad(event);
+	return loadWebhooksPageData(event.locals);
 };
