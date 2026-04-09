@@ -122,7 +122,7 @@
 					>
 				</form>
 				<p class="mt-1 text-xs text-[var(--text-muted)]">
-					The payload sent to Make.com will include <code>callback_url</code> and <code>callback_token</code> when set.
+					The payload sent to Make.com will include <code>callback_url</code> when a callback token is configured.
 				</p>
 			{/if}
 		</div>

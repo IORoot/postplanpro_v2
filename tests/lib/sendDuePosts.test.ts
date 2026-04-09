@@ -80,7 +80,7 @@ describe('sendDuePosts', () => {
 		vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')));
 		const r = await sendDuePosts();
 		expect(r.failed).toBeGreaterThanOrEqual(1);
-		expect(r.errors.some((e) => e.includes('network down'))).toBe(true);
+		expect(r.errors.some((e) => e.includes('Webhook request failed'))).toBe(true);
 	});
 
 	it('fails on invalid payload_override JSON', async () => {

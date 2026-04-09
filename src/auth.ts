@@ -2,14 +2,13 @@ import { getDatabase } from '$lib/db/index.js';
 import { env } from '$env/dynamic/private';
 import type { Provider } from '@auth/core/providers';
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { SvelteKitAuth } from '@auth/sveltekit';
+import { AuthError, CredentialsSignin, SvelteKitAuth } from '@auth/sveltekit';
 import Apple from '@auth/sveltekit/providers/apple';
 import Credentials from '@auth/sveltekit/providers/credentials';
 import Facebook from '@auth/sveltekit/providers/facebook';
 import GitHub from '@auth/sveltekit/providers/github';
 import Google from '@auth/sveltekit/providers/google';
 import { sendAuthEmail } from '$lib/server/email.js';
-import { AuthError, CredentialsSignin } from '@auth/core/errors';
 
 /** Same shape as @auth/core’s default logger.error (so other auth errors still look familiar). */
 function logAuthJsError(error: Error): void {
