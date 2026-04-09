@@ -70,6 +70,27 @@ function stringValue(v: unknown): string {
 type FilterRule = { path: string; operator: string; value?: string };
 type FilterConfig = { combine: 'and' | 'or'; rules: FilterRule[] };
 
+const MAX_REGEX_SOURCE_LENGTH = 256;
+
+function isRegexSourceSafe(source: string): boolean {
+	if (!source || source.length > MAX_REGEX_SOURCE_LENGTH) return false;
+	// Reject common catastrophic patterns and risky features.
+	if (/\\[1-9]/.test(source)) return false; // backreferences
+	if (/\(\?<[=!]/.test(source)) return false; // lookbehind
+	if (/\((?:[^()\\]|\\.)*[+*](?:[^()\\]|\\.)*\)[+*{]/.test(source)) return false; // nested quantifiers
+	if (/\(\.\*\)\+|\(\.\+\)\+/.test(source)) return false; // broad nested wildcards
+	return true;
+}
+
+function compileUserRegex(source: string, flags = ''): RegExp | null {
+	if (!isRegexSourceSafe(source)) return null;
+	try {
+		return new RegExp(source, flags);
+	} catch {
+		return null;
+	}
+}
+
 function evaluateRule(item: Record<string, unknown>, rule: FilterRule): boolean {
 	const raw = getAtPath(item, rule.path);
 	const str = stringValue(raw);
@@ -85,9 +106,11 @@ function evaluateRule(item: Record<string, unknown>, rule: FilterRule): boolean 
 			case 'not_contains':
 				return !str.includes(val);
 			case 'regex':
-				return val ? new RegExp(val).test(str) : false;
+				if (!val) return false;
+				return compileUserRegex(val)?.test(str) ?? false;
 			case 'not_regex':
-				return val ? !new RegExp(val).test(str) : true;
+				if (!val) return true;
+				return !(compileUserRegex(val)?.test(str) ?? false);
 			case 'array_contains':
 				return Array.isArray(raw) && raw.some((x) => String(x) === val);
 			case 'array_not_contains':
@@ -175,9 +198,10 @@ function applyTransform(raw: string, fn: string | undefined, args: string[] | un
 			case 'removeHtml':
 				return raw.replace(/<[^>]*>/g, '');
 			case 'regex': {
-				const pattern = args[0] ?? '';
+				const regexSource = args[0] ?? '';
 				const replacement = args[1];
-				const re = new RegExp(pattern, 'g');
+				const re = compileUserRegex(regexSource, 'g');
+				if (!re) return raw;
 				if (replacement !== undefined && replacement !== '') {
 					return raw.replace(re, (match, ...groups) => {
 						let r = replacement.replace(/\$&/g, match);
@@ -187,7 +211,9 @@ function applyTransform(raw: string, fn: string | undefined, args: string[] | un
 						return r;
 					});
 				}
-				const m = raw.match(new RegExp(pattern));
+				const singleMatchRegex = compileUserRegex(regexSource);
+				if (!singleMatchRegex) return '';
+				const m = raw.match(singleMatchRegex);
 				return m ? (m[1] ?? m[0]) : '';
 			}
 			case 'substring': {

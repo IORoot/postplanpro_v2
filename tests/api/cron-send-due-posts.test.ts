@@ -48,11 +48,11 @@ describe('GET /api/cron/send-due-posts', () => {
 		expect(data).toBeDefined();
 	});
 
-	it('returns 200 when secret matches query param', async () => {
+	it('returns 401 when secret is provided only in query param', async () => {
 		const request = new Request(`http://test/api/cron/send-due-posts?secret=${CRON_SECRET}`, {
 			method: 'GET'
 		});
 		const response = await GET({ request, url: new URL(request.url) });
-		expect(response.status).toBe(200);
+		expect(response.status).toBe(401);
 	});
 });

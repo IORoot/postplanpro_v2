@@ -110,7 +110,7 @@ describe('POST /api/callbacks/import', () => {
 		const response = await POST({ request });
 		expect(response.status).toBe(400);
 		const data = await response.json();
-		expect(data.error).toMatch(/title/i);
+		expect(data.error).toBe('Operation failed.');
 	});
 
 	it('returns 200 and creates drafts with valid token and body', async () => {

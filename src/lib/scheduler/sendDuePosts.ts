@@ -4,6 +4,7 @@ import { buildPostPayload } from '$lib/payload.js';
 import { env } from '$env/dynamic/private';
 
 const MAX_RESPONSE_BODY = 50000;
+const WEBHOOK_REQUEST_FAILED = 'Webhook request failed';
 
 function isLocalhostBaseUrl(url: string): boolean {
 	try {
@@ -15,7 +16,7 @@ function isLocalhostBaseUrl(url: string): boolean {
 	}
 }
 
-/** Merge id and optional callback_url/callback_token into the body sent to Make.com. */
+/** Merge id and optional callback_url into the body sent to Make.com. */
 function injectCallbackPayload(
 	db: ReturnType<typeof getDatabase>,
 	body: Record<string, unknown>,
@@ -32,7 +33,6 @@ function injectCallbackPayload(
 	const token = user?.callback_token?.trim();
 	if (!token) return out;
 	out.callback_url = baseUrl.replace(/\/$/, '') + '/api/callbacks/stage';
-	out.callback_token = token;
 	return out;
 }
 
@@ -185,11 +185,12 @@ export async function sendDuePosts(): Promise<{ sent: number; failed: number; er
 				const res = await fetch(webhook.url, { method: 'POST', headers, body: requestJson });
 				const responseBody = await res.text();
 				if (res.ok) anySuccess = true;
-				else lastError = `${res.status} ${res.statusText}: ${responseBody.slice(0, 200)}`;
+				else lastError = WEBHOOK_REQUEST_FAILED;
 				insertSendLog(db, post.account_id, post.id, requestJson, res.status, responseBody, res.ok);
 			} catch (e) {
-				lastError = e instanceof Error ? e.message : 'Request failed';
-				insertSendLog(db, post.account_id, post.id, requestJson, null, lastError, false);
+				const internalError = e instanceof Error ? e.message : 'Request failed';
+				lastError = WEBHOOK_REQUEST_FAILED;
+				insertSendLog(db, post.account_id, post.id, requestJson, null, internalError, false);
 			}
 		}
 		if (lastError) {
@@ -311,12 +312,13 @@ export async function sendPost(postId: string, accountId: string): Promise<SendP
 			lastStatus = res.status;
 			lastBody = responseBody;
 			insertSendLog(db, accountId, post.id, requestJson, res.status, responseBody, res.ok);
-			if (!res.ok) lastError = `${res.status} ${res.statusText}: ${responseBody.slice(0, 200)}`;
+			if (!res.ok) lastError = WEBHOOK_REQUEST_FAILED;
 		} catch (e) {
-			lastError = e instanceof Error ? e.message : 'Request failed';
+			const internalError = e instanceof Error ? e.message : 'Request failed';
+			lastError = WEBHOOK_REQUEST_FAILED;
 			lastStatus = null;
-			lastBody = lastError;
-			insertSendLog(db, accountId, post.id, requestJson, null, lastError, false);
+			lastBody = null;
+			insertSendLog(db, accountId, post.id, requestJson, null, internalError, false);
 		}
 	}
 	if (lastError) {

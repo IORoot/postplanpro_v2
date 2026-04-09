@@ -298,8 +298,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	try {
 		tx();
 	} catch (e) {
-		const msg = e instanceof Error ? e.message : 'Failed to import posts.';
-		return json({ error: msg }, { status: 400 });
+		console.error('Callback import failed', e);
+		return json({ error: 'Operation failed.' }, { status: 400 });
 	}
 
 	incrementUsageMonth(db, accountId, month, {
