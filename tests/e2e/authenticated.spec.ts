@@ -29,7 +29,9 @@ test.describe('Authenticated (seeded E2E user)', () => {
 		await signInWithEmail(page);
 		await page.goto('/inputs');
 		await expect(page).toHaveURL(/\/inputs/);
-		await expect(page.getByRole('heading', { name: /^Inputs$/i })).toBeVisible();
+		// Main h1 is the active section (default: CMS); "Inputs" is in the document title.
+		await expect(page).toHaveTitle(/Inputs/);
+		await expect(page.getByRole('heading', { name: /^CMS$/i })).toBeVisible();
 	});
 
 	test('reports page loads', async ({ page }) => {

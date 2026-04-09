@@ -31,6 +31,14 @@ type ImportPayload = {
 	posts?: unknown;
 };
 
+/** Thrown for known validation/business rules inside the import transaction (no server log). */
+class CallbackImportValidationError extends Error {
+	override name = 'CallbackImportValidationError';
+	constructor(message: string) {
+		super(message);
+	}
+}
+
 export const POST: RequestHandler = async ({ request }) => {
 	const authHeader = request.headers.get('Authorization');
 	const headerToken = request.headers.get('X-Callback-Token') ?? request.headers.get('x-callback-token');
@@ -140,7 +148,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 			const rawTitle = typeof post.title === 'string' ? post.title.trim() : '';
 			if (!rawTitle) {
-				throw new Error('Each post must include a non-empty "title" string.');
+				throw new CallbackImportValidationError('Each post must include a non-empty "title" string.');
 			}
 
 			const content =
@@ -182,7 +190,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 
 			if (scheduleIds.length > 0 && scheduleSpecific) {
-				throw new Error(
+				throw new CallbackImportValidationError(
 					`Post at index ${i} cannot have both "schedule_ids" and "schedule_specific".`
 				);
 			}
@@ -202,7 +210,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						.prepare('SELECT id, color FROM schedule WHERE id = ? AND account_id = ?')
 						.get(scheduleId, accountId) as { id: string; color: string | null } | undefined;
 					if (!scheduleRow) {
-						throw new Error(
+						throw new CallbackImportValidationError(
 							`Invalid schedule_id "${scheduleId}" for this account (post index ${i}).`
 						);
 					}
@@ -212,7 +220,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					}
 					const slot = getNextFreeSlot(scheduleRow.id, undefined, accountId);
 					if (!slot) {
-						throw new Error(
+						throw new CallbackImportValidationError(
 							`Schedule "${scheduleId}" has no available slots (post index ${i}).`
 						);
 					}
@@ -221,7 +229,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				} else if (scheduleSpecific) {
 					const dt = new Date(scheduleSpecific);
 					if (Number.isNaN(dt.getTime())) {
-						throw new Error(
+						throw new CallbackImportValidationError(
 							`Invalid schedule_specific datetime "${scheduleSpecific}" (post index ${i}).`
 						);
 					}
@@ -250,7 +258,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						const { sent, scheduled } = getPostsSentAndScheduledForMonth(db, accountId, month);
 						const batchInMonth = postsPerMonthInBatch.get(month) ?? 0;
 						if (sent + scheduled + batchInMonth + 1 > limits.postsSentPerMonth) {
-							throw new Error(
+							throw new CallbackImportValidationError(
 								`Post limit for ${month} (${limits.postsSentPerMonth}) would be exceeded.`
 							);
 						}
@@ -298,6 +306,9 @@ export const POST: RequestHandler = async ({ request }) => {
 	try {
 		tx();
 	} catch (e) {
+		if (e instanceof CallbackImportValidationError) {
+			return json({ error: 'Operation failed.' }, { status: 400 });
+		}
 		console.error('Callback import failed', e);
 		return json({ error: 'Operation failed.' }, { status: 400 });
 	}

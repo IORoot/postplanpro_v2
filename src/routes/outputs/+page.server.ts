@@ -1,6 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { loadWebhooksPageData, actions } from './webhooks/+page.server.js';
+import { loadWebhooksPageData } from './webhooks/loadWebhooksPageData.js';
+import { actions } from './webhooks/+page.server.js';
 
 export { actions };
 
