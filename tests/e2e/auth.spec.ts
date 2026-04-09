@@ -31,7 +31,7 @@ test.describe('Auth', () => {
 	});
 
 	test('admin path redirects when unauthenticated', async ({ page }) => {
-		await page.goto('/users');
+		await page.goto('/admin/users');
 		await expect(page).toHaveURL('/');
 	});
 });

@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 import { describe, it, expect, beforeAll } from 'vitest';
-import { load, actions } from '../../src/routes/users/+page.server.js';
+import { load, actions } from '../../src/routes/admin/users/+page.server.js';
 import { getDatabase } from '$lib/db/index.js';
 import {
 	resetTestDatabase,
@@ -33,17 +33,17 @@ beforeAll(() => {
 	});
 });
 
-describe('users/+page.server', () => {
+describe('admin/users +page.server', () => {
 	it('redirects non-admin from load', async () => {
 		await expect(
 			load(
-				mockRequestEvent({ userId: VICTIM_ID }, 'http://test/users') as Parameters<typeof load>[0]
+				mockRequestEvent({ userId: VICTIM_ID }, 'http://test/admin/users') as Parameters<typeof load>[0]
 			)
 		).rejects.toMatchObject({ status: 303, location: '/calendar' });
 	});
 
 	it('admin load lists exactly seeded users', async () => {
-		const r = await load(mockRequestEvent({ userId: ADMIN_USER_ID }, 'http://test/users') as Parameters<typeof load>[0]);
+		const r = await load(mockRequestEvent({ userId: ADMIN_USER_ID }, 'http://test/admin/users') as Parameters<typeof load>[0]);
 		expect(r.users.length).toBe(2);
 		const emails = r.users.map((u) => u.email).sort();
 		expect(emails).toEqual(['admin@test.com', 'victim@test.com']);
@@ -51,7 +51,7 @@ describe('users/+page.server', () => {
 
 	it('removeUser deletes victim and related posts', async () => {
 		const res = await actions.removeUser?.({
-			request: formRequest('http://test/users', { user_id: VICTIM_ID }),
+			request: formRequest('http://test/admin/users', { user_id: VICTIM_ID }),
 			locals: { userId: ADMIN_USER_ID },
 			params: {},
 			...({} as never)
@@ -67,7 +67,7 @@ describe('users/+page.server', () => {
 		).n;
 		expect(n).toBe(1);
 		const res = await actions.updateTier?.({
-			request: formRequest('http://test/users', { user_id: ADMIN_USER_ID, tier: 'free' }),
+			request: formRequest('http://test/admin/users', { user_id: ADMIN_USER_ID, tier: 'free' }),
 			locals: { userId: ADMIN_USER_ID },
 			params: {},
 			...({} as never)
@@ -86,7 +86,7 @@ describe('users/+page.server', () => {
 			)
 			.run(secondAdmin);
 		const res = await actions.updateTier?.({
-			request: formRequest('http://test/users', { user_id: secondAdmin, tier: 'pro' }),
+			request: formRequest('http://test/admin/users', { user_id: secondAdmin, tier: 'pro' }),
 			locals: { userId: ADMIN_USER_ID },
 			params: {},
 			...({} as never)

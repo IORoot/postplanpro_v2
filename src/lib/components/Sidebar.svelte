@@ -13,7 +13,9 @@
 	];
 	const userTier = $page.data.userTier as string | null | undefined;
 	const navItems = $derived(
-		userTier === 'admin' ? [...baseNavItems, { href: '/users', label: 'Users', icon: 'users' }] : baseNavItems
+		userTier === 'admin'
+			? [...baseNavItems, { href: '/admin', label: 'Admin', icon: 'gear' as const }]
+			: baseNavItems
 	);
 
 	function iconPath(icon: string) {
@@ -220,13 +222,17 @@
 					</div>
 				{/if}
 			</div>
-			<p class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-[var(--sidebar-text-muted)]">Main menu</p>
+			<p class="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-[var(--sidebar-text-muted)]">
+				{userTier === 'admin' ? 'Admin' : 'Main menu'}
+			</p>
 			<ul class="space-y-0.5">
 				{#each navItems as item}
 					{@const isActive =
-						$page.url.pathname === item.href ||
-						(item.href === '/inputs' && $page.url.pathname === '/inputs/webhooks') ||
-						(item.href !== '/calendar' && $page.url.pathname.startsWith(item.href + '/'))}
+						item.href === '/admin'
+							? $page.url.pathname.startsWith('/admin')
+							: $page.url.pathname === item.href ||
+								(item.href === '/inputs' && $page.url.pathname === '/inputs/webhooks') ||
+								(item.href !== '/calendar' && $page.url.pathname.startsWith(item.href + '/'))}
 					<li>
 						<a
 							href={item.href}
