@@ -7,7 +7,8 @@
 #
 # Repository secret (required):
 #   ENV_BASE_64 — entire `.env` file, Base64-encoded (no line breaks in the secret value is safest).
-#   Must include CRON_SECRET and APP_BASE_URL so the host crontab can call send-due-posts (see scripts/postplan-cron-hit.sh).
+#   Must include CRON_SECRET. APP_BASE_URL is still required for the running app (OAuth, etc.). Host cron uses
+#   scripts/postplan-cron-hit.sh which defaults to http://127.0.0.1:3000 so nginx does not strip X-Cron-Secret.
 #
 # GitHub Packages: the workflow pushes to GHCR (`ghcr.io/<lowercase owner>/<lowercase repo>:<sha>`).
 # The default GITHUB_TOKEN must be allowed to write packages (enabled by `permissions` below).

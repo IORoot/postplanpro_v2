@@ -30,6 +30,8 @@ Scheduled posts are sent when something invokes the app’s cron handler. Either
 
    The **GitHub deploy workflow** (`.github/workflows/deploy.yml`) installs a **host crontab** entry that runs `scripts/postplan-cron-hit.sh` every minute and appends `ENABLE_INTERNAL_CRON=false` to `.env` when that variable is unset, so the container does not poll twice. Set `ENABLE_INTERNAL_CRON` in your base64-encoded env if you need a different combination.
 
+   That script defaults to **`http://127.0.0.1:3000`** (Docker’s published host port) so `X-Cron-Secret` is not stripped by nginx or another reverse proxy in front of `APP_BASE_URL`. Override with **`CRON_INTERNAL_BASE_URL`**, or **`CRON_HOST_PORT`** if the host port is not 3000. To force using the public URL instead, set **`CRON_USE_APP_BASE_URL=1`** (only if your proxy forwards custom headers).
+
 2. **External HTTP cron** — set `CRON_SECRET`, then call the endpoint every minute (e.g. system cron or [cron-job.org](https://cron-job.org)) with the secret in a header:
 
 ```sh

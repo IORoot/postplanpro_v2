@@ -14,6 +14,8 @@ services:
       DATABASE_PATH: /data/postplan.db
       # Required in production (see src/auth.ts)
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env or the environment}
+      # Must be passed explicitly; relying only on env_file can omit vars from the container env in some setups.
+      CRON_SECRET: ${CRON_SECRET:?Set CRON_SECRET in .env or the environment}
       AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
       # Public URL of the app (OAuth, Stripe redirects, cron base URL)
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}

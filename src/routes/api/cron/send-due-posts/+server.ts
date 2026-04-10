@@ -11,9 +11,14 @@ function secretsMatch(a: string, b: string): boolean {
 	return timingSafeEqual(aBuf, bBuf);
 }
 
+/** Strip BOM/CRLF and surrounding whitespace from .env / curl (avoids 401 when host and container differ by a \\r). */
+function normalizeCronSecret(s: string): string {
+	return s.replace(/^\uFEFF/, '').replace(/\r/g, '').trim();
+}
+
 export const GET: RequestHandler = async ({ request }) => {
-	const CRON_SECRET = env.CRON_SECRET ?? '';
-	const headerSecret = request.headers.get('x-cron-secret') ?? '';
+	const CRON_SECRET = normalizeCronSecret(env.CRON_SECRET ?? '');
+	const headerSecret = normalizeCronSecret(request.headers.get('x-cron-secret') ?? '');
 	if (!CRON_SECRET || !headerSecret || !secretsMatch(headerSecret, CRON_SECRET)) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
