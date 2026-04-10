@@ -1,21 +1,8 @@
 import { getDatabase } from '$lib/db/index.js';
+import { insertWebhookRecord, parseHeadersJson } from '$lib/db/webhookMutations.js';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { loadWebhooksPageData } from './loadWebhooksPageData.js';
-
-function parseHeadersJson(json: string | null | undefined): { key: string; value: string }[] {
-	if (!json?.trim()) return [];
-	try {
-		const arr = JSON.parse(json) as unknown;
-		return Array.isArray(arr)
-			? arr
-					.filter((h): h is { key: string; value: string } => h != null && typeof h === 'object' && typeof (h as { key?: string }).key === 'string')
-					.map((h) => ({ key: (h as { key: string }).key, value: String((h as { value?: string }).value ?? '') }))
-			: [];
-	} catch {
-		return [];
-	}
-}
 
 export const load: PageServerLoad = async ({ locals }) => loadWebhooksPageData(locals);
 
@@ -29,19 +16,9 @@ export const actions: Actions = {
 		const api_key = (data.get('api_key') as string)?.trim() || null;
 		const headersJson = data.get('headers_json') as string;
 		if (!name || !url) return fail(400, { error: 'Name and URL are required' });
-		const id = crypto.randomUUID();
-		const db = getDatabase();
-		try {
-			db.prepare('INSERT INTO webhook_config (id, account_id, name, url, api_key) VALUES (?, ?, ?, ?, ?)').run(id, accountId, name, url, api_key);
-			const headers = parseHeadersJson(headersJson);
-			const insertHeader = db.prepare('INSERT INTO webhook_header (id, webhook_id, key, value) VALUES (?, ?, ?, ?)');
-			for (const { key, value } of headers) {
-				if (key.trim()) insertHeader.run(crypto.randomUUID(), id, key.trim(), value?.trim() ?? '');
-			}
-		} catch {
-			return fail(500, { error: 'Failed to create webhook' });
-		}
-		return { success: true };
+		const result = insertWebhookRecord(accountId, name, url, api_key, headersJson);
+		if (!result.ok) return fail(500, { error: result.error });
+		return { success: true, webhookId: result.id };
 	},
 	updateWebhook: async ({ request, locals }) => {
 		const accountId = locals.userId;

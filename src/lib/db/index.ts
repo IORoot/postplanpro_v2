@@ -54,6 +54,16 @@ function getDb(): Database.Database {
 			// Column already exists
 		}
 		try {
+			db.exec("ALTER TABLE user ADD COLUMN timezone TEXT DEFAULT 'Europe/London'");
+		} catch {
+			// Column already exists
+		}
+		try {
+			db.exec('ALTER TABLE user ADD COLUMN timezone_migrated_at TEXT');
+		} catch {
+			// Column already exists
+		}
+		try {
 			db.exec('ALTER TABLE post ADD COLUMN image_url TEXT');
 		} catch {
 			// Column already exists
@@ -119,6 +129,9 @@ function getDb(): Database.Database {
 						db.prepare("UPDATE user SET tier = 'admin' WHERE id = ?").run(firstUser.id);
 					}
 				}
+			}
+			if (userCols.some((c) => c.name === 'timezone')) {
+				db.prepare("UPDATE user SET timezone = 'Europe/London' WHERE timezone IS NULL OR TRIM(timezone) = ''").run();
 			}
 		} catch {
 			// Ignore

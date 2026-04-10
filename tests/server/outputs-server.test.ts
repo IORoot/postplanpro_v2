@@ -34,7 +34,7 @@ describe('outputs/+page.server actions', () => {
 			params: {},
 			...({} as never)
 		} as Parameters<NonNullable<typeof actions.createWebhook>>[0]);
-		expect(res).toEqual({ success: true });
+		expect(res).toEqual({ success: true, webhookId: expect.any(String) });
 		const row = getDatabase().prepare('SELECT name, url, api_key FROM webhook_config WHERE name = ?').get('Hook2') as {
 			name: string;
 			url: string;

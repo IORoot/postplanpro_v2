@@ -2,6 +2,7 @@ import type { Session } from '@auth/sveltekit';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getDatabase } from '$lib/db/index.js';
+import { ensureValidTimeZone } from '$lib/server/timezone.js';
 import type { LayoutServerLoad } from './$types';
 
 // Must not use import.meta.url + relative path: SSR bundle lives under
@@ -28,10 +29,14 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 
 	let sidebarCalendar: { year: number; month: number; markers: Record<string, number> } | null = null;
 	let userTier: string | null = null;
+	let userTimezone = 'Europe/London';
 	if (accountId) {
 		const db = getDatabase();
-		const tierRow = db.prepare('SELECT tier FROM user WHERE id = ?').get(accountId) as { tier: string } | undefined;
+		const tierRow = db.prepare('SELECT tier, timezone FROM user WHERE id = ?').get(accountId) as
+			| { tier: string; timezone: string | null }
+			| undefined;
 		userTier = tierRow?.tier ?? null;
+		userTimezone = ensureValidTimeZone(tierRow?.timezone);
 		const rows = db
 			.prepare(
 				`SELECT substr(scheduled_at, 1, 10) as day, COUNT(*) as count
@@ -58,6 +63,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		session,
 		sidebarCalendar,
 		userTier,
+		userTimezone,
 		appVersion
 	};
 };

@@ -1,7 +1,4 @@
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-
-const SCENARIOS_PATH = path.join(process.cwd(), 'static', 'scenarios.json');
+import scenariosJson from '$lib/data/scenarios.json';
 const OG_IMAGE_RE = /<meta\s+property="og:image"\s+content="([^"]+)"/i;
 const MAKE_SHARED_SCENARIO_RE = /make\.com\/public\/shared-scenario\//i;
 const CACHE_TTL_MS = 60 * 60 * 1000;
@@ -49,8 +46,7 @@ async function fetchMakeScenarioPreviewUrl(link: string): Promise<string | null>
 }
 
 export async function load(): Promise<{ scenarios: ScenarioWithPreview[] }> {
-	const raw = await readFile(SCENARIOS_PATH, 'utf-8');
-	const scenarios: ScenarioBase[] = JSON.parse(raw) as ScenarioBase[];
+	const scenarios: ScenarioBase[] = scenariosJson as ScenarioBase[];
 
 	const makeLinks = scenarios
 		.filter((s) => s.target === 'make' && MAKE_SHARED_SCENARIO_RE.test(s.link))

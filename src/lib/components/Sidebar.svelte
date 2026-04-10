@@ -12,10 +12,38 @@
 		{ href: '/reports', label: 'Reports', icon: 'chart' }
 	];
 	const userTier = $page.data.userTier as string | null | undefined;
+	const userTimezone = $derived(($page.data.userTimezone as string | null | undefined) ?? 'Europe/London');
 	const navItems = $derived(
 		userTier === 'admin'
 			? [...baseNavItems, { href: '/admin', label: 'Admin', icon: 'gear' as const }]
 			: baseNavItems
+	);
+	let clockNow = $state(new Date());
+
+	$effect(() => {
+		const id = setInterval(() => {
+			clockNow = new Date();
+		}, 1000);
+		return () => clearInterval(id);
+	});
+
+	const clockDate = $derived(
+		new Intl.DateTimeFormat(undefined, {
+			timeZone: userTimezone,
+			weekday: 'short',
+			month: 'short',
+			day: '2-digit',
+			year: 'numeric'
+		}).format(clockNow)
+	);
+	const clockTime = $derived(
+		new Intl.DateTimeFormat(undefined, {
+			timeZone: userTimezone,
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit',
+			hour12: false
+		}).format(clockNow)
 	);
 
 	function iconPath(icon: string) {
@@ -279,5 +307,15 @@
 				</div>
 			</div>
 		{/if}
+		<div class="border-t border-[var(--sidebar-border)] px-3 py-2.5">
+			<a
+				href="/account?section=settings"
+				class="block rounded-lg px-3 py-1.5 text-[11px] text-[var(--sidebar-text-muted)] tabular-nums transition-colors hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)] truncate"
+				title="Open settings to change timezone"
+				onclick={closeSidebar}
+			>
+				{clockDate} {clockTime} {userTimezone}
+			</a>
+		</div>
 	</div>
 </aside>

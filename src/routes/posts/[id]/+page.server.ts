@@ -2,6 +2,12 @@ import { getDatabase } from '$lib/db/index.js';
 import { getWebhookIdsForPost, setPostWebhooks } from '$lib/db/postWebhooks.js';
 import { normalizePostColor } from '$lib/postColors.js';
 import { getNextFreeSlot } from '$lib/scheduler/generateSlots.js';
+import {
+	ensureValidTimeZone,
+	localDateTimeToUtcIso,
+	normalizeScheduledAtForStorage,
+	utcIsoToLocalDateTime
+} from '$lib/server/timezone.js';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -9,6 +15,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const accountId = locals.userId;
 	if (!accountId) throw redirect(303, '/auth/login');
 	const db = getDatabase();
+	const userRow = db.prepare('SELECT timezone FROM user WHERE id = ?').get(accountId) as { timezone: string | null } | undefined;
+	const userTimezone = ensureValidTimeZone(userRow?.timezone);
 	const post = db.prepare('SELECT * FROM post WHERE id = ? AND account_id = ?').get(params.id, accountId) as {
 		id: string;
 		webhook_id: string;
@@ -79,14 +87,18 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		.all(params.id) as { stage: string; status: string; completed_at: string }[];
 
 	const webhook_ids = getWebhookIdsForPost(db, params.id, post.webhook_id);
+	const scheduleLocal = utcIsoToLocalDateTime(post.scheduled_at, userTimezone);
 
-	return { post, fields, globals, webhooks, schedules, templates: [...byTemplate.values()], stages, webhook_ids };
+	return { post, fields, globals, webhooks, schedules, templates: [...byTemplate.values()], stages, webhook_ids, userTimezone, scheduleLocal };
 };
 
 export const actions: Actions = {
 	update: async ({ request, params, locals }) => {
 		const accountId = locals.userId;
 		if (!accountId) return fail(401, { error: 'Unauthorized' });
+		const db = getDatabase();
+		const userRow = db.prepare('SELECT timezone FROM user WHERE id = ?').get(accountId) as { timezone: string | null } | undefined;
+		const userTimezone = ensureValidTimeZone(userRow?.timezone);
 		const data = await request.formData();
 		const title = (data.get('title') as string)?.trim();
 		const content = (data.get('content') as string)?.trim() ?? '';
@@ -111,10 +123,13 @@ export const actions: Actions = {
 		if (scheduleBy === 'schedule' && schedule_id) {
 			const slot = getNextFreeSlot(schedule_id, params.id, accountId);
 			if (!slot) return fail(400, { error: 'That schedule has no available slots. Add more rules or slots to the schedule.' });
-			scheduled_at = slot;
+			scheduled_at = localDateTimeToUtcIso(normalizeScheduledAtForStorage(slot), userTimezone);
+			if (!scheduled_at) return fail(400, { error: 'Unable to convert scheduled slot for your timezone.' });
 			resolvedScheduleId = schedule_id;
 		} else if (scheduleBy === 'datetime') {
-			scheduled_at = (data.get('scheduled_at') as string)?.trim() || null;
+			const localInput = (data.get('scheduled_at') as string)?.trim() || null;
+			scheduled_at = localInput ? localDateTimeToUtcIso(localInput, userTimezone) : null;
+			if (localInput && !scheduled_at) return fail(400, { error: 'Invalid scheduled date/time.' });
 		} else {
 			scheduled_at = null;
 		}
@@ -122,7 +137,6 @@ export const actions: Actions = {
 		if (!title) return fail(400, { error: 'Title is required' });
 		if (webhookIds.length === 0) return fail(400, { error: 'Select at least one webhook' });
 
-		const db = getDatabase();
 		const existing = db
 			.prepare('SELECT id FROM post WHERE id = ? AND account_id = ?')
 			.get(params.id, accountId) as { id: string } | undefined;

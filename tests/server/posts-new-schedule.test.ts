@@ -57,7 +57,8 @@ describe('posts/new create with schedule', () => {
 			scheduled_at: string;
 		};
 		expect(row.status).toBe('scheduled');
-		expect(row.scheduled_at.slice(0, 16)).toBe('2039-06-01T15:00');
+		// Europe/London is UTC+1 in June, so 15:00 local is stored as 14:00 UTC.
+		expect(row.scheduled_at.slice(0, 16)).toBe('2039-06-01T14:00');
 	});
 
 	it('persists custom post fields on create', async () => {

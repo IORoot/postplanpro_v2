@@ -2,6 +2,7 @@ import { getDatabase } from '$lib/db/index.js';
 import { getWebhookIdsForPost } from '$lib/db/postWebhooks.js';
 import { buildPostPayload } from '$lib/payload.js';
 import { env } from '$env/dynamic/private';
+import { utcNowIso } from '$lib/server/timezone.js';
 
 const MAX_RESPONSE_BODY = 50000;
 const WEBHOOK_REQUEST_FAILED = 'Webhook request failed';
@@ -72,27 +73,15 @@ function resolveRequestBody(
 	}
 }
 
-/** Current time in local timezone, format YYYY-MM-DDTHH:mm:ss (matches stored scheduled_at from datetime-local / toIsoLocal). */
-function nowLocalIso(): string {
-	const d = new Date();
-	const y = d.getFullYear();
-	const m = String(d.getMonth() + 1).padStart(2, '0');
-	const day = String(d.getDate()).padStart(2, '0');
-	const h = String(d.getHours()).padStart(2, '0');
-	const min = String(d.getMinutes()).padStart(2, '0');
-	const s = String(d.getSeconds()).padStart(2, '0');
-	return `${y}-${m}-${day}T${h}:${min}:${s}`;
-}
-
 export async function sendDuePosts(): Promise<{ sent: number; failed: number; errors: string[] }> {
 	const db = getDatabase();
-	const now = nowLocalIso();
+	const now = utcNowIso();
 	const due = db
 		.prepare(
 			`SELECT id, account_id, webhook_id, title, content, image_url, payload_override, scheduled_at, status
        FROM post
-       WHERE status = 'scheduled' AND scheduled_at IS NOT NULL AND scheduled_at <= ?
-       ORDER BY scheduled_at`
+       WHERE status = 'scheduled' AND scheduled_at IS NOT NULL AND datetime(scheduled_at) <= datetime(?)
+       ORDER BY datetime(scheduled_at)`
 		)
 		.all(now) as {
 		id: string;
