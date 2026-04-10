@@ -17,6 +17,9 @@ services:
       AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
       # Public URL of the app (OAuth, Stripe redirects, cron base URL)
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+      # Single-container Docker has no system cron — run the due-post poller inside the app process.
+      # Disable if you use an external caller to GET /api/cron/send-due-posts (e.g. multiple replicas).
+      ENABLE_INTERNAL_CRON: ${ENABLE_INTERNAL_CRON:-true}
     env_file:
       - path: .env
         required: false

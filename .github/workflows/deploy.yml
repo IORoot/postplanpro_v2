@@ -7,6 +7,7 @@
 #
 # Repository secret (required):
 #   ENV_BASE_64 — entire `.env` file, Base64-encoded (no line breaks in the secret value is safest).
+#   Must include CRON_SECRET and APP_BASE_URL so the host crontab can call send-due-posts (see scripts/postplan-cron-hit.sh).
 #
 # GitHub Packages: the workflow pushes to GHCR (`ghcr.io/<lowercase owner>/<lowercase repo>:<sha>`).
 # The default GITHUB_TOKEN must be allowed to write packages (enabled by `permissions` below).
@@ -94,5 +95,29 @@ jobs:
           printf '%s' "$ENV_BASE_64" | base64 -d > .env
           test -s .env || { echo "Decoded .env is empty; check ENV_BASE_64 encoding." >&2; exit 1; }
           printf '\nDEPLOY_IMAGE=%s\n' "$DEPLOY_IMAGE" >> .env
+          # Host crontab is installed in the next step; avoid two pollers unless ENV_BASE_64 sets ENABLE_INTERNAL_CRON explicitly.
+          if ! grep -q '^ENABLE_INTERNAL_CRON=' .env; then
+            printf '\nENABLE_INTERNAL_CRON=false\n' >> .env
+          fi
           docker compose pull app
           docker compose up -d --no-build --remove-orphans
+
+      - name: Install host crontab (send-due-posts every minute)
+        run: |
+          set -euo pipefail
+          REPO_ROOT="$(pwd)"
+          CRON_SCRIPT="${REPO_ROOT}/scripts/postplan-cron-hit.sh"
+          test -x "$CRON_SCRIPT" || chmod +x "$CRON_SCRIPT"
+          TMP="$(mktemp)"
+          # Remove any previous entry for this job (same path or old checkout path) so deploys do not duplicate.
+          (crontab -l 2>/dev/null || true) \
+            | grep -vF 'postplan-cron-hit.sh' \
+            | grep -vF '# postplan: send due posts (managed by deploy workflow)' \
+            > "$TMP" || true
+          {
+            cat "$TMP"
+            echo "# postplan: send due posts (managed by deploy workflow)"
+            echo "* * * * * $CRON_SCRIPT"
+          } | crontab -
+          rm -f "$TMP"
+          echo "Crontab entry for $CRON_SCRIPT installed (runs every minute)."

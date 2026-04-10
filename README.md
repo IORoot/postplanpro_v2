@@ -24,13 +24,17 @@ bun run preview
 
 ## Sending scheduled posts
 
-Scheduled posts are sent when the cron endpoint is called. Set `CRON_SECRET` in your environment (see `.env.example`), then call the endpoint every minute (e.g. with system cron or [cron-job.org](https://cron-job.org)):
+Scheduled posts are sent when something invokes the app’s cron handler. Either:
+
+1. **Docker / single Node process** — set `ENABLE_INTERNAL_CRON=true` (the default in `docker-compose.yml`). The server runs `sendDuePosts` on a timer (every 60s by default; override with `INTERNAL_CRON_INTERVAL_MS`, minimum 10000). Turn this **off** if you run multiple app replicas and use an external trigger instead, so only one instance sends.
+
+   The **GitHub deploy workflow** (`.github/workflows/deploy.yml`) installs a **host crontab** entry that runs `scripts/postplan-cron-hit.sh` every minute and appends `ENABLE_INTERNAL_CRON=false` to `.env` when that variable is unset, so the container does not poll twice. Set `ENABLE_INTERNAL_CRON` in your base64-encoded env if you need a different combination.
+
+2. **External HTTP cron** — set `CRON_SECRET`, then call the endpoint every minute (e.g. system cron or [cron-job.org](https://cron-job.org)) with the secret in a header:
 
 ```sh
 curl -H "X-Cron-Secret: YOUR_SECRET" "https://your-app.com/api/cron/send-due-posts"
 ```
-
-Or with query param: `GET /api/cron/send-due-posts?secret=YOUR_SECRET`
 
 ---
 
