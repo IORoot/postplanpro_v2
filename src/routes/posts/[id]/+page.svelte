@@ -38,6 +38,18 @@
 	let overrideText = $state('');
 	let webhookIds = $state<string[]>([]);
 	let copyFeedback = $state(false);
+	const userTimezone = $derived(data.userTimezone ?? 'Europe/London');
+
+	function formatInUserTimezone(iso: string | null): string {
+		if (!iso) return '';
+		const d = new Date(iso);
+		if (Number.isNaN(d.getTime())) return iso;
+		return new Intl.DateTimeFormat(undefined, {
+			timeZone: userTimezone,
+			dateStyle: 'medium',
+			timeStyle: 'short'
+		}).format(d);
+	}
 	$effect(() => {
 		webhookIds = data.webhook_ids ?? (data.post?.webhook_id ? [data.post.webhook_id] : []);
 	});
@@ -64,7 +76,7 @@
 		titleInput = data.post.title;
 		contentInput = data.post.content ?? '';
 		imageUrlInput = data.post.image_url ?? '';
-		scheduledAtInput = data.post.scheduled_at ? new Date(data.post.scheduled_at).toISOString().slice(0, 16) : '';
+		scheduledAtInput = data.scheduleLocal?.dateTime ?? '';
 		scheduleByInput = data.post.schedule_id
 			? 'schedule'
 			: data.post.scheduled_at
@@ -187,11 +199,11 @@
 	</span>
 	{#if data.post.scheduled_at}
 		<span class="text-sm text-[var(--text-muted)]">
-			{data.post.status === 'scheduled' ? 'Scheduled for ' : ''}{new Date(data.post.scheduled_at).toLocaleString()}
+			{data.post.status === 'scheduled' ? 'Scheduled for ' : ''}{formatInUserTimezone(data.post.scheduled_at)}
 		</span>
 	{/if}
 	{#if data.post.status === 'sent' && data.post.sent_at}
-		<span class="text-sm text-[var(--text-muted)]">Sent {new Date(data.post.sent_at).toLocaleString()}</span>
+		<span class="text-sm text-[var(--text-muted)]">Sent {formatInUserTimezone(data.post.sent_at)}</span>
 	{/if}
 </p>
 
@@ -354,6 +366,7 @@
 							bind:value={scheduledAtInput}
 							class="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]"
 						/>
+						<p class="mt-1 text-xs text-[var(--text-muted)]">Timezone: {userTimezone}</p>
 					</div>
 					<label class="flex items-center gap-2">
 						<input type="radio" name="schedule_by" value="schedule" class="rounded border-[var(--border)]" bind:group={scheduleByInput} />
@@ -457,7 +470,7 @@
 										<td class="px-3 py-2 text-[var(--text-muted)]">{i + 1}</td>
 										<td class="px-3 py-2 font-medium text-[var(--text)]">{s.stage}</td>
 										<td class="px-3 py-2 text-[var(--text-muted)]">{isPass ? 'pass' : 'fail'}</td>
-										<td class="px-3 py-2 text-[var(--text-muted)]">{new Date(s.completed_at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}</td>
+										<td class="px-3 py-2 text-[var(--text-muted)]">{formatInUserTimezone(s.completed_at)}</td>
 										<td class="px-2 py-2 text-right">
 											<span
 												class="inline-block h-2 w-2 rounded-full {isPass ? 'bg-green-500' : 'bg-red-500'}"

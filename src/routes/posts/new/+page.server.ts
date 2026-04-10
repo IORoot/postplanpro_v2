@@ -1,9 +1,15 @@
 import { getDatabase } from '$lib/db/index.js';
+import { insertWebhookRecord } from '$lib/db/webhookMutations.js';
 import { setPostWebhooks } from '$lib/db/postWebhooks.js';
 import { normalizePostColor, DEFAULT_MANUAL_POST_COLOR } from '$lib/postColors.js';
+import {
+	ensureValidTimeZone,
+	localDateTimeToUtcIso,
+	monthKeyInTimeZoneFromUtc,
+	normalizeScheduledAtForStorage
+} from '$lib/server/timezone.js';
 import { getNextFreeSlot } from '$lib/scheduler/generateSlots.js';
 import { canSchedulePostInMonth } from '$lib/usage.js';
-import { monthKeyFromDate } from '$lib/usage.js';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -11,6 +17,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const accountId = locals.userId;
 	if (!accountId) return { webhooks: [], schedules: [], templates: [] };
 	const db = getDatabase();
+	const userRow = db.prepare('SELECT timezone FROM user WHERE id = ?').get(accountId) as { timezone: string | null } | undefined;
+	const userTimezone = ensureValidTimeZone(userRow?.timezone);
 	const webhooks = db.prepare('SELECT id, name FROM webhook_config WHERE account_id = ? ORDER BY name').all(accountId) as { id: string; name: string }[];
 	const schedules = db.prepare('SELECT id, name FROM schedule WHERE account_id = ? ORDER BY name').all(accountId) as { id: string; name: string }[];
 	const templates = db
@@ -45,13 +53,32 @@ export const load: PageServerLoad = async ({ locals }) => {
 			});
 		}
 	}
-	return { webhooks, schedules, templates: [...byTemplate.values()] };
+	return { webhooks, schedules, templates: [...byTemplate.values()], userTimezone };
 };
 
 export const actions: Actions = {
+	createWebhook: async ({ request, locals }) => {
+		const accountId = locals.userId;
+		if (!accountId) return fail(401, { error: 'Unauthorized' });
+		const data = await request.formData();
+		const name = (data.get('name') as string)?.trim();
+		const url = (data.get('url') as string)?.trim();
+		const api_key = (data.get('api_key') as string)?.trim() || null;
+		const headersJson = data.get('headers_json') as string;
+		if (!name || !url) return fail(400, { error: 'Name and URL are required' });
+		const result = insertWebhookRecord(accountId, name, url, api_key, headersJson);
+		if (!result.ok) return fail(500, { error: result.error });
+		return { success: true, webhookId: result.id };
+	},
+
 	create: async ({ request, locals }) => {
 		const accountId = locals.userId;
 		if (!accountId) return fail(401, { error: 'Unauthorized' });
+		const db = getDatabase();
+		const userRow = db.prepare('SELECT tier, timezone FROM user WHERE id = ?').get(accountId) as
+			| { tier: string; timezone: string | null }
+			| undefined;
+		const userTimezone = ensureValidTimeZone(userRow?.timezone);
 		const data = await request.formData();
 		const title = (data.get('title') as string)?.trim();
 		const content = (data.get('content') as string)?.trim() ?? '';
@@ -65,10 +92,13 @@ export const actions: Actions = {
 		if (scheduleBy === 'schedule' && schedule_id) {
 			const slot = getNextFreeSlot(schedule_id, undefined, accountId);
 			if (!slot) return fail(400, { error: 'That schedule has no available slots. Add more rules or slots to the schedule.' });
-			scheduled_at = slot;
+			scheduled_at = localDateTimeToUtcIso(normalizeScheduledAtForStorage(slot), userTimezone);
+			if (!scheduled_at) return fail(400, { error: 'Unable to convert scheduled slot for your timezone.' });
 			resolvedScheduleId = schedule_id;
 		} else if (scheduleBy === 'datetime') {
-			scheduled_at = (data.get('scheduled_at') as string)?.trim() || null;
+			const localInput = (data.get('scheduled_at') as string)?.trim() || null;
+			scheduled_at = localInput ? localDateTimeToUtcIso(localInput, userTimezone) : null;
+			if (localInput && !scheduled_at) return fail(400, { error: 'Invalid scheduled date/time.' });
 		} else {
 			scheduled_at = null;
 		}
@@ -76,7 +106,6 @@ export const actions: Actions = {
 		if (!title) return fail(400, { error: 'Title is required' });
 		if (webhookIds.length === 0) return fail(400, { error: 'Select at least one webhook' });
 
-		const db = getDatabase();
 		for (const wid of webhookIds) {
 			const webhookExists = db
 				.prepare('SELECT id FROM webhook_config WHERE id = ? AND account_id = ?')
@@ -90,10 +119,9 @@ export const actions: Actions = {
 			if (!scheduleRow) return fail(400, { error: 'Invalid schedule' });
 			if (scheduleRow.color) color = scheduleRow.color;
 		}
-		const tierRow = db.prepare('SELECT tier FROM user WHERE id = ?').get(accountId) as { tier: string } | undefined;
-		const tier = tierRow?.tier ?? 'free';
+		const tier = userRow?.tier ?? 'free';
 		if (scheduled_at) {
-			const month = monthKeyFromDate(scheduled_at);
+			const month = monthKeyInTimeZoneFromUtc(scheduled_at, userTimezone);
 			if (month) {
 				const check = canSchedulePostInMonth(db, accountId, month, tier);
 				if (!check.allowed) return fail(403, { error: check.reason ?? 'Post limit exceeded for this month.' });

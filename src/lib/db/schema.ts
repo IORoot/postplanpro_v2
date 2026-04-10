@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS user (
   image TEXT,
   password_hash TEXT,
   email_verified_at TEXT,
+  timezone TEXT DEFAULT 'Europe/London',
+  timezone_migrated_at TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 

@@ -1,4 +1,12 @@
 import { getDatabase } from '$lib/db/index.js';
+import {
+	DEFAULT_TIMEZONE,
+	ensureValidTimeZone,
+	isNaiveScheduledAt,
+	isValidTimeZone,
+	localDateTimeToUtcIso,
+	normalizeScheduledAtForStorage
+} from '$lib/server/timezone.js';
 import { getUsageForMonth, currentMonthKey } from '$lib/usage.js';
 import { getTierLimits } from '$lib/tiers.js';
 import { sendResetPasswordEmail, signOut } from '../../auth.js';
@@ -6,6 +14,26 @@ import { redirect, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 type AccountSection = 'billing' | 'account' | 'templates' | 'globals' | 'settings';
+
+function getSupportedTimezones(): string[] {
+	try {
+		const values = Intl.supportedValuesOf?.('timeZone');
+		if (values && values.length > 0) return values;
+	} catch {
+		// Fallback below
+	}
+	return [
+		'UTC',
+		'Europe/London',
+		'Europe/Berlin',
+		'America/New_York',
+		'America/Chicago',
+		'America/Denver',
+		'America/Los_Angeles',
+		'Asia/Tokyo',
+		'Australia/Sydney'
+	];
+}
 
 function parseTemplateFieldsJson(
 	json: string | null | undefined
@@ -61,8 +89,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const db = getDatabase();
 
 	const user = db
-		.prepare('SELECT email, password_hash, tier FROM user WHERE id = ?')
-		.get(userId) as { email: string | null; password_hash: string | null; tier: string } | undefined;
+		.prepare('SELECT email, password_hash, tier, timezone, timezone_migrated_at FROM user WHERE id = ?')
+		.get(userId) as
+		| {
+				email: string | null;
+				password_hash: string | null;
+				tier: string;
+				timezone: string | null;
+				timezone_migrated_at: string | null;
+		  }
+		| undefined;
 	if (!user) {
 		throw redirect(303, '/auth/login');
 	}
@@ -124,6 +160,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			fields: fieldsByTemplate.get(t.id) ?? []
 		})),
 		email: user.email ?? null,
+		timezone: ensureValidTimeZone(user.timezone),
+		supportedTimezones: getSupportedTimezones(),
+		timezoneMigrated: !!user.timezone_migrated_at,
 		hasPassword: !!user.password_hash,
 		tier,
 		usage: {
@@ -152,6 +191,45 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 };
 
 export const actions: Actions = {
+	updateTimezone: async ({ request, locals }) => {
+		const session = await locals.auth();
+		if (!session?.user?.id) return fail(401, { error: 'Not signed in.' });
+		const userId = session.user.id as string;
+		const data = await request.formData();
+		const requestedTimezone = String(data.get('timezone') ?? '').trim();
+		if (!isValidTimeZone(requestedTimezone)) {
+			return fail(400, { error: 'Please select a valid timezone.' });
+		}
+		const timezone = ensureValidTimeZone(requestedTimezone);
+		const db = getDatabase();
+		const user = db
+			.prepare('SELECT timezone_migrated_at FROM user WHERE id = ?')
+			.get(userId) as { timezone_migrated_at: string | null } | undefined;
+		if (!user) return fail(404, { error: 'User not found.' });
+
+		// One-time legacy migration: interpret naive scheduled_at as user's chosen local timezone, then store UTC ISO.
+		if (!user.timezone_migrated_at) {
+			const rows = db
+				.prepare('SELECT id, scheduled_at FROM post WHERE account_id = ? AND scheduled_at IS NOT NULL')
+				.all(userId) as { id: string; scheduled_at: string }[];
+			const updatePost = db.prepare('UPDATE post SET scheduled_at = ?, updated_at = datetime(\'now\') WHERE id = ? AND account_id = ?');
+			for (const row of rows) {
+				if (!isNaiveScheduledAt(row.scheduled_at)) continue;
+				const utc = localDateTimeToUtcIso(normalizeScheduledAtForStorage(row.scheduled_at), timezone);
+				if (!utc) continue;
+				updatePost.run(utc, row.id, userId);
+			}
+		}
+
+		db.prepare(
+			`UPDATE user
+       SET timezone = ?, timezone_migrated_at = COALESCE(timezone_migrated_at, datetime('now'))
+       WHERE id = ?`
+		).run(timezone, userId);
+
+		return { success: true };
+	},
+
 	sendResetPassword: async ({ request, locals, url }) => {
 		const session = await locals.auth();
 		if (!session?.user?.id) return fail(401, { error: 'Not signed in.' });

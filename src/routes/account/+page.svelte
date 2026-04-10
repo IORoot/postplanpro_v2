@@ -202,6 +202,9 @@
 		{#if form?.disconnectOk}
 			<p class="mb-4 rounded-lg px-3 py-2 text-sm alert-success">OAuth account disconnected.</p>
 		{/if}
+		{#if form?.success && section === 'settings'}
+			<p class="mb-4 rounded-lg px-3 py-2 text-sm alert-success">Settings updated.</p>
+		{/if}
 
 		{#if section === 'account'}
 			<div class="mt-6 space-y-8 lg:mt-0">
@@ -873,6 +876,31 @@
 							{/if}
 						</button>
 					</div>
+				</div>
+
+				<div class="content-card mt-4 rounded-xl p-6 shadow-sm">
+					<h2 class="text-base font-semibold text-[var(--text)]">Timezone</h2>
+					<p class="mt-1 text-sm text-[var(--text-muted)]">
+						Used for your sidebar clock and for converting scheduled post date/time inputs.
+					</p>
+					<form method="POST" action="?/updateTimezone" use:enhance={() => invalidateAll()} class="mt-4 space-y-3">
+						<label for="timezone" class="block text-sm font-medium text-[var(--text)]">Your timezone</label>
+						<select
+							id="timezone"
+							name="timezone"
+							class="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]"
+						>
+							{#each data.supportedTimezones as tz}
+								<option value={tz} selected={tz === data.timezone}>{tz}</option>
+							{/each}
+						</select>
+						<button
+							type="submit"
+							class="inline-flex min-h-[44px] items-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)]"
+						>
+							Save timezone
+						</button>
+					</form>
 				</div>
 			</section>
 		{/if}
