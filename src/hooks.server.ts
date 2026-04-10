@@ -3,6 +3,7 @@ import type { Session } from '@auth/sveltekit';
 import { redirect, type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { getDatabase } from '$lib/db/index.js';
+import { startInternalCronIfEnabled } from '$lib/server/internalCron.js';
 
 function isMarketingPublicPath(pathname: string): boolean {
 	return pathname === '/' || pathname.startsWith('/welcome');
@@ -106,3 +107,8 @@ const securityHeaders: Handle = async ({ event, resolve }) => {
 };
 
 export const handle = sequence(authHandle, appAuthGuard, ssrPublicDarkShell, securityHeaders);
+
+/** Runs once when the Node server starts (adapter-node). Used to send scheduled posts without an external cron. */
+export function init() {
+	startInternalCronIfEnabled();
+}
