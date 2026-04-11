@@ -125,4 +125,28 @@ describe('sendPost', () => {
 		const st = (db.prepare('SELECT status FROM post WHERE id = ?').get(postId) as { status: string }).status;
 		expect(st).toBe('sent');
 	});
+
+	it('includes account_name in webhook JSON (name, else email)', async () => {
+		const db = getDatabase();
+		const postId = 'send-account-name';
+		db.prepare(
+			`INSERT OR REPLACE INTO post (id, account_id, webhook_id, title, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'draft', datetime('now'), datetime('now'))`
+		).run(postId, TEST_USER_ID, TEST_WEBHOOK_ID, 'Z');
+		db.prepare('UPDATE user SET name = ? WHERE id = ?').run('Account Display', TEST_USER_ID);
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			statusText: 'OK',
+			text: async () => '{}'
+		});
+		vi.stubGlobal('fetch', fetchMock);
+		const r = await sendPost(postId, TEST_USER_ID);
+		expect(r.success).toBe(true);
+		const firstCall = fetchMock.mock.calls[0];
+		expect(firstCall).toBeDefined();
+		const body = JSON.parse(firstCall![1].body as string) as { account_name: string };
+		expect(body.account_name).toBe('Account Display');
+		db.prepare('UPDATE user SET name = NULL WHERE id = ?').run(TEST_USER_ID);
+	});
 });
