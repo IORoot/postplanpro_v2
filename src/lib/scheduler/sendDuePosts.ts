@@ -17,6 +17,28 @@ function isLocalhostBaseUrl(url: string): boolean {
 	}
 }
 
+/** Display name for webhooks: `user.name` when set, otherwise `user.email`. */
+function accountNameForWebhook(
+	db: ReturnType<typeof getDatabase>,
+	accountId: string
+): string {
+	const row = db.prepare('SELECT name, email FROM user WHERE id = ?').get(accountId) as
+		| { name: string | null; email: string | null }
+		| undefined;
+	const trimmed = row?.name?.trim();
+	if (trimmed) return trimmed;
+	return row?.email ?? '';
+}
+
+/** Adds `account_name` on every outbound webhook body (after payload / override). */
+function mergeAccountNameIntoBody(
+	db: ReturnType<typeof getDatabase>,
+	body: Record<string, unknown>,
+	accountId: string
+): Record<string, unknown> {
+	return { ...body, account_name: accountNameForWebhook(db, accountId) };
+}
+
 /** Merge id and optional callback_url into the body sent to Make.com. */
 function injectCallbackPayload(
 	db: ReturnType<typeof getDatabase>,
@@ -144,12 +166,8 @@ export async function sendDuePosts(): Promise<{ sent: number; failed: number; er
 			insertSendLog(db, post.account_id, post.id, post.payload_override ?? '', null, resolved.error, false);
 			continue;
 		}
-		const bodyWithCallback = injectCallbackPayload(
-			db,
-			resolved.body as Record<string, unknown>,
-			post.id,
-			post.account_id
-		);
+		const withAccount = mergeAccountNameIntoBody(db, resolved.body as Record<string, unknown>, post.account_id);
+		const bodyWithCallback = injectCallbackPayload(db, withAccount, post.id, post.account_id);
 		const requestJson = JSON.stringify(bodyWithCallback);
 
 		let lastError: string | null = null;
@@ -263,12 +281,8 @@ export async function sendPost(postId: string, accountId: string): Promise<SendP
 		insertSendLog(db, accountId, post.id, post.payload_override ?? '', null, resolved.error, false);
 		return { success: false, error: resolved.error, responseStatus: null, responseBody: resolved.error };
 	}
-	const bodyWithCallback = injectCallbackPayload(
-		db,
-		resolved.body as Record<string, unknown>,
-		post.id,
-		accountId
-	);
+	const withAccount = mergeAccountNameIntoBody(db, resolved.body as Record<string, unknown>, accountId);
+	const bodyWithCallback = injectCallbackPayload(db, withAccount, post.id, accountId);
 	const requestJson = JSON.stringify(bodyWithCallback);
 	const updateSent = db.prepare(
 		"UPDATE post SET status = 'sent', sent_at = datetime('now'), error_message = NULL, updated_at = datetime('now') WHERE id = ?"
