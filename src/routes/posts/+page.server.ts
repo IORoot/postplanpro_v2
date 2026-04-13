@@ -1,5 +1,6 @@
 import { getDatabase } from '$lib/db/index.js';
 import { getNextFreeSlot } from '$lib/scheduler/generateSlots.js';
+import { ensureValidTimeZone } from '$lib/server/timezone.js';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -50,8 +51,10 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
 	const webhooks = db.prepare('SELECT id, name FROM webhook_config WHERE account_id = ? ORDER BY name').all(accountId) as { id: string; name: string }[];
 	const schedules = db.prepare('SELECT id, name FROM schedule WHERE account_id = ? ORDER BY name').all(accountId) as { id: string; name: string }[];
+	const user = db.prepare('SELECT timezone FROM user WHERE id = ?').get(accountId) as { timezone: string | null } | undefined;
+	const timezone = ensureValidTimeZone(user?.timezone);
 
-	return { posts, webhooks, schedules, filters: { status, webhookId, scheduled } };
+	return { posts, webhooks, schedules, timezone, filters: { status, webhookId, scheduled } };
 };
 
 function getIds(formData: FormData): string[] {
@@ -91,10 +94,12 @@ export const actions: Actions = {
 			const schedule = db.prepare('SELECT id, color FROM schedule WHERE id = ? AND account_id = ?').get(scheduleId, accountId) as { id: string; color: string | null } | undefined;
 			if (!schedule) return fail(400, { error: 'Invalid schedule' });
 			const scheduleColor = schedule.color ?? null;
+			const slotAnchor = new Date();
+			slotAnchor.setSeconds(0, 0);
 			const updateWithSlot = db.prepare("UPDATE post SET schedule_id = ?, scheduled_at = ?, status = ?, color = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
 			const updateNoSlot = db.prepare("UPDATE post SET schedule_id = ?, status = ?, color = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
 			for (const id of ids) {
-				const slot = getNextFreeSlot(scheduleId, id, accountId);
+				const slot = getNextFreeSlot(scheduleId, id, accountId, slotAnchor);
 				if (slot) {
 					updateWithSlot.run(scheduleId, slot, 'scheduled', scheduleColor, id, accountId);
 				} else {

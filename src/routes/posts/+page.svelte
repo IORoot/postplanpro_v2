@@ -13,6 +13,21 @@
 	let copiedId = $state<string | null>(null);
 	let copyFailedId = $state<string | null>(null);
 
+	function parseScheduledUtc(value: string): Date {
+		const normalized = value.trim().replace(' ', 'T');
+		if (/[zZ]$/.test(normalized) || /[+-]\d{2}:?\d{2}$/.test(normalized)) return new Date(normalized);
+		return new Date(`${normalized}Z`);
+	}
+
+	function formatScheduledAt(value: string): string {
+		const d = parseScheduledUtc(value);
+		return new Intl.DateTimeFormat(undefined, {
+			timeZone: data.timezone,
+			dateStyle: 'medium',
+			timeStyle: 'short'
+		}).format(d);
+	}
+
 	async function copyPostId(id: string) {
 		copyFailedId = null;
 		try {
@@ -223,7 +238,7 @@
 								<span
 									class="min-w-0 max-w-full break-words sm:max-w-[min(100%,20rem)] sm:truncate"
 									title={post.webhook_name ?? ''}>{post.webhook_name}</span>
-								<span class="min-w-0 shrink-0">{post.scheduled_at ? new Date(post.scheduled_at).toLocaleString() : '—'}</span>
+								<span class="min-w-0 shrink-0">{post.scheduled_at ? formatScheduledAt(post.scheduled_at) : '—'}</span>
 								<span class="rounded px-2 py-0.5 text-xs font-medium {statusClass}">{post.status}</span>
 							</div>
 						</div>

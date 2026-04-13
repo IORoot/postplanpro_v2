@@ -6,18 +6,29 @@
 
 	let { data } = $props();
 
+	function parseUtcLike(iso: string): Date {
+		const normalized = iso.trim().replace(' ', 'T');
+		if (/[zZ]$/.test(normalized) || /[+-]\d{2}:?\d{2}$/.test(normalized)) return new Date(normalized);
+		return new Date(`${normalized}Z`);
+	}
+
 	function formatDate(iso: string) {
-		return new Date(iso).toLocaleString();
+		return new Intl.DateTimeFormat(undefined, {
+			timeZone: data.timezone,
+			dateStyle: 'medium',
+			timeStyle: 'short'
+		}).format(parseUtcLike(iso));
 	}
 
 	function formatDateTime(iso: string) {
-		return new Date(iso).toLocaleString(undefined, {
+		return new Intl.DateTimeFormat(undefined, {
+			timeZone: data.timezone,
 			weekday: 'short',
 			month: 'short',
 			day: 'numeric',
 			hour: 'numeric',
 			minute: '2-digit'
-		});
+		}).format(parseUtcLike(iso));
 	}
 
 	function tryPrettyJson(raw: string): string {

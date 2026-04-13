@@ -278,14 +278,12 @@ export function generateSlots(
 	return slots.slice(0, count).map((r) => r.scheduled_at);
 }
 
-/** Normalize datetime string to ISO slice (YYYY-MM-DDTHH:MM:SS) for comparison. */
+/** Normalize datetime string to UTC-like sortable form without timezone conversion. */
 function normalizeSlot(s: string): string {
 	const trimmed = (s || '').trim().replace(' ', 'T');
-	if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?/.test(trimmed)) {
-		const d = new Date(trimmed);
-		if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 19);
-	}
-	return trimmed.slice(0, 19);
+	const m = trimmed.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(?::(\d{2}))?/);
+	if (!m) return trimmed.slice(0, 19);
+	return `${m[1]}:${m[2] ?? '00'}`;
 }
 
 /**
@@ -295,7 +293,8 @@ function normalizeSlot(s: string): string {
 export function getNextFreeSlot(
 	scheduleId: string,
 	excludePostId?: string | null,
-	accountId?: string
+	accountId?: string,
+	fromDate?: Date
 ): string | null {
 	const db = getDatabase();
 	const taken = db
@@ -314,13 +313,15 @@ export function getNextFreeSlot(
 					: [scheduleId])
 		) as { scheduled_at: string }[];
 	const takenSet = new Set(taken.map((r) => normalizeSlot(r.scheduled_at)));
-	const from = new Date();
+	const from = fromDate ? new Date(fromDate) : new Date();
+	// Keep slot allocation minute-stable inside bulk actions.
+	from.setSeconds(0, 0);
+	const fromNorm = from.toISOString().slice(0, 19);
 	const slots = generateSlots(scheduleId, 500, from, accountId);
 	for (const slot of slots) {
 		const norm = normalizeSlot(slot);
 		if (!takenSet.has(norm)) {
-			const d = new Date(norm);
-			if (d >= from) return norm;
+			if (norm >= fromNorm) return norm;
 		}
 	}
 	return null;
