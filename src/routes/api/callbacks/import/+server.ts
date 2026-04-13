@@ -41,16 +41,17 @@ class CallbackImportValidationError extends Error {
 
 export const POST: RequestHandler = async ({ request }) => {
 	const authHeader = request.headers.get('Authorization');
-	const headerToken = request.headers.get('X-Callback-Token') ?? request.headers.get('x-callback-token');
+	const callbackHeaderToken =
+		request.headers.get('X-Callback-Token') ?? request.headers.get('x-callback-token');
+	const apiKeyToken = request.headers.get('X-API-KEY') ?? request.headers.get('x-api-key');
 	const bearerToken =
 		authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
-	const token = (bearerToken || headerToken || '').trim();
+	const token = (apiKeyToken || callbackHeaderToken || bearerToken || '').trim();
 
 	if (!token) {
 		return json(
 			{
-				error:
-					'Missing callback token. Use Authorization: Bearer <token> or X-Callback-Token: <token>.'
+				error: 'Missing API key. Use X-API-KEY: <token>.'
 			},
 			{ status: 401 }
 		);

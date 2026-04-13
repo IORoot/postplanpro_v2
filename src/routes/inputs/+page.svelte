@@ -158,8 +158,7 @@
 						</p>
 						<p class="mt-2">Send in requests as:</p>
 						<ul class="mt-1 list-inside list-disc space-y-0.5">
-							<li><code class="rounded bg-[var(--bg)] px-1 text-xs">Authorization: Bearer &lt;token&gt;</code></li>
-							<li>or <code class="rounded bg-[var(--bg)] px-1 text-xs">X-Callback-Token: &lt;token&gt;</code></li>
+							<li><code class="rounded bg-[var(--bg)] px-1 text-xs">X-API-KEY: &lt;token&gt;</code></li>
 						</ul>
 					{/snippet}
 				</InboundAuthTokenCard>
@@ -205,7 +204,7 @@
 								<li>URL: the <code class="rounded bg-[var(--bg)] px-1">callback_url</code> from the payload (or copy from the left).</li>
 								<li>
 									Method: <code class="rounded bg-[var(--bg)] px-1">POST</code>. Header:
-									<code class="rounded bg-[var(--bg)] px-1">Authorization: Bearer {'{{callback_token}}'}</code>.
+									<code class="rounded bg-[var(--bg)] px-1">X-API-KEY: {'{{callback_token}}'}</code>.
 								</li>
 								<li>
 									Body (raw JSON): use <code class="rounded bg-[var(--bg)] px-1">post_id</code> (webhook
@@ -264,7 +263,7 @@
 										class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-neutral-950 p-3 pr-16 text-xs text-neutral-50"><code
 											>{`curl -X POST "${data.callbackUrl ?? 'https://your-app.com/api/callbacks/stage'}" \\
   -H "Content-Type: application/json" \\
-  -H "X-Callback-Token: YOUR_CALLBACK_TOKEN" \\
+  -H "X-API-KEY: YOUR_CALLBACK_TOKEN" \\
   -d '{"post_id":"uuid-of-the-post","stage":"instagram_published"}'`}</code
 										></pre>
 								</div>

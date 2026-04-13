@@ -52,8 +52,7 @@
 		</p>
 		<p class="mt-2">Send in requests as:</p>
 		<ul class="mt-1 list-inside list-disc space-y-0.5">
-			<li><code class="rounded bg-[var(--bg)] px-1 text-xs">Authorization: Bearer &lt;token&gt;</code></li>
-			<li>or <code class="rounded bg-[var(--bg)] px-1 text-xs">X-Callback-Token: &lt;token&gt;</code></li>
+			<li><code class="rounded bg-[var(--bg)] px-1 text-xs">X-API-KEY: &lt;token&gt;</code></li>
 		</ul>
 	{/snippet}
 </InboundAuthTokenCard>
@@ -93,8 +92,7 @@
 				Create posts from external tools by sending JSON. Use the webhook token above to authenticate.
 			</p>
 			<p class="mt-2">
-				Send <code class="rounded bg-[var(--bg)] px-1 text-xs">Authorization: Bearer &lt;token&gt;</code> or
-				<code class="rounded bg-[var(--bg)] px-1 text-xs">X-Callback-Token: &lt;token&gt;</code>.
+				Send <code class="rounded bg-[var(--bg)] px-1 text-xs">X-API-KEY: &lt;token&gt;</code>.
 			</p>
 			<p class="mt-3 font-medium text-[var(--text)]">Example request</p>
 			<p class="mt-1 text-xs">
@@ -169,7 +167,7 @@
 						class="overflow-x-auto rounded rounded-t-none border border-[var(--border)] bg-neutral-950 p-3 pr-16 text-xs text-neutral-50"><code
 							>{`curl -X POST "${data.importCallbackUrl ?? 'https://your-app.com/api/callbacks/import'}" \\
   -H "Content-Type: application/json" \\
-  -H "X-Callback-Token: YOUR_WEBHOOK_TOKEN" \\
+  -H "X-API-KEY: YOUR_WEBHOOK_TOKEN" \\
   -d '{"posts":[{"title":"My post title","webhook_id":"<webhook-id>","content":"Optional post body."}]}'`}</code
 						></pre>
 				</div>

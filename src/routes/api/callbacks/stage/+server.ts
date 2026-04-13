@@ -4,10 +4,15 @@ import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const authHeader = request.headers.get('Authorization');
+	const apiKeyToken = request.headers.get('X-API-KEY') ?? request.headers.get('x-api-key');
+	const callbackHeaderToken =
+		request.headers.get('X-Callback-Token') ?? request.headers.get('x-callback-token');
 	const token =
-		authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : request.headers.get('X-Callback-Token')?.trim();
+		apiKeyToken?.trim() ||
+		callbackHeaderToken?.trim() ||
+		(authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null);
 	if (!token) {
-		return json({ error: 'Missing callback token. Use Authorization: Bearer <token> or X-Callback-Token.' }, { status: 401 });
+		return json({ error: 'Missing API key. Use X-API-KEY: <token>.' }, { status: 401 });
 	}
 
 	const db = getDatabase();
