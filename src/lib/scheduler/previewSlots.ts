@@ -53,6 +53,11 @@ function timeToDateUTC(date: Date, timeStr: string): Date {
 	);
 }
 
+function toLocalSlotString(d: Date): string {
+	const pad = (n: number) => String(n).padStart(2, '0');
+	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 function addInterval(date: Date, amount: number, unit: string): Date {
 	const d = new Date(date);
 	switch (unit) {
@@ -99,7 +104,7 @@ function generateFromRule(
 			const at = config.at as string | undefined;
 			if (!at) break;
 			const d = new Date(at);
-			if (d >= start && d <= effectiveEnd) slots.push(d.toISOString().slice(0, 19));
+			if (d >= start && d <= effectiveEnd) slots.push(toLocalSlotString(d));
 			break;
 		}
 		case 'cron': {
@@ -113,9 +118,9 @@ function generateFromRule(
 				const interval = CronExpressionParser.parse(expr, options);
 				for (let i = 0; i < limit; i++) {
 					const next = interval.next();
-					const d = next.toDate();
-					if (d > effectiveEnd) break;
-					slots.push(d.toISOString().slice(0, 19));
+				const d = next.toDate();
+				if (d > effectiveEnd) break;
+				slots.push(toLocalSlotString(d));
 				}
 			} catch {
 				// invalid cron
@@ -128,7 +133,7 @@ function generateFromRule(
 			if (d < start) d.setDate(d.getDate() + 1);
 			for (let i = 0; i < limit; i++) {
 				if (d > effectiveEnd) break;
-				slots.push(d.toISOString().slice(0, 19));
+				slots.push(toLocalSlotString(d));
 				d.setDate(d.getDate() + 1);
 			}
 			break;
@@ -136,16 +141,17 @@ function generateFromRule(
 		case 'weekly': {
 			const dayOfWeek = (config.dayOfWeek as number) ?? 0;
 			const time = (config.time as string) || '09:00';
-			let d = timeToDateUTC(start, time);
-			while (d.getUTCDay() !== dayOfWeek || d < start) {
-				d.setUTCDate(d.getUTCDate() + 1);
-				d = timeToDateUTC(d, time);
+			let d = timeToDate(start, time);
+			while (d.getDay() !== dayOfWeek || d < start) {
+				d.setDate(d.getDate() + 1);
+				d = timeToDate(d, time);
 			}
-			const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
 			for (let i = 0; i < limit; i++) {
 				if (d > effectiveEnd) break;
-				slots.push(d.toISOString().slice(0, 19));
-				d = new Date(d.getTime() + sevenDaysMs);
+				slots.push(toLocalSlotString(d));
+				const next = new Date(d);
+				next.setDate(next.getDate() + 7);
+				d = timeToDate(next, time);
 			}
 			break;
 		}
@@ -166,7 +172,7 @@ function generateFromRule(
 			}
 			for (let i = 0; i < limit; i++) {
 				if (d > effectiveEnd) break;
-				slots.push(d.toISOString().slice(0, 19));
+				slots.push(toLocalSlotString(d));
 				m += 1;
 				if (m > 11) {
 					m = 0;
@@ -189,7 +195,7 @@ function generateFromRule(
 			}
 			for (let i = 0; i < limit; i++) {
 				if (d > effectiveEnd) break;
-				slots.push(d.toISOString().slice(0, 19));
+				slots.push(toLocalSlotString(d));
 				y += 1;
 				d = timeToDate(new Date(y, month, Math.min(dayNum, new Date(y, month + 1, 0).getDate())), time);
 			}
@@ -201,7 +207,7 @@ function generateFromRule(
 			let d = new Date(start);
 			for (let i = 0; i < limit; i++) {
 				if (d > effectiveEnd) break;
-				slots.push(d.toISOString().slice(0, 19));
+				slots.push(toLocalSlotString(d));
 				d = addInterval(d, amount, unit);
 			}
 			break;

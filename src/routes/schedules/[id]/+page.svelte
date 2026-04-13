@@ -152,6 +152,18 @@
 		fieldCount = fieldIndices.length;
 	}
 
+	/**
+	 * Convert a UTC ISO string (with or without Z) to a "YYYY-MM-DDTHH:MM" string
+	 * in the browser's local timezone, suitable for datetime-local inputs.
+	 */
+	function isoToLocalInputValue(iso: string | null | undefined): string {
+		if (!iso) return '';
+		const d = new Date(iso);
+		if (isNaN(d.getTime())) return '';
+		const pad = (n: number) => String(n).padStart(2, '0');
+		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+	}
+
 	let copyFeedback = $state(false);
 	async function copyScheduleId() {
 		const id = data.schedule?.id;
@@ -463,8 +475,8 @@
 							<input
 								id="rule-{i}-once"
 								type="datetime-local"
-								value={rule.config.at ? String(rule.config.at).slice(0, 16) : ''}
-								oninput={(e) => updateRuleConfig(i, 'at', e.currentTarget.value ? new Date(e.currentTarget.value).toISOString().slice(0, 19) : '')}
+								value={isoToLocalInputValue(rule.config.at as string)}
+								oninput={(e) => updateRuleConfig(i, 'at', e.currentTarget.value ? new Date(e.currentTarget.value).toISOString() : '')}
 								class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
 							/>
 						</div>
@@ -481,9 +493,9 @@
 										<input
 											id="rule-{i}-start"
 											type="datetime-local"
-											value={rule.start_at ? String(rule.start_at).slice(0, 16) : ''}
+											value={isoToLocalInputValue(rule.start_at)}
 											oninput={(e) => {
-												rules = rules.map((r, idx) => (idx === i ? { ...r, start_at: e.currentTarget.value ? new Date(e.currentTarget.value).toISOString().slice(0, 19) : null } : r));
+												rules = rules.map((r, idx) => (idx === i ? { ...r, start_at: e.currentTarget.value ? new Date(e.currentTarget.value).toISOString() : null } : r));
 											}}
 											class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
 										/>
@@ -493,9 +505,9 @@
 										<input
 											id="rule-{i}-end"
 											type="datetime-local"
-											value={rule.end_at ? String(rule.end_at).slice(0, 16) : ''}
+											value={isoToLocalInputValue(rule.end_at)}
 											oninput={(e) => {
-												rules = rules.map((r, idx) => (idx === i ? { ...r, end_at: e.currentTarget.value ? new Date(e.currentTarget.value).toISOString().slice(0, 19) : null } : r));
+												rules = rules.map((r, idx) => (idx === i ? { ...r, end_at: e.currentTarget.value ? new Date(e.currentTarget.value).toISOString() : null } : r));
 											}}
 											class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
 										/>

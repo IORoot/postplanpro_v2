@@ -382,7 +382,7 @@
 														updateRuleConfig(
 															i,
 															'at',
-															e.currentTarget.value ? new Date(e.currentTarget.value).toISOString().slice(0, 19) : ''
+															e.currentTarget.value ? new Date(e.currentTarget.value).toISOString() : ''
 														)}
 													class="mt-2 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[var(--text)] min-h-[44px]"
 												/>
@@ -407,7 +407,7 @@
 															? {
 																	...r,
 																	start_at: e.currentTarget.value
-																		? new Date(e.currentTarget.value).toISOString().slice(0, 19)
+																		? new Date(e.currentTarget.value).toISOString()
 																		: null
 																}
 															: r
@@ -428,7 +428,7 @@
 															? {
 																	...r,
 																	end_at: e.currentTarget.value
-																		? new Date(e.currentTarget.value).toISOString().slice(0, 19)
+																		? new Date(e.currentTarget.value).toISOString()
 																		: null
 																}
 															: r
