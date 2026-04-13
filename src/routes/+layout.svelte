@@ -82,12 +82,4 @@
 		{/if}
 	</main>
 
-	<a
-		href="/changelog"
-		class="fixed z-40 text-[0.6875rem] tabular-nums text-[var(--text-muted)] underline-offset-2 transition-colors [transition-duration:var(--motion-instant)] hover:text-[var(--text)] hover:underline"
-		style="right: max(1rem, env(safe-area-inset-right, 0px)); bottom: max(1rem, env(safe-area-inset-bottom, 0px));"
-		aria-label="View changelog for version {$page.data.appVersion}"
-	>
-		v{$page.data.appVersion}
-	</a>
 </div>

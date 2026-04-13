@@ -1,6 +1,8 @@
 import { writable } from 'svelte/store';
 
-const ANIMATIONS_KEY = 'postplan-show-input-animations';
+/** localStorage key for input page animations (used by backup import/export UI). */
+export const INPUT_ANIMATIONS_STORAGE_KEY = 'postplan-show-input-animations';
+const ANIMATIONS_KEY = INPUT_ANIMATIONS_STORAGE_KEY;
 
 function getInitialShowAnimations(): boolean {
 	if (typeof window === 'undefined') return true;

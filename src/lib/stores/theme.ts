@@ -2,7 +2,9 @@ import { writable, get } from 'svelte/store';
 
 export type Theme = 'light' | 'dark';
 
-const STORAGE_KEY = 'postplan-theme';
+/** localStorage key for theme preference (used by backup import/export UI). */
+export const THEME_STORAGE_KEY = 'postplan-theme';
+const STORAGE_KEY = THEME_STORAGE_KEY;
 
 /** Synced from root layout on navigation — welcome + auth always use dark tokens. */
 let pathnameForThemeMerge = '';

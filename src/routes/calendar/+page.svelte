@@ -57,6 +57,26 @@
 		status: string;
 		webhook_name: string;
 	};
+	type LiveStatusRow = {
+		id: string;
+		status: string;
+		scheduled_at: string | null;
+	};
+
+	function parseScheduledAt(value: string): Date {
+		const normalized = value.trim().replace(' ', 'T');
+		if (/[zZ]$/.test(normalized) || /[+-]\d{2}:?\d{2}$/.test(normalized)) return new Date(normalized);
+		return new Date(`${normalized}Z`);
+	}
+
+	function formatScheduledAt(
+		value: string,
+		opts: Intl.DateTimeFormatOptions = { dateStyle: 'medium', timeStyle: 'short' }
+	): string {
+		return new Intl.DateTimeFormat(undefined, { timeZone: data.timezone, ...opts }).format(
+			parseScheduledAt(value)
+		);
+	}
 
 	function trimResponse(body: string | null | undefined): string {
 		if (!body) return '';
@@ -99,8 +119,12 @@
 
 	const view = $derived(data.view as CalendarView);
 	const anchor = $derived(new Date(data.anchorDate + 'T00:00:00'));
+	let livePosts = $state<CalendarPost[]>([]);
+	$effect(() => {
+		livePosts = [...(data.posts as CalendarPost[])];
+	});
 	const posts = $derived(
-		[...(data.posts as CalendarPost[])].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
+		[...livePosts].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
 	);
 	const postsByDate = $derived.by(() => {
 		const byDate = new Map<string, CalendarPost[]>();
@@ -117,7 +141,7 @@
 		const map = new Map<string, CalendarPost[]>();
 		if (view !== 'month' && view !== 'year') return map;
 		for (const post of posts) {
-			const d = new Date(post.scheduled_at);
+			const d = parseScheduledAt(post.scheduled_at);
 			const key = `${d.getFullYear()}-${d.getMonth()}`;
 			const list = map.get(key) ?? [];
 			list.push(post);
@@ -284,7 +308,7 @@
 	}
 
 	function formatTime(iso: string) {
-		return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+		return formatScheduledAt(iso, { hour: '2-digit', minute: '2-digit' });
 	}
 
 	function formatHourLabel(hour: number): string {
@@ -374,6 +398,39 @@
 		if (status === 'sent') return 'status-sent';
 		return 'status-failed';
 	}
+
+	async function refreshLiveStatuses() {
+		if (livePosts.length === 0) return;
+		const ids = livePosts.map((p) => p.id);
+		try {
+			const res = await fetch('/api/posts/status', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ ids })
+			});
+			if (!res.ok) return;
+			const body = (await res.json()) as { statuses?: LiveStatusRow[] };
+			const updates = new Map((body.statuses ?? []).map((r) => [r.id, r] as const));
+			if (updates.size === 0) return;
+			livePosts = livePosts.map((p) => {
+				const u = updates.get(p.id);
+				if (!u) return p;
+				return {
+					...p,
+					status: u.status,
+					scheduled_at: u.scheduled_at ?? p.scheduled_at
+				};
+			});
+		} catch {
+			// Keep UI stable if polling fails transiently.
+		}
+	}
+
+	onMount(() => {
+		void refreshLiveStatuses();
+		const id = setInterval(refreshLiveStatuses, 10000);
+		return () => clearInterval(id);
+	});
 
 	const DRAG_TYPE = 'application/x-postplan-reschedule';
 
@@ -504,7 +561,7 @@
 		const raw = e.dataTransfer?.getData(DRAG_TYPE);
 		if (!raw) return;
 		const { postId, scheduled_at } = JSON.parse(raw) as { postId: string; scheduled_at: string };
-		const postDate = new Date(scheduled_at);
+		const postDate = parseScheduledAt(scheduled_at);
 		const d = new Date(cellDate);
 		d.setHours(postDate.getHours(), postDate.getMinutes(), postDate.getSeconds(), 0);
 		reschedulePost(postId, toIsoLocal(d));
@@ -516,7 +573,7 @@
 		const raw = e.dataTransfer.getData(DRAG_TYPE);
 		if (!raw) return;
 		const { scheduled_at } = JSON.parse(raw) as { postId: string; scheduled_at: string };
-		const postDate = new Date(scheduled_at);
+		const postDate = parseScheduledAt(scheduled_at);
 		const d = new Date(cellDate);
 		d.setHours(postDate.getHours(), postDate.getMinutes(), postDate.getSeconds(), 0);
 		setDragPreview(
@@ -533,7 +590,7 @@
 		const raw = e.dataTransfer?.getData(DRAG_TYPE);
 		if (!raw) return;
 		const { postId, scheduled_at } = JSON.parse(raw) as { postId: string; scheduled_at: string };
-		const postDate = new Date(scheduled_at);
+		const postDate = parseScheduledAt(scheduled_at);
 		const y = anchor.getFullYear();
 		const lastDay = new Date(y, monthIndex + 1, 0).getDate();
 		const day = Math.min(postDate.getDate(), lastDay);
@@ -547,7 +604,7 @@
 		const raw = e.dataTransfer.getData(DRAG_TYPE);
 		if (!raw) return;
 		const { scheduled_at } = JSON.parse(raw) as { postId: string; scheduled_at: string };
-		const postDate = new Date(scheduled_at);
+		const postDate = parseScheduledAt(scheduled_at);
 		const y = anchor.getFullYear();
 		const lastDay = new Date(y, monthIndex + 1, 0).getDate();
 		const day = Math.min(postDate.getDate(), lastDay);
@@ -1188,12 +1245,12 @@
 									href={"/posts/" + post.id}
 									class="calendar-post-accent block min-w-0 cursor-grab truncate rounded-md px-2 py-1 text-xs text-neutral-900 hover:underline active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
 									style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? '#fafafa'};`}
-									title={`${new Date(post.scheduled_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })} · ${post.title}`}
+									title={`${formatScheduledAt(post.scheduled_at, { day: '2-digit', month: 'short' })} · ${post.title}`}
 									draggable={true}
 									ondragstart={(e) => handleDragStart(e, post)}
 									ondragend={handleDragEnd}
 								>
-									{new Date(post.scheduled_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })} · {post.title}
+									{formatScheduledAt(post.scheduled_at, { day: '2-digit', month: 'short' })} · {post.title}
 								</a>
 							{/each}
 							{#if monthPosts.length > 4}
@@ -1222,7 +1279,7 @@
 		{:else}
 			<div class="space-y-2">
 				{#each posts as post (post.id)}
-					{@const postDate = new Date(post.scheduled_at)}
+					{@const postDate = parseScheduledAt(post.scheduled_at)}
 					{@const isPostToday = isToday(postDate)}
 					<div
 						class="calendar-post-accent rounded-lg p-2 {isPostToday ? 'calendar-today' : ''}"
@@ -1233,7 +1290,7 @@
 								<img src={post.image_url} alt={"Preview for " + post.title} class="h-8 w-8 rounded object-cover border border-[var(--border)]" loading="lazy" />
 							{/if}
 							<a href={"/posts/" + post.id} class="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900 hover:underline">
-								{new Date(post.scheduled_at).toLocaleString()} · {post.title}
+								{formatScheduledAt(post.scheduled_at)} · {post.title}
 							</a>
 							<button
 								type="button"
@@ -1271,7 +1328,7 @@
 											href={"/posts/" + post.id}
 											class="h-1.5 w-1.5 rounded-full"
 											style={`background-color: ${darkenMarkerColor(post.color)};`}
-											title={`${post.title} • ${new Date(post.scheduled_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`}
+											title={`${post.title} • ${formatScheduledAt(post.scheduled_at, { hour: '2-digit', minute: '2-digit' })}`}
 										></a>
 									{/each}
 								</div>

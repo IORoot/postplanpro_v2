@@ -1,5 +1,6 @@
 import { getDatabase } from '$lib/db/index.js';
 import { loadReportStatistics } from '$lib/server/overviewData.js';
+import { ensureValidTimeZone } from '$lib/server/timezone.js';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -31,6 +32,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		};
 
 	const db = getDatabase();
+	const user = db.prepare('SELECT timezone FROM user WHERE id = ?').get(accountId) as
+		| { timezone: string | null }
+		| undefined;
+	const timezone = ensureValidTimeZone(user?.timezone);
 	const statistics =
 		reportType === 'statistics'
 			? loadReportStatistics(db, accountId)
@@ -118,6 +123,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	return {
 		reports,
+		timezone,
 		reportType,
 		callbackStages,
 		callbackOrderBy,
