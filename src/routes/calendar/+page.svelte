@@ -14,6 +14,14 @@
 		showQuickPath = true;
 	});
 
+	onMount(() => {
+		const id = setInterval(() => {
+			if (document.visibilityState !== 'visible') return;
+			void invalidateAll();
+		}, 10000);
+		return () => clearInterval(id);
+	});
+
 	function dismissQuickPath() {
 		localStorage.setItem(QUICK_PATH_KEY, '1');
 		showQuickPath = false;

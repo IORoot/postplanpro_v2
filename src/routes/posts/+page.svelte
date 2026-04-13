@@ -3,6 +3,7 @@
 	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import { onMount } from 'svelte';
 
 	let { data } = $props();
 	let sendingId = $state<string | null>(null);
@@ -89,6 +90,14 @@
 			sendingId = null;
 		}
 	}
+
+	onMount(() => {
+		const id = setInterval(() => {
+			if (document.visibilityState !== 'visible') return;
+			void invalidateAll();
+		}, 10000);
+		return () => clearInterval(id);
+	});
 </script>
 
 <svelte:head>
