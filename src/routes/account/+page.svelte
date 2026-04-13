@@ -2,8 +2,13 @@
 	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { theme, toggleTheme } from '$lib/stores/theme.js';
-	import { showInputAnimations, toggleInputAnimations } from '$lib/stores/uiPrefs.js';
+	import { get } from 'svelte/store';
+	import {
+		ACCOUNT_IMPORT_CONFIRM_PHRASE,
+		ACCOUNT_RESET_CONFIRM_PHRASE
+	} from '$lib/accountBackupConstants.js';
+	import { theme, toggleTheme, THEME_STORAGE_KEY } from '$lib/stores/theme.js';
+	import { showInputAnimations, toggleInputAnimations, INPUT_ANIMATIONS_STORAGE_KEY } from '$lib/stores/uiPrefs.js';
 
 	let { data, form } = $props();
 
@@ -71,6 +76,166 @@
 	function openNewTemplate() {
 		newTemplate = true;
 		newTemplateFields = [{ key: '', type: 'string', value: '' }];
+	}
+
+	let backupIncludeSendLog = $state(false);
+	let importConfirmPhrase = $state('');
+	let exportingBackup = $state(false);
+	let importingBackup = $state(false);
+	let backupUiMessage = $state<string | null>(null);
+	let backupUiError = $state(false);
+	let importFileInput = $state<HTMLInputElement | undefined>(undefined);
+
+	let resetDataAcknowledged = $state(false);
+	let resetDataConfirmPhrase = $state('');
+	let resettingAccount = $state(false);
+	let resetUiMessage = $state<string | null>(null);
+	let resetUiError = $state(false);
+
+	/** Live clocks: device OS time vs saved IANA timezone (settings section only). */
+	let systemClockLabel = $state('');
+	let savedTzClockLabel = $state('');
+
+	$effect(() => {
+		if (section !== 'settings') return;
+		function tick() {
+			const now = new Date();
+			systemClockLabel = new Intl.DateTimeFormat(undefined, {
+				dateStyle: 'full',
+				timeStyle: 'medium'
+			}).format(now);
+			try {
+				savedTzClockLabel = new Intl.DateTimeFormat(undefined, {
+					timeZone: data.timezone,
+					dateStyle: 'full',
+					timeStyle: 'medium'
+				}).format(now);
+			} catch {
+				savedTzClockLabel = systemClockLabel;
+			}
+		}
+		tick();
+		const id = setInterval(tick, 1000);
+		return () => clearInterval(id);
+	});
+
+	async function exportBackup() {
+		backupUiMessage = null;
+		exportingBackup = true;
+		try {
+			const q = backupIncludeSendLog ? '?includeSendLog=1' : '';
+			const res = await fetch(`/api/account/export${q}`);
+			if (!res.ok) {
+				const err = (await res.json().catch(() => ({}))) as { error?: string };
+				throw new Error(err.error ?? res.statusText);
+			}
+			const text = await res.text();
+			const data = JSON.parse(text) as Record<string, unknown>;
+			data.clientPreferences = {
+				theme: get(theme),
+				showInputAnimations: get(showInputAnimations)
+			};
+			const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `postplan-backup-${new Date().toISOString().slice(0, 10)}.json`;
+			a.click();
+			URL.revokeObjectURL(url);
+			backupUiMessage = 'Backup downloaded.';
+			backupUiError = false;
+		} catch (e) {
+			backupUiMessage = e instanceof Error ? e.message : 'Export failed.';
+			backupUiError = true;
+		} finally {
+			exportingBackup = false;
+		}
+	}
+
+	async function onImportFile(ev: Event) {
+		const input = ev.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		input.value = '';
+		if (!file) return;
+		if (importConfirmPhrase !== ACCOUNT_IMPORT_CONFIRM_PHRASE) {
+			backupUiMessage = 'Confirmation phrase does not match.';
+			backupUiError = true;
+			return;
+		}
+		importingBackup = true;
+		backupUiMessage = null;
+		try {
+			let backup: unknown;
+			try {
+				backup = JSON.parse(await file.text());
+			} catch {
+				throw new Error('File is not valid JSON.');
+			}
+			const res = await fetch('/api/account/import', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					confirmReplace: ACCOUNT_IMPORT_CONFIRM_PHRASE,
+					backup
+				})
+			});
+			const body = (await res.json().catch(() => ({}))) as {
+				error?: string;
+				clientPreferences?: { theme?: string; showInputAnimations?: boolean };
+			};
+			if (!res.ok) {
+				throw new Error(body.error ?? 'Import failed.');
+			}
+			const prefs = body.clientPreferences;
+			if (prefs) {
+				if (prefs.theme === 'light' || prefs.theme === 'dark') {
+					localStorage.setItem(THEME_STORAGE_KEY, prefs.theme);
+					theme.set(prefs.theme);
+				}
+				if (typeof prefs.showInputAnimations === 'boolean') {
+					localStorage.setItem(INPUT_ANIMATIONS_STORAGE_KEY, String(prefs.showInputAnimations));
+					showInputAnimations.set(prefs.showInputAnimations);
+				}
+			}
+			await invalidateAll();
+			backupUiMessage = 'Backup restored. Your account data has been replaced.';
+			backupUiError = false;
+			importConfirmPhrase = '';
+		} catch (e) {
+			backupUiMessage = e instanceof Error ? e.message : 'Import failed.';
+			backupUiError = true;
+		} finally {
+			importingBackup = false;
+		}
+	}
+
+	async function submitResetAccountData() {
+		resetUiMessage = null;
+		resettingAccount = true;
+		try {
+			const res = await fetch('/api/account/reset-data', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					acknowledge: resetDataAcknowledged,
+					confirmReset: resetDataConfirmPhrase
+				})
+			});
+			const body = (await res.json().catch(() => ({}))) as { error?: string };
+			if (!res.ok) {
+				throw new Error(body.error ?? 'Reset failed.');
+			}
+			await invalidateAll();
+			resetUiMessage = 'All listed data has been deleted. Your account and sign-in are unchanged.';
+			resetUiError = false;
+			resetDataConfirmPhrase = '';
+			resetDataAcknowledged = false;
+		} catch (e) {
+			resetUiMessage = e instanceof Error ? e.message : 'Reset failed.';
+			resetUiError = true;
+		} finally {
+			resettingAccount = false;
+		}
 	}
 </script>
 
@@ -883,6 +1048,22 @@
 					<p class="mt-1 text-sm text-[var(--text-muted)]">
 						Used for your sidebar clock and for converting scheduled post date/time inputs.
 					</p>
+					<div
+						class="mt-4 space-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface-hover)]/40 px-3 py-3 sm:px-4"
+						role="status"
+						aria-live="polite"
+					>
+						<div>
+							<p class="text-xs font-medium text-[var(--text-muted)]">This device (system date &amp; time)</p>
+							<p class="mt-1 font-mono text-sm leading-relaxed text-[var(--text)] tabular-nums">{systemClockLabel}</p>
+						</div>
+						<div>
+							<p class="text-xs font-medium text-[var(--text-muted)]">
+								Same moment in your saved timezone ({data.timezone})
+							</p>
+							<p class="mt-1 font-mono text-sm leading-relaxed text-[var(--text)] tabular-nums">{savedTzClockLabel}</p>
+						</div>
+					</div>
 					<form method="POST" action="?/updateTimezone" use:enhance={() => invalidateAll()} class="mt-4 space-y-3">
 						<label for="timezone" class="block text-sm font-medium text-[var(--text)]">Your timezone</label>
 						<select
@@ -901,6 +1082,146 @@
 							Save timezone
 						</button>
 					</form>
+				</div>
+
+				<div class="content-card mt-4 rounded-xl p-6 shadow-sm">
+					<h2 class="text-base font-semibold text-[var(--text)]">Backup & restore</h2>
+					<p class="mt-1 text-sm text-[var(--text-muted)]">
+						Download everything tied to your account: posts, schedules, outputs (webhooks), globals, templates, usage
+						counters, and optional send history. The JSON file contains webhook URLs, API keys, and callback secrets — keep
+						it private.
+					</p>
+					<label class="mt-4 flex cursor-pointer items-start gap-3 text-sm text-[var(--text)]">
+						<input
+							type="checkbox"
+							bind:checked={backupIncludeSendLog}
+							class="mt-1 h-4 w-4 shrink-0 rounded border-[var(--border)]"
+						/>
+						<span>Include send history (report rows; can be large)</span>
+					</label>
+					<div class="mt-4">
+						<button
+							type="button"
+							disabled={exportingBackup}
+							onclick={exportBackup}
+							class="btn-primary inline-flex min-h-[44px] items-center rounded-lg px-4 py-2.5 text-sm font-medium text-white"
+						>
+							{exportingBackup ? 'Preparing…' : 'Download backup'}
+						</button>
+					</div>
+
+					<hr class="my-6 border-[var(--border)]" />
+
+					<p class="text-sm text-[var(--text-muted)]">
+						<strong class="text-[var(--text)]">Import replaces</strong> all current posts, schedules, webhooks, templates,
+						globals, and related data with the backup. This cannot be undone. Type
+						<span class="font-mono text-[var(--text)]">{ACCOUNT_IMPORT_CONFIRM_PHRASE}</span> below, then choose your file.
+					</p>
+					<label for="import-confirm-phrase" class="mt-3 block text-sm font-medium text-[var(--text)]">Confirmation</label>
+					<input
+						id="import-confirm-phrase"
+						type="text"
+						autocomplete="off"
+						bind:value={importConfirmPhrase}
+						class="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]"
+						placeholder={ACCOUNT_IMPORT_CONFIRM_PHRASE}
+					/>
+					<input
+						bind:this={importFileInput}
+						type="file"
+						accept="application/json,.json"
+						class="hidden"
+						onchange={onImportFile}
+					/>
+					<button
+						type="button"
+						class="mt-3 inline-flex min-h-[44px] items-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+						disabled={importConfirmPhrase !== ACCOUNT_IMPORT_CONFIRM_PHRASE || importingBackup}
+						onclick={() => importFileInput?.click()}
+					>
+						{importingBackup ? 'Importing…' : 'Choose backup file…'}
+					</button>
+					{#if backupUiMessage}
+						<p
+							class="mt-3 text-sm {backupUiError
+								? 'text-red-600 dark:text-red-400'
+								: 'text-green-700 dark:text-green-400'}"
+							role="status"
+						>
+							{backupUiMessage}
+						</p>
+					{/if}
+				</div>
+
+				<div
+					class="content-card mt-4 rounded-xl border border-[var(--danger-border)] p-6 shadow-sm"
+				>
+					<h2 class="text-base font-semibold text-[var(--danger-text)]">Reset all app data</h2>
+					<p class="mt-1 text-sm text-[var(--text-muted)]">
+						This removes every post, schedule, webhook, template, and report row stored for your account. It does
+						<strong class="text-[var(--text)]">not</strong> delete your login, email, plan, or session — only app
+						content and configuration below.
+					</p>
+					<ul class="mt-3 list-disc space-y-1.5 pl-5 text-sm text-[var(--text)]">
+						<li><strong>Schedules</strong> (including rules and custom fields)</li>
+						<li><strong>Posts</strong> (and custom fields, send stages, multi-webhook links)</li>
+						<li><strong>Inputs</strong> — inbound / import webhook configuration</li>
+						<li><strong>Outputs</strong> — outbound webhook destinations and headers</li>
+						<li><strong>Reports</strong> — send history used on the Reports page</li>
+						<li><strong>Globals</strong> — variables merged into outbound JSON</li>
+						<li><strong>Templates</strong> — your custom field templates (built-in defaults are not removed)</li>
+						<li class="text-[var(--text-muted)]">
+							Monthly usage counters are also cleared (callback and import tallies).
+						</li>
+					</ul>
+					<p class="mt-4 text-sm font-medium text-[var(--danger-text)]">This cannot be undone. Export a backup first if you might need a copy.</p>
+
+					<label class="mt-4 flex cursor-pointer items-start gap-3 text-sm text-[var(--text)]">
+						<input
+							type="checkbox"
+							bind:checked={resetDataAcknowledged}
+							class="mt-1 h-4 w-4 shrink-0 rounded border-[var(--border)]"
+						/>
+						<span
+							>I understand this will permanently delete the data listed above and cannot be undone.</span
+						>
+					</label>
+
+					<label for="reset-data-phrase" class="mt-4 block text-sm font-medium text-[var(--text)]">
+						Type <span class="font-mono">{ACCOUNT_RESET_CONFIRM_PHRASE}</span> to confirm
+					</label>
+					<input
+						id="reset-data-phrase"
+						type="text"
+						autocomplete="off"
+						bind:value={resetDataConfirmPhrase}
+						class="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]"
+						placeholder={ACCOUNT_RESET_CONFIRM_PHRASE}
+					/>
+
+					<button
+						type="button"
+						class="btn-danger-outline btn-touch mt-4"
+						disabled={
+							resettingAccount ||
+							!resetDataAcknowledged ||
+							resetDataConfirmPhrase !== ACCOUNT_RESET_CONFIRM_PHRASE
+						}
+						onclick={submitResetAccountData}
+					>
+						{resettingAccount ? 'Deleting…' : 'Delete all app data'}
+					</button>
+
+					{#if resetUiMessage}
+						<p
+							class="mt-3 text-sm {resetUiError
+								? 'text-red-600 dark:text-red-400'
+								: 'text-green-700 dark:text-green-400'}"
+							role="status"
+						>
+							{resetUiMessage}
+						</p>
+					{/if}
 				</div>
 			</section>
 		{/if}
