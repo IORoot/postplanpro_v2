@@ -1,4 +1,5 @@
 import { getDatabase } from '$lib/db/index.js';
+import { insertWebhookRecord } from '$lib/db/webhookMutations.js';
 import { setPostWebhooks } from '$lib/db/postWebhooks.js';
 import { generateSlots } from '$lib/scheduler/generateSlots.js';
 import {
@@ -389,6 +390,19 @@ async function discoverPostTypes(siteUrl: string, auth: string): Promise<PostTyp
 
 /** Discover post types from WordPress REST API index (GET /wp-json/) */
 export const actions: Actions = {
+	createWebhook: async ({ request, locals }) => {
+		const accountId = locals.userId;
+		if (!accountId) return fail(401, { error: 'Unauthorized' });
+		const data = await request.formData();
+		const name = (data.get('name') as string)?.trim();
+		const url = (data.get('url') as string)?.trim();
+		const api_key = (data.get('api_key') as string)?.trim() || null;
+		const headersJson = data.get('headers_json') as string;
+		if (!name || !url) return fail(400, { error: 'Name and URL are required' });
+		const result = insertWebhookRecord(accountId, name, url, api_key, headersJson);
+		if (!result.ok) return fail(500, { error: result.error });
+		return { success: true, webhookId: result.id };
+	},
 	discoverCsv: async ({ request, locals }) => {
 		if (!locals.userId) return fail(401, { error: 'Unauthorized' });
 		const formData = await request.formData();
@@ -596,7 +610,7 @@ export const actions: Actions = {
 		const fetchFullPerItem = (data.get('fetch_full_per_item') as string) !== 'off';
 		const skipDuplicates = (data.get('skip_duplicates') as string) === 'on';
 		const includeFeaturedImage = (data.get('include_featured_image') as string) === 'on';
-		if (!siteUrl || webhookIds.length === 0) return fail(400, { error: 'Site URL and at least one webhook are required' });
+		if (!siteUrl) return fail(400, { error: 'Site URL is required' });
 		if (!postTypeRoute.startsWith('/wp/v2/')) return fail(400, { error: 'Invalid post type route' });
 
 		let customMapping: { path: string; key: string; type: string; unescapeNewlines?: boolean }[];
@@ -719,10 +733,11 @@ export const actions: Actions = {
 				const content = resolveValue(item, contentPath, contentUnescapeNewlines, 'string');
 				const imageUrl = imageUrlPath ? (resolveValue(item, imageUrlPath, false, 'string') as string)?.trim() || null : null;
 				const id = crypto.randomUUID();
+				const primaryWebhookId = webhookIds.length > 0 ? webhookIds[0] : null;
 				insertPost.run(
 					id,
 					accountId,
-					webhookIds[0],
+					primaryWebhookId,
 					title || '(no title)',
 					content,
 					imageUrl,
@@ -746,8 +761,10 @@ export const actions: Actions = {
 		});
 		transaction();
 
-		for (const postId of createdIds) {
-			setPostWebhooks(db, postId, accountId, webhookIds);
+		if (webhookIds.length > 0) {
+			for (const postId of createdIds) {
+				setPostWebhooks(db, postId, accountId, webhookIds);
+			}
 		}
 
 		// Optionally apply schedule to all created posts
@@ -820,7 +837,7 @@ export const actions: Actions = {
 		const importStart = Math.max(1, parseInt((data.get('import_start') as string) || '1', 10));
 		const importCount = Math.min(500, Math.max(1, parseInt((data.get('per_page') as string) || '20', 10)));
 		const skipDuplicates = (data.get('skip_duplicates') as string) === 'on';
-		if (!blogUrl || webhookIds.length === 0) return fail(400, { error: 'Blog URL and at least one webhook are required' });
+		if (!blogUrl) return fail(400, { error: 'Blog URL is required' });
 
 		let customMapping: { path: string; key: string; type: string; unescapeNewlines?: boolean }[];
 		try {
@@ -902,7 +919,8 @@ export const actions: Actions = {
 				const content = resolveValue(item, contentPath, contentUnescapeNewlines, 'string');
 				const imageUrl = imageUrlPath ? (resolveValue(item, imageUrlPath, false, 'string') as string)?.trim() || null : null;
 				const id = crypto.randomUUID();
-				insertPost.run(id, accountId, webhookIds[0], title || '(no title)', content, imageUrl, null, 'draft', sourceId);
+				const primaryWebhookId = webhookIds.length > 0 ? webhookIds[0] : null;
+				insertPost.run(id, accountId, primaryWebhookId, title || '(no title)', content, imageUrl, null, 'draft', sourceId);
 				createdIds.push(id);
 				for (const m of customMapping) {
 					if (!m.path.trim() || !m.key.trim()) continue;
@@ -919,8 +937,10 @@ export const actions: Actions = {
 		});
 		transaction();
 
-		for (const postId of createdIds) {
-			setPostWebhooks(db, postId, accountId, webhookIds);
+		if (webhookIds.length > 0) {
+			for (const postId of createdIds) {
+				setPostWebhooks(db, postId, accountId, webhookIds);
+			}
 		}
 
 		const limitsSq = getTierLimits(tier);
@@ -1015,7 +1035,7 @@ export const actions: Actions = {
 		const importStart = Math.max(1, parseInt((data.get('import_start') as string) || '1', 10));
 		const importCount = Math.min(500, Math.max(1, parseInt((data.get('per_page') as string) || '20', 10)));
 		const skipDuplicates = (data.get('skip_duplicates') as string) === 'on';
-		if (!feedUrl || webhookIds.length === 0) return fail(400, { error: 'Feed URL and at least one webhook are required' });
+		if (!feedUrl) return fail(400, { error: 'Feed URL is required' });
 
 		let customMapping: { path: string; key: string; type: string; unescapeNewlines?: boolean }[];
 		try {
@@ -1097,7 +1117,8 @@ export const actions: Actions = {
 				const content = resolveValue(item, contentPath, contentUnescapeNewlines, 'string');
 				const imageUrl = imageUrlPath ? (resolveValue(item, imageUrlPath, false, 'string') as string)?.trim() || null : null;
 				const id = crypto.randomUUID();
-				insertPost.run(id, accountId, webhookIds[0], title || '(no title)', content, imageUrl, null, 'draft', sourceId);
+				const primaryWebhookId = webhookIds.length > 0 ? webhookIds[0] : null;
+				insertPost.run(id, accountId, primaryWebhookId, title || '(no title)', content, imageUrl, null, 'draft', sourceId);
 				createdIds.push(id);
 				for (const m of customMapping) {
 					if (!m.path.trim() || !m.key.trim()) continue;
@@ -1114,8 +1135,10 @@ export const actions: Actions = {
 		});
 		transaction();
 
-		for (const postId of createdIds) {
-			setPostWebhooks(db, postId, accountId, webhookIds);
+		if (webhookIds.length > 0) {
+			for (const postId of createdIds) {
+				setPostWebhooks(db, postId, accountId, webhookIds);
+			}
 		}
 
 		const limitsRss = getTierLimits(tierRss);
@@ -1195,8 +1218,6 @@ export const actions: Actions = {
 		const importStart = Math.max(1, parseInt((data.get('import_start') as string) || '1', 10));
 		const importCount = Math.min(500, Math.max(1, parseInt((data.get('per_page') as string) || '20', 10)));
 		const skipDuplicates = (data.get('skip_duplicates') as string) === 'on';
-
-		if (webhookIds.length === 0) return fail(400, { error: 'At least one webhook is required', action: 'importFromCsv' });
 
 		let customMapping: { path: string; key: string; type: string; unescapeNewlines?: boolean }[];
 		try {
@@ -1317,7 +1338,8 @@ export const actions: Actions = {
 				const imageUrl = imageRaw != null ? stringValue(imageRaw).trim() || null : null;
 
 				const id = crypto.randomUUID();
-				insertPost.run(id, accountId, webhookIds[0], title, content, imageUrl, null, 'draft', sourceId);
+				const primaryWebhookId = webhookIds.length > 0 ? webhookIds[0] : null;
+				insertPost.run(id, accountId, primaryWebhookId, title, content, imageUrl, null, 'draft', sourceId);
 				createdIds.push(id);
 
 				for (const m of customMapping) {
@@ -1335,8 +1357,10 @@ export const actions: Actions = {
 		});
 		transaction();
 
-		for (const postId of createdIds) {
-			setPostWebhooks(db, postId, accountId, webhookIds);
+		if (webhookIds.length > 0) {
+			for (const postId of createdIds) {
+				setPostWebhooks(db, postId, accountId, webhookIds);
+			}
 		}
 
 		const limitsCsv = getTierLimits(tierCsv);

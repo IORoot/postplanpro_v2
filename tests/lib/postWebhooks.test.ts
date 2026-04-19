@@ -42,13 +42,17 @@ describe('postWebhooks', () => {
 		expect([...ids].sort()).toEqual([TEST_WEBHOOK_ID, 'second-webhook-id'].sort());
 	});
 
-	it('setPostWebhooks no-ops on empty list', () => {
+	it('setPostWebhooks clears links and nulls post.webhook_id when list empty', () => {
 		const db = getDatabase();
 		const pid = 'pw-post-3';
 		db.prepare(
 			'INSERT OR REPLACE INTO post (id, account_id, webhook_id, title, status) VALUES (?, ?, ?, ?, ?)'
 		).run(pid, TEST_USER_ID, TEST_WEBHOOK_ID, 'P3', 'draft');
+		setPostWebhooks(db, pid, TEST_USER_ID, [TEST_WEBHOOK_ID]);
 		setPostWebhooks(db, pid, TEST_USER_ID, []);
 		expect((db.prepare('SELECT COUNT(*) as n FROM post_webhook WHERE post_id = ?').get(pid) as { n: number }).n).toBe(0);
+		expect(
+			(db.prepare('SELECT webhook_id FROM post WHERE id = ?').get(pid) as { webhook_id: string | null }).webhook_id
+		).toBeNull();
 	});
 });

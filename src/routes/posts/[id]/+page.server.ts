@@ -88,8 +88,21 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	const webhook_ids = getWebhookIdsForPost(db, params.id, post.webhook_id);
 	const scheduleLocal = utcIsoToLocalDateTime(post.scheduled_at, userTimezone);
+	const has_output_webhook = webhook_ids.length > 0;
 
-	return { post, fields, globals, webhooks, schedules, templates: [...byTemplate.values()], stages, webhook_ids, userTimezone, scheduleLocal };
+	return {
+		post,
+		fields,
+		globals,
+		webhooks,
+		schedules,
+		templates: [...byTemplate.values()],
+		stages,
+		webhook_ids,
+		has_output_webhook,
+		userTimezone,
+		scheduleLocal
+	};
 };
 
 export const actions: Actions = {

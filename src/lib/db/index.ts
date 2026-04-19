@@ -13,6 +13,75 @@ function resolveDbPath(): string {
 	return fromEnv && fromEnv.length > 0 ? fromEnv : path.join(process.cwd(), 'data', 'postplan.db');
 }
 
+/** Rebuild post + post_webhook so post.webhook_id can be NULL (imports without destination webhook). */
+function migratePostWebhookIdNullable(database: Database.Database) {
+	const cols = database.prepare('PRAGMA table_info(post)').all() as { name: string; notnull: number }[];
+	const whCol = cols.find((c) => c.name === 'webhook_id');
+	if (!whCol || whCol.notnull !== 1) return;
+
+	database.pragma('foreign_keys = OFF');
+	database.exec('BEGIN');
+	try {
+		database.exec('DROP TABLE IF EXISTS post_webhook_mig_backup');
+		database.exec(
+			'CREATE TEMP TABLE post_webhook_mig_backup AS SELECT post_id, webhook_id FROM post_webhook'
+		);
+		database.exec('DROP TABLE post_webhook');
+		database.exec(`CREATE TABLE post__webhook_nullable (
+			id TEXT PRIMARY KEY,
+			account_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+			webhook_id TEXT REFERENCES webhook_config(id),
+			schedule_id TEXT REFERENCES schedule(id),
+			title TEXT NOT NULL,
+			content TEXT,
+			image_url TEXT,
+			color TEXT,
+			payload_override TEXT,
+			scheduled_at TEXT,
+			status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'sent', 'failed')),
+			sent_at TEXT,
+			error_message TEXT,
+			import_source_id TEXT,
+			created_at TEXT DEFAULT (datetime('now')),
+			updated_at TEXT DEFAULT (datetime('now'))
+		)`);
+		database.exec(
+			`INSERT INTO post__webhook_nullable SELECT id, account_id, webhook_id, schedule_id, title, content, image_url, color, payload_override, scheduled_at, status, sent_at, error_message, import_source_id, created_at, updated_at FROM post`
+		);
+		database.exec('DROP TABLE post');
+		database.exec('ALTER TABLE post__webhook_nullable RENAME TO post');
+		database.exec(`CREATE TABLE post_webhook (
+			post_id TEXT NOT NULL REFERENCES post(id) ON DELETE CASCADE,
+			webhook_id TEXT NOT NULL REFERENCES webhook_config(id),
+			PRIMARY KEY (post_id, webhook_id)
+		)`);
+		database.exec('CREATE INDEX IF NOT EXISTS idx_post_webhook_post ON post_webhook(post_id)');
+		database.exec(
+			'INSERT OR IGNORE INTO post_webhook SELECT post_id, webhook_id FROM post_webhook_mig_backup'
+		);
+		database.exec('DROP TABLE post_webhook_mig_backup');
+		const postIdx = [
+			'CREATE INDEX IF NOT EXISTS idx_post_webhook ON post(webhook_id)',
+			'CREATE INDEX IF NOT EXISTS idx_post_scheduled_at ON post(scheduled_at)',
+			'CREATE INDEX IF NOT EXISTS idx_post_status ON post(status)',
+			'CREATE INDEX IF NOT EXISTS idx_post_import_source ON post(account_id, import_source_id)',
+			'CREATE INDEX IF NOT EXISTS idx_post_account ON post(account_id)',
+			'CREATE INDEX IF NOT EXISTS idx_post_account_scheduled_at ON post(account_id, scheduled_at)'
+		];
+		for (const sql of postIdx) database.exec(sql);
+		database.exec('COMMIT');
+	} catch (e) {
+		try {
+			database.exec('ROLLBACK');
+		} catch {
+			/* ignore */
+		}
+		throw e;
+	} finally {
+		database.pragma('foreign_keys = ON');
+	}
+}
+
 function getDb(): Database.Database {
 	if (!db) {
 		const dbPath = resolveDbPath();
@@ -173,6 +242,13 @@ function getDb(): Database.Database {
 			}
 		}
 
+		try {
+			migratePostWebhookIdNullable(db);
+		} catch (e) {
+			console.error('[db] migratePostWebhookIdNullable failed:', e);
+			throw e;
+		}
+
 		// Seed immutable default custom-field template if missing.
 		const hasDefaultInstagramTemplate = db
 			.prepare("SELECT id FROM field_template WHERE is_default = 1 AND name = 'Instagram'")
@@ -273,7 +349,7 @@ export type ScheduleField = {
 export type Post = {
 	id: string;
 	account_id: string;
-	webhook_id: string;
+	webhook_id: string | null;
 	schedule_id: string | null;
 	title: string;
 	content: string | null;

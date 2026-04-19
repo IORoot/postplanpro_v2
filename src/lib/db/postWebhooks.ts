@@ -23,7 +23,7 @@ export function getWebhookIdsForPost(
 
 /**
  * Sets the webhooks for a post. Replaces all rows in post_webhook and sets post.webhook_id to the first ID.
- * Caller must validate that webhookIds is non-empty and all belong to account.
+ * When webhookIds is empty, clears post_webhook and sets post.webhook_id to NULL.
  */
 export function setPostWebhooks(
 	db: Database.Database,
@@ -31,8 +31,14 @@ export function setPostWebhooks(
 	accountId: string,
 	webhookIds: string[]
 ): void {
-	if (webhookIds.length === 0) return;
 	db.prepare('DELETE FROM post_webhook WHERE post_id = ?').run(postId);
+	if (webhookIds.length === 0) {
+		db.prepare("UPDATE post SET webhook_id = NULL, updated_at = datetime('now') WHERE id = ? AND account_id = ?").run(
+			postId,
+			accountId
+		);
+		return;
+	}
 	const insert = db.prepare('INSERT INTO post_webhook (post_id, webhook_id) VALUES (?, ?)');
 	for (const wid of webhookIds) {
 		insert.run(postId, wid);

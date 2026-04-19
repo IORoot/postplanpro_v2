@@ -13,6 +13,7 @@ type CalendarPostRow = {
 	scheduled_at: string;
 	status: string;
 	webhook_name: string;
+	has_output_webhook: number;
 };
 
 const ALLOWED_VIEWS = new Set<CalendarView>([
@@ -104,18 +105,20 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		? ((view === 'agenda'
 				? db.prepare(
 					`
-		SELECT p.id, p.title, p.image_url, p.color, p.scheduled_at, p.status, w.name as webhook_name
+		SELECT p.id, p.title, p.image_url, p.color, p.scheduled_at, p.status, COALESCE(w.name, 'No webhook') as webhook_name,
+			CASE WHEN p.webhook_id IS NOT NULL OR EXISTS (SELECT 1 FROM post_webhook pw WHERE pw.post_id = p.id) THEN 1 ELSE 0 END as has_output_webhook
 		FROM post p
-		JOIN webhook_config w ON p.webhook_id = w.id
+		LEFT JOIN webhook_config w ON p.webhook_id = w.id
 		WHERE p.account_id = ? AND p.scheduled_at IS NOT NULL
 		ORDER BY p.scheduled_at
 	`
 				  ).all(accountId)
 				: db.prepare(
 					`
-		SELECT p.id, p.title, p.image_url, p.color, p.scheduled_at, p.status, w.name as webhook_name
+		SELECT p.id, p.title, p.image_url, p.color, p.scheduled_at, p.status, COALESCE(w.name, 'No webhook') as webhook_name,
+			CASE WHEN p.webhook_id IS NOT NULL OR EXISTS (SELECT 1 FROM post_webhook pw WHERE pw.post_id = p.id) THEN 1 ELSE 0 END as has_output_webhook
 		FROM post p
-		JOIN webhook_config w ON p.webhook_id = w.id
+		LEFT JOIN webhook_config w ON p.webhook_id = w.id
 		WHERE p.account_id = ? AND p.scheduled_at IS NOT NULL AND p.scheduled_at >= ? AND p.scheduled_at <= ?
 		ORDER BY p.scheduled_at
 	`

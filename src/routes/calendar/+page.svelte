@@ -64,7 +64,12 @@
 		scheduled_at: string;
 		status: string;
 		webhook_name: string;
+		has_output_webhook: number;
 	};
+
+	/** Inline “no output webhook” pill (match posts list styling, calendar density). */
+	const calendarNoOutputPillClass =
+		'shrink-0 rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium leading-none text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100';
 	type LiveStatusRow = {
 		id: string;
 		status: string;
@@ -923,16 +928,23 @@
 										{formatTime(post.scheduled_at)} {post.title}
 									</a>
 								</div>
-								<div class="mt-1 flex items-center justify-between gap-2">
-									<span class={"rounded px-1.5 py-0.5 text-[10px] font-medium " + statusClass(post.status)}>{post.status}</span>
-									<button
-										type="button"
-										disabled={sendingId === post.id}
-										onclick={(e) => sendNow(post.id, e)}
-										class="min-h-[36px] min-w-[44px] touch-manipulation rounded px-2 py-1 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)] disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5"
-									>
-										{sendingId === post.id ? '…' : 'Send'}
-									</button>
+								<div class="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+									<span class="inline-flex min-w-0 flex-wrap items-center gap-1">
+										<span class={"shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium " + statusClass(post.status)}>{post.status}</span>
+										{#if !post.has_output_webhook}
+											<span class={calendarNoOutputPillClass} role="status">No output webhook</span>
+										{/if}
+									</span>
+									{#if post.has_output_webhook}
+										<button
+											type="button"
+											disabled={sendingId === post.id}
+											onclick={(e) => sendNow(post.id, e)}
+											class="min-h-[36px] min-w-[44px] shrink-0 touch-manipulation rounded px-2 py-1 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)] disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5"
+										>
+											{sendingId === post.id ? '…' : 'Send'}
+										</button>
+									{/if}
 								</div>
 							</div>
 						{/each}
@@ -1047,21 +1059,26 @@
 									ondragstart={(e) => handleDragStart(e, post)}
 									ondragend={handleDragEnd}
 								>
-									<div class="flex items-center gap-2">
+									<div class="flex min-w-0 items-center gap-1">
 										{#if post.image_url}
-											<img src={post.image_url} alt={"Preview for " + post.title} class="h-6 w-6 rounded object-cover border border-[var(--border)]" loading="lazy" />
+											<img src={post.image_url} alt={"Preview for " + post.title} class="h-6 w-6 shrink-0 rounded object-cover border border-[var(--border)]" loading="lazy" />
 										{/if}
 										<a href={"/posts/" + post.id} class="min-w-0 flex-1 truncate text-xs font-medium text-neutral-900 hover:underline">
 											{formatTime(post.scheduled_at)} {post.title}
 										</a>
-										<button
-											type="button"
-											class="rounded px-1.5 py-0.5 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)]"
-											disabled={sendingId === post.id}
-											onclick={(e) => sendNow(post.id, e)}
-										>
-											{sendingId === post.id ? '…' : 'Send'}
-										</button>
+										{#if !post.has_output_webhook}
+											<span class={calendarNoOutputPillClass} role="status">No output webhook</span>
+										{/if}
+										{#if post.has_output_webhook}
+											<button
+												type="button"
+												class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)]"
+												disabled={sendingId === post.id}
+												onclick={(e) => sendNow(post.id, e)}
+											>
+												{sendingId === post.id ? '…' : 'Send'}
+											</button>
+										{/if}
 									</div>
 								</div>
 							{/each}
@@ -1107,8 +1124,9 @@
 							<div class="mt-1 flex items-center justify-center gap-1">
 								{#each dayPosts.slice(0, 3) as p (p.id)}
 									<span
-										class="h-1.5 w-1.5 rounded-full"
+										class="h-1.5 w-1.5 rounded-full {!p.has_output_webhook ? 'ring-1 ring-amber-500 ring-offset-1 ring-offset-transparent' : ''}"
 										style={`background-color: ${isActiveDay ? 'white' : darkenMarkerColor(p.color)};`}
+										title={!p.has_output_webhook ? 'No output webhook' : undefined}
 									></span>
 								{/each}
 								{#if dayPosts.length > 3}
@@ -1137,9 +1155,12 @@
 						{#each postsAtHour(hour) as post (post.id)}
 							<a
 								href={"/posts/" + post.id}
-								class="block h-2 w-2 rounded-full border border-[var(--border)] hover:scale-125"
+								class="block h-2 w-2 rounded-full border border-[var(--border)] hover:scale-125 {!post.has_output_webhook ? 'ring-1 ring-amber-500' : ''}"
 								style={`background-color: ${post.color ?? '#e5e5e5'};`}
-								title={post.title + ' — ' + formatTime(post.scheduled_at)}
+								title={post.title +
+									' — ' +
+									formatTime(post.scheduled_at) +
+									(!post.has_output_webhook ? ' — No output webhook' : '')}
 							></a>
 						{/each}
 					</div>
@@ -1181,15 +1202,20 @@
 										<a href={"/posts/" + post.id} class="break-words text-sm font-medium text-neutral-900 hover:underline" title={post.title}>{post.title}</a>
 										<p class="break-words text-[10px] text-neutral-600">{formatTime(post.scheduled_at)} · {post.webhook_name}</p>
 										<div class="mt-1 flex flex-wrap items-center gap-1">
-											<span class={"rounded px-1.5 py-0.5 text-[10px] font-medium " + statusClass(post.status)}>{post.status}</span>
-											<button
-												type="button"
-												class="rounded bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)]"
-												disabled={sendingId === post.id}
-												onclick={(e) => sendNow(post.id, e)}
-											>
-												{sendingId === post.id ? '…' : 'Send'}
-											</button>
+											<span class={"shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium " + statusClass(post.status)}>{post.status}</span>
+											{#if !post.has_output_webhook}
+												<span class={calendarNoOutputPillClass} role="status">No output webhook</span>
+											{/if}
+											{#if post.has_output_webhook}
+												<button
+													type="button"
+													class="shrink-0 rounded bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)]"
+													disabled={sendingId === post.id}
+													onclick={(e) => sendNow(post.id, e)}
+												>
+													{sendingId === post.id ? '…' : 'Send'}
+												</button>
+											{/if}
 										</div>
 									</div>
 								</div>
@@ -1251,14 +1277,17 @@
 							{#each postsToShow as post (post.id)}
 								<a
 									href={"/posts/" + post.id}
-									class="calendar-post-accent block min-w-0 cursor-grab truncate rounded-md px-2 py-1 text-xs text-neutral-900 hover:underline active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
+									class="calendar-post-accent flex min-w-0 cursor-grab items-center gap-1 rounded-md px-2 py-1 text-xs text-neutral-900 hover:underline active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
 									style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? '#fafafa'};`}
-									title={`${formatScheduledAt(post.scheduled_at, { day: '2-digit', month: 'short' })} · ${post.title}`}
+									title={`${formatScheduledAt(post.scheduled_at, { day: '2-digit', month: 'short' })} · ${post.title}${!post.has_output_webhook ? ' · No output webhook' : ''}`}
 									draggable={true}
 									ondragstart={(e) => handleDragStart(e, post)}
 									ondragend={handleDragEnd}
 								>
-									{formatScheduledAt(post.scheduled_at, { day: '2-digit', month: 'short' })} · {post.title}
+									<span class="min-w-0 truncate">{formatScheduledAt(post.scheduled_at, { day: '2-digit', month: 'short' })} · {post.title}</span>
+									{#if !post.has_output_webhook}
+										<span class={calendarNoOutputPillClass} role="status">No output webhook</span>
+									{/if}
 								</a>
 							{/each}
 							{#if monthPosts.length > 4}
@@ -1293,21 +1322,26 @@
 						class="calendar-post-accent rounded-lg p-2 {isPostToday ? 'calendar-today' : ''}"
 						style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? '#fafafa'};`}
 					>
-						<div class="flex items-center gap-2">
+						<div class="flex min-w-0 flex-wrap items-center gap-2">
 							{#if post.image_url}
-								<img src={post.image_url} alt={"Preview for " + post.title} class="h-8 w-8 rounded object-cover border border-[var(--border)]" loading="lazy" />
+								<img src={post.image_url} alt={"Preview for " + post.title} class="h-8 w-8 shrink-0 rounded object-cover border border-[var(--border)]" loading="lazy" />
 							{/if}
 							<a href={"/posts/" + post.id} class="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900 hover:underline">
 								{formatScheduledAt(post.scheduled_at)} · {post.title}
 							</a>
-							<button
-								type="button"
-								class="rounded px-2 py-1 text-xs font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
-								disabled={sendingId === post.id}
-								onclick={(e) => sendNow(post.id, e)}
-							>
-								{sendingId === post.id ? '…' : 'Send'}
-							</button>
+							{#if !post.has_output_webhook}
+								<span class={calendarNoOutputPillClass} role="status">No output webhook</span>
+							{/if}
+							{#if post.has_output_webhook}
+								<button
+									type="button"
+									class="shrink-0 rounded px-2 py-1 text-xs font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
+									disabled={sendingId === post.id}
+									onclick={(e) => sendNow(post.id, e)}
+								>
+									{sendingId === post.id ? '…' : 'Send'}
+								</button>
+							{/if}
 						</div>
 					</div>
 				{/each}
@@ -1334,9 +1368,9 @@
 									{#each dayPosts as post (post.id)}
 										<a
 											href={"/posts/" + post.id}
-											class="h-1.5 w-1.5 rounded-full"
+											class="h-1.5 w-1.5 rounded-full {!post.has_output_webhook ? 'ring-1 ring-amber-500' : ''}"
 											style={`background-color: ${darkenMarkerColor(post.color)};`}
-											title={`${post.title} • ${formatScheduledAt(post.scheduled_at, { hour: '2-digit', minute: '2-digit' })}`}
+											title={`${post.title} • ${formatScheduledAt(post.scheduled_at, { hour: '2-digit', minute: '2-digit' })}${!post.has_output_webhook ? ' • No output webhook' : ''}`}
 										></a>
 									{/each}
 								</div>

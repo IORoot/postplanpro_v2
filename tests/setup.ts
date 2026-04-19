@@ -21,7 +21,7 @@ if (typeof window !== 'undefined') {
 			}
 		} as Storage;
 	}
-	window.matchMedia =
+		window.matchMedia =
 		window.matchMedia ||
 		((query: string) => ({
 			matches: false,
@@ -33,4 +33,8 @@ if (typeof window !== 'undefined') {
 			removeEventListener: () => {},
 			dispatchEvent: () => false
 		}));
+
+		// jsdom: scrollIntoView often missing or not callable; app uses it after wizard step changes.
+		(Element.prototype as Element & { scrollIntoView: () => void }).scrollIntoView =
+			function () {};
 }

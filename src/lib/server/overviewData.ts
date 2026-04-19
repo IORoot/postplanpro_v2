@@ -133,9 +133,9 @@ export function loadReportStatistics(
 
 	const upcomingPosts = db
 		.prepare(
-			`SELECT p.id, p.title, p.scheduled_at, p.status, w.name as webhook_name
+			`SELECT p.id, p.title, p.scheduled_at, p.status, COALESCE(w.name, 'No webhook') as webhook_name
        FROM post p
-       JOIN webhook_config w ON p.webhook_id = w.id
+       LEFT JOIN webhook_config w ON p.webhook_id = w.id
        WHERE p.account_id = ? AND p.scheduled_at IS NOT NULL AND p.scheduled_at >= ?
        ORDER BY p.scheduled_at ASC
        LIMIT 10`
@@ -144,9 +144,9 @@ export function loadReportStatistics(
 
 	const lastPublishedPosts = db
 		.prepare(
-			`SELECT p.id, p.title, p.sent_at, w.name as webhook_name
+			`SELECT p.id, p.title, p.sent_at, COALESCE(w.name, 'No webhook') as webhook_name
        FROM post p
-       JOIN webhook_config w ON p.webhook_id = w.id
+       LEFT JOIN webhook_config w ON p.webhook_id = w.id
        WHERE p.account_id = ? AND p.status = 'sent'
        ORDER BY p.sent_at DESC
        LIMIT 10`

@@ -13,9 +13,11 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const scheduled = url.searchParams.get('scheduled') ?? ''; // 'yes' | 'no' | ''
 
 	let sql = `
-		SELECT p.id, p.webhook_id, p.schedule_id, p.title, p.content, p.image_url, p.color, p.scheduled_at, p.status, p.sent_at, p.created_at, w.name as webhook_name
+		SELECT p.id, p.webhook_id, p.schedule_id, p.title, p.content, p.image_url, p.color, p.scheduled_at, p.status, p.sent_at, p.created_at,
+			COALESCE(w.name, 'No webhook') as webhook_name,
+			CASE WHEN p.webhook_id IS NOT NULL OR EXISTS (SELECT 1 FROM post_webhook pw WHERE pw.post_id = p.id) THEN 1 ELSE 0 END as has_output_webhook
 		FROM post p
-		JOIN webhook_config w ON p.webhook_id = w.id
+		LEFT JOIN webhook_config w ON p.webhook_id = w.id
 		WHERE p.account_id = ?
 	`;
 	const params: (string | number)[] = [accountId];
@@ -36,7 +38,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
 	const posts = db.prepare(sql).all(...params) as {
 		id: string;
-		webhook_id: string;
+		webhook_id: string | null;
 		schedule_id: string | null;
 		title: string;
 		content: string | null;
@@ -47,6 +49,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		sent_at: string | null;
 		created_at: string;
 		webhook_name: string;
+		has_output_webhook: number;
 	}[];
 
 	const webhooks = db.prepare('SELECT id, name FROM webhook_config WHERE account_id = ? ORDER BY name').all(accountId) as { id: string; name: string }[];

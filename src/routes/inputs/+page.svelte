@@ -124,6 +124,14 @@
 
 <PageSectionHeading title={pageHeadingTitle} description={pageHeadingDescription} />
 
+{#if section === 'cms' || section === 'spreadsheets' || section === 'feeds'}
+	<nav class="inputs-sources-subnav mt-4 flex flex-wrap gap-2 border-b border-[var(--border)] pb-3" aria-label="Source type">
+		<a href="/inputs?section=cms" class="settings-nav-link {section === 'cms' ? 'settings-nav-link-active' : ''}">CMS</a>
+		<a href="/inputs?section=spreadsheets" class="settings-nav-link {section === 'spreadsheets' ? 'settings-nav-link-active' : ''}">Spreadsheets</a>
+		<a href="/inputs?section=feeds" class="settings-nav-link {section === 'feeds' ? 'settings-nav-link-active' : ''}">Feeds</a>
+	</nav>
+{/if}
+
 {#if section === 'callbacks'}
 			<section class="mt-8" id="inputs-callbacks">
 			{#if $showInputAnimations}
@@ -154,7 +162,7 @@
 					{#snippet help()}
 						<p class="mt-0">
 							Same token as the <strong>import webhook</strong> under
-							<a href="/inputs/webhooks" class="font-medium text-[var(--primary)] hover:underline">Webhooks</a> in this sidebar.
+							<a href="/inputs/webhooks" class="font-medium text-[var(--primary)] hover:underline">Webhooks</a> in the Inputs sidebar.
 						</p>
 						<p class="mt-2">Send in requests as:</p>
 						<ul class="mt-1 list-inside list-disc space-y-0.5">
@@ -455,6 +463,16 @@
 		background: var(--surface);
 		border-color: var(--border);
 		color: var(--text);
+	}
+	/* Muted panel for import filter steps (shared across importers) */
+	:global(.importer-panel-filters) {
+		border-radius: 0.75rem;
+		border: 1px solid var(--border);
+		background: rgb(245 245 245);
+		padding: 1.25rem;
+	}
+	:global(.dark .importer-panel-filters) {
+		background: rgb(23 23 23 / 0.35);
 	}
 	@media (min-width: 1024px) {
 		:global(.bulk-create-step3-grid) {

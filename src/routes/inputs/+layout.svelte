@@ -9,6 +9,10 @@
 		const allowed = ['cms', 'spreadsheets', 'feeds', 'callbacks'] as const;
 		return (allowed as readonly string[]).includes(s) ? s : 'cms';
 	});
+
+	const sourcesNavActive = $derived(
+		navSection === 'cms' || navSection === 'spreadsheets' || navSection === 'feeds'
+	);
 </script>
 
 <div class="settings-layout">
@@ -16,21 +20,9 @@
 		<nav class="settings-nav">
 			<a
 				href="/inputs?section=cms"
-				class="settings-nav-link {navSection === 'cms' ? 'settings-nav-link-active' : ''}"
+				class="settings-nav-link {sourcesNavActive ? 'settings-nav-link-active' : ''}"
 			>
-				CMS
-			</a>
-			<a
-				href="/inputs?section=spreadsheets"
-				class="settings-nav-link {navSection === 'spreadsheets' ? 'settings-nav-link-active' : ''}"
-			>
-				Spreadsheets
-			</a>
-			<a
-				href="/inputs?section=feeds"
-				class="settings-nav-link {navSection === 'feeds' ? 'settings-nav-link-active' : ''}"
-			>
-				Feeds
+				Sources
 			</a>
 			<a
 				href="/inputs/webhooks"

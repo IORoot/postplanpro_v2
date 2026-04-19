@@ -52,10 +52,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 					.prepare(
 						`SELECT l.id, l.post_id, l.sent_at, l.request_json, l.response_status, l.response_body, l.success,
         p.title as post_title,
-        w.name as webhook_name
+        COALESCE(w.name, 'No webhook') as webhook_name
      FROM send_log l
      JOIN post p ON p.id = l.post_id
-     JOIN webhook_config w ON w.id = p.webhook_id
+     LEFT JOIN webhook_config w ON w.id = p.webhook_id
      WHERE l.account_id = ?
      ORDER BY l.sent_at DESC`
 					)

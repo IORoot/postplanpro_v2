@@ -214,6 +214,14 @@
 	{#if sendError}
 		<p class="mb-4 rounded-lg px-3 py-2 text-sm alert-error">{sendError}</p>
 	{/if}
+	{#if webhookIds.length === 0}
+		<p
+			class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100"
+			role="status"
+		>
+			No output webhook
+		</p>
+	{/if}
 
 	<div class="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
 		<div class="space-y-6">
@@ -347,7 +355,15 @@
 
 			<!-- Schedule -->
 			<section class="content-card rounded-xl border border-[var(--border)] p-6 shadow-sm">
-				<h2 class="text-base font-semibold text-[var(--text)] mb-4">Schedule</h2>
+				<div class="mb-4 flex flex-wrap items-center gap-2">
+					<h2 class="text-base font-semibold text-[var(--text)]">Schedule</h2>
+					{#if webhookIds.length === 0}
+						<span
+							class="rounded px-2 py-0.5 text-xs font-semibold uppercase tracking-wide bg-red-100 text-red-800 ring-1 ring-red-300/80 dark:bg-red-950 dark:text-red-200 dark:ring-red-800"
+							role="status"
+							>No output</span>
+					{/if}
+				</div>
 				<p class="text-xs text-[var(--text-muted)] mb-3">Draft, pick a date/time, or assign the next free slot from a schedule.</p>
 				<div class="space-y-3">
 					<label class="flex items-center gap-2">
@@ -387,15 +403,17 @@
 			<!-- Actions -->
 			<div class="flex flex-wrap gap-2">
 				<button type="submit" class="btn-primary btn-touch text-white shadow-sm">Save</button>
-				<button
-					type="button"
-					disabled={sending}
-					onclick={sendNow}
-					class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] disabled:opacity-50 min-h-[44px]"
-					title="Send post JSON to target now"
-				>
-					{sending ? 'Sending…' : 'Send now'}
-				</button>
+				{#if webhookIds.length > 0}
+					<button
+						type="button"
+						disabled={sending}
+						onclick={sendNow}
+						class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] disabled:opacity-50 min-h-[44px]"
+						title="Send post JSON to target now"
+					>
+						{sending ? 'Sending…' : 'Send now'}
+					</button>
+				{/if}
 				<a href="/posts" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center">Cancel</a>
 			</div>
 		</div>

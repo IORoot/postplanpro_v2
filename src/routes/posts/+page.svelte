@@ -243,12 +243,20 @@
 								href="/posts/{post.id}"
 								class="block min-w-0 overflow-wrap-anywhere font-semibold text-[var(--primary)] hover:underline sm:truncate"
 								title={post.title}>{post.title}</a>
-							<div class="mt-1 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--text-muted)]">
+							<div class="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--text-muted)]">
 								<span
 									class="min-w-0 max-w-full break-words sm:max-w-[min(100%,20rem)] sm:truncate"
 									title={post.webhook_name ?? ''}>{post.webhook_name}</span>
 								<span class="min-w-0 shrink-0">{post.scheduled_at ? formatScheduledAt(post.scheduled_at) : '—'}</span>
-								<span class="rounded px-2 py-0.5 text-xs font-medium {statusClass}">{post.status}</span>
+								<span class="inline-flex shrink-0 items-center gap-2">
+									<span class="rounded px-2 py-0.5 text-xs font-medium {statusClass}">{post.status}</span>
+									{#if !post.has_output_webhook}
+										<span
+											class="shrink-0 rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100"
+											role="status"
+											>No output webhook</span>
+									{/if}
+								</span>
 							</div>
 						</div>
 					</div>
@@ -263,15 +271,17 @@
 						>
 							{copyFailedId === post.id ? "Can't copy" : copiedId === post.id ? 'Copied' : post.id}
 						</button>
-						<button
-							type="button"
-							disabled={sendingId === post.id}
-							onclick={() => sendNow(post.id)}
-							class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)] disabled:opacity-50 min-h-[44px]"
-							title="Send this post's payload to its webhook now (does not wait for the scheduled time)"
-						>
-							{sendingId === post.id ? 'Sending…' : 'Send'}
-						</button>
+						{#if post.has_output_webhook}
+							<button
+								type="button"
+								disabled={sendingId === post.id}
+								onclick={() => sendNow(post.id)}
+								class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)] disabled:opacity-50 min-h-[44px]"
+								title="Send this post's payload to its webhook now (does not wait for the scheduled time)"
+							>
+								{sendingId === post.id ? 'Sending…' : 'Send'}
+							</button>
+						{/if}
 						<a href="/posts/{post.id}" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center">Edit</a>
 						<form method="POST" action="?/deletePost" use:enhance={({ cancel }) => { if (!confirm("Delete this post permanently? You can't undo this.")) cancel(); return () => invalidateAll(); }} class="inline">
 							<input type="hidden" name="id" value={post.id} />

@@ -108,7 +108,7 @@ export async function sendDuePosts(): Promise<{ sent: number; failed: number; er
 		.all(now) as {
 		id: string;
 		account_id: string;
-		webhook_id: string;
+		webhook_id: string | null;
 		title: string;
 		content: string | null;
 		image_url: string | null;

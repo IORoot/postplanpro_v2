@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS schedule_field (
 CREATE TABLE IF NOT EXISTS post (
   id TEXT PRIMARY KEY,
   account_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
-  webhook_id TEXT NOT NULL REFERENCES webhook_config(id),
+  webhook_id TEXT REFERENCES webhook_config(id),
   schedule_id TEXT REFERENCES schedule(id),
   title TEXT NOT NULL,
   content TEXT,

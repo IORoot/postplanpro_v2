@@ -15,7 +15,7 @@
 
 <PageSectionHeading
 	title="Webhooks"
-	description="Inbound import webhook: send JSON to create posts from Make.com, n8n, or your own scripts. Same webhook token as post notifications under Callbacks in this sidebar."
+	description="Inbound import webhook: send JSON to create posts from Make.com, n8n, or your own scripts. Same webhook token as post notifications under Callbacks in the Inputs sidebar."
 />
 
 {#if $showInputAnimations}
