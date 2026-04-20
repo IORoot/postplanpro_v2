@@ -227,8 +227,12 @@
 		{#each filteredPosts as post}
 			{@const statusClass = post.status === 'draft' ? 'status-draft' : post.status === 'scheduled' ? 'status-scheduled' : post.status === 'sent' ? 'status-sent' : 'status-failed'}
 			<div
-				class="content-card content-card-accent rounded-xl p-4"
-				style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? 'var(--primary)'};`}
+				class="content-card content-card-accent rounded-xl p-4 {!post.has_output_webhook
+					? '!border-l-zinc-300 !bg-zinc-100 dark:!border-l-zinc-600 dark:!bg-zinc-800/55'
+					: ''}"
+				style={post.has_output_webhook
+					? `background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? 'var(--primary)'};`
+					: undefined}
 			>
 				<div class="flex flex-wrap items-start justify-between gap-4">
 					<div class="min-w-0 flex flex-1 items-start gap-3">
