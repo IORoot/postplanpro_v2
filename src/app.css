@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Match app theme: `dark` class on `html` (see theme store), not only OS preference */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* Tailwind neutral + green-600 primary */
   --color-surface: #f5f5f5;

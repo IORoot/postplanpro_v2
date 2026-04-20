@@ -30,6 +30,10 @@ beforeAll(() => {
 		status: 'scheduled',
 		scheduled_at: `${y}-${m}-${day}T12:00:00`
 	});
+	// Sidebar posts pill shows sent count only; mark one send in the current month.
+	getDatabase()
+		.prepare("UPDATE post SET status = 'sent', sent_at = ? WHERE id = 'layout-cal-post'")
+		.run(`${y}-${m}-${day}T12:00:00.000Z`);
 });
 
 describe('+layout.server load', () => {

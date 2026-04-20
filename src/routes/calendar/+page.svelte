@@ -824,7 +824,7 @@
 <div class="content-card relative z-0 mt-0 min-w-0 overflow-x-clip rounded-xl p-4 md:p-5" data-sveltekit-preload-data="tap">
 	<div class="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
 		<div
-			class="-mx-1 flex min-w-0 max-w-full gap-1 overflow-x-auto overflow-y-hidden rounded-xl bg-[var(--surface)] p-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] lg:mx-0 lg:flex-1 lg:flex-wrap lg:overflow-visible lg:pb-1 [&::-webkit-scrollbar]:hidden"
+			class="-mx-1 flex min-w-0 max-w-full gap-1 overflow-x-auto overflow-y-hidden rounded-xl bg-[var(--surface)] p-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] lg:mx-0 lg:flex-1 lg:flex-nowrap lg:overflow-x-auto lg:pb-1 [&::-webkit-scrollbar]:hidden"
 		>
 			{#each viewButtons as v}
 				<a
@@ -848,7 +848,7 @@
 		</div>
 		{#if showDateControls}
 			<div
-				class="flex w-full min-w-0 flex-wrap items-center justify-center gap-2 lg:w-auto lg:max-w-[min(100%,40rem)] lg:justify-end"
+				class="flex w-full min-w-0 flex-wrap items-center justify-center gap-2 sm:flex-nowrap sm:justify-end lg:w-auto lg:max-w-none lg:shrink-0"
 			>
 				<a
 					href={hrefFor(view, withOffset(anchor, view, -1))}
@@ -856,9 +856,9 @@
 					aria-label="Previous range"
 				>←</a>
 				<div
-					class="min-w-0 max-w-full flex-[1_1_14rem] rounded-lg px-2 py-2 text-center text-sm font-semibold text-[var(--text)] sm:px-3 {calendarUnselectedBtnClass}"
+					class="min-w-0 max-w-full flex-[1_1_14rem] rounded-lg px-2 py-2 text-center text-sm font-semibold text-[var(--text)] sm:flex-1 sm:basis-0 sm:px-3 md:max-w-md lg:max-w-lg {calendarUnselectedBtnClass}"
 				>
-					<span class="inline-block max-w-full break-words">{rangeLabel()}</span>
+					<span class="inline-block max-w-full min-w-0 break-words sm:truncate">{rangeLabel()}</span>
 				</div>
 				<a
 					href={hrefFor(view, withOffset(anchor, view, 1))}
@@ -867,7 +867,7 @@
 				>→</a>
 				<a
 					href={hrefFor(view, new Date())}
-					class="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-lg px-3 py-2 text-sm text-[var(--text)] touch-manipulation {calendarUnselectedBtnClass}"
+					class="inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg px-3 py-2 text-sm text-[var(--text)] touch-manipulation {calendarUnselectedBtnClass}"
 					>Today</a>
 				{#if data.stats}
 					<a
@@ -902,24 +902,24 @@
 {#if view === 'month'}
 	<div class="content-card mt-4 rounded-xl p-4">
 		<div class="mb-3 rounded-xl bg-[var(--surface)]">
-			<div class="mb-3 flex items-center justify-center gap-2">
+			<div class="mb-3 flex flex-nowrap items-center justify-center gap-2">
 				<a
 					href={hrefFor('month', new Date(anchor.getFullYear() - 1, anchor.getMonth(), 1))}
-					class="rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 					title="Previous year"
 				>
 					←
 				</a>
-				<span class="text-lg font-semibold text-[var(--text)]">{anchor.getFullYear()}</span>
+				<span class="shrink-0 text-center text-lg font-semibold tabular-nums text-[var(--text)]">{anchor.getFullYear()}</span>
 				<a
 					href={hrefFor('month', new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
-					class="rounded-lg px-3 py-1.5 text-xs text-[var(--text)] {calendarUnselectedBtnClass}"
+					class="shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs text-[var(--text)] {calendarUnselectedBtnClass}"
 				>
 					This year
 				</a>
 				<a
 					href={hrefFor('month', new Date(anchor.getFullYear() + 1, anchor.getMonth(), 1))}
-					class="rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 					title="Next year"
 				>
 					→
@@ -1103,20 +1103,20 @@
 {:else if view === 'week'}
 	<div class="content-card mt-4 rounded-xl p-3">
 		<div class="mb-6 rounded-xl bg-[var(--surface)]">
-			<div class="mb-2 flex items-center justify-between">
+			<div class="mb-2 flex flex-nowrap items-center justify-between gap-2">
 				<a
 					href={hrefFor('week', new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))}
-					class="rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 					title="Previous month"
 				>
 					←
 				</a>
-				<p class="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+				<p class="min-w-0 truncate text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
 					Weeks of {monthNames[anchor.getMonth()]} {anchor.getFullYear()}
 				</p>
 				<a
 					href={hrefFor('week', new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1))}
-					class="rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 					title="Next month"
 				>
 					→
@@ -1264,17 +1264,19 @@
 {:else if view === 'day'}
 	<div class="content-card mt-4 rounded-xl p-4">
 		<div class="mb-4 rounded-xl bg-[var(--surface)] p-3">
-			<div class="mb-2 flex items-center justify-between">
+			<div class="mb-2 flex flex-nowrap items-center justify-between gap-2">
 				<a
 					href={hrefFor('day', withOffset(anchor, 'week', -1))}
-					class="rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 				>
 					←
 				</a>
-				<p class="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Day quick navigation</p>
+				<p class="shrink-0 px-1 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+					Day quick navigation
+				</p>
 				<a
 					href={hrefFor('day', withOffset(anchor, 'week', 1))}
-					class="rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 				>
 					→
 				</a>
@@ -1379,24 +1381,24 @@
 {:else if view === 'year'}
 	<div class="content-card mt-4 rounded-xl p-4">
 		<div class="mb-4 rounded-xl bg-[var(--surface)] p-3">
-			<div class="flex items-center justify-center gap-2">
+			<div class="flex flex-nowrap items-center justify-center gap-2">
 				<a
 					href={hrefFor('year', new Date(anchor.getFullYear() - 1, 0, 1))}
-					class="rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 					title="Previous year"
 				>
 					←
 				</a>
-				<span class="text-lg font-semibold text-[var(--text)]">{anchor.getFullYear()}</span>
+				<span class="shrink-0 text-lg font-semibold tabular-nums text-[var(--text)]">{anchor.getFullYear()}</span>
 				<a
 					href={hrefFor('year', new Date(new Date().getFullYear(), 0, 1))}
-					class="rounded-lg px-3 py-1.5 text-xs text-[var(--text)] {calendarUnselectedBtnClass}"
+					class="shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs text-[var(--text)] {calendarUnselectedBtnClass}"
 				>
 					This year
 				</a>
 				<a
 					href={hrefFor('year', new Date(anchor.getFullYear() + 1, 0, 1))}
-					class="rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 					title="Next year"
 				>
 					→

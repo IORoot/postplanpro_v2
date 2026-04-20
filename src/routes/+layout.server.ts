@@ -48,7 +48,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		const usage = getUsageForMonth(db, accountId, monthKey);
 		const limits = getTierLimits(userTier ?? 'free');
 		sidebarPlanUsage = {
-			posts: { used: usage.postsSent + usage.postsScheduled, limit: limits.postsSentPerMonth },
+			/* "Used" = sent this month; limit still counts scheduled+sent for quota (billing page). */
+			posts: { used: usage.postsSent, limit: limits.postsSentPerMonth },
 			imports: { used: usage.importOperations, limit: limits.importOperationsPerMonth },
 			callbacks: { used: usage.callbackInputs, limit: limits.callbackInputsPerMonth }
 		};
