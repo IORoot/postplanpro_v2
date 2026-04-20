@@ -1,6 +1,7 @@
 <script lang="ts">
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
+	import StatisticsMonthChart from '$lib/components/StatisticsMonthChart.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 
@@ -48,14 +49,25 @@
 <div class="flex flex-col gap-6 lg:flex-row">
 	<nav class="flex shrink-0 flex-col gap-1 lg:w-52" aria-label="Report types">
 		<a
-			href="/reports?report=statistics"
+			href={data.statsChartMonth
+				? `/reports?report=statistics&statsMonth=${encodeURIComponent(data.statsChartMonth)}`
+				: '/reports?report=statistics'}
 			class="flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors touch-manipulation {data.reportType === 'statistics'
 				? 'bg-[var(--primary)]/15 text-[var(--primary)]'
 				: 'text-[var(--text-muted)] hover:bg-[var(--primary-soft)] hover:text-[var(--text)]'}"
 		>
-			<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
-			</svg>
+			<span
+				class="inline-block h-5 w-5 shrink-0 bg-current"
+				style:mask-image="url('/statistics.svg')"
+				style:mask-size="contain"
+				style:mask-repeat="no-repeat"
+				style:mask-position="center"
+				style:-webkit-mask-image="url('/statistics.svg')"
+				style:-webkit-mask-size="contain"
+				style:-webkit-mask-repeat="no-repeat"
+				style:-webkit-mask-position="center"
+				aria-hidden="true"
+			></span>
 			Statistics
 		</a>
 		<a
@@ -64,9 +76,18 @@
 				? 'bg-[var(--primary)]/15 text-[var(--primary)]'
 				: 'text-[var(--text-muted)] hover:bg-[var(--primary-soft)] hover:text-[var(--text)]'}"
 		>
-			<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H5.25a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H5.25a1.125 1.125 0 00-1.125 1.125v7.5c0 .621.504 1.125 1.125 1.125h7.5a1.125 1.125 0 001.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25z" />
-			</svg>
+			<span
+				class="inline-block h-5 w-5 shrink-0 bg-current"
+				style:mask-image="url('/request_response.svg')"
+				style:mask-size="contain"
+				style:mask-repeat="no-repeat"
+				style:mask-position="center"
+				style:-webkit-mask-image="url('/request_response.svg')"
+				style:-webkit-mask-size="contain"
+				style:-webkit-mask-repeat="no-repeat"
+				style:-webkit-mask-position="center"
+				aria-hidden="true"
+			></span>
 			Request / Response
 		</a>
 		<a
@@ -75,9 +96,18 @@
 				? 'bg-[var(--primary)]/15 text-[var(--primary)]'
 				: 'text-[var(--text-muted)] hover:bg-[var(--primary-soft)] hover:text-[var(--text)]'}"
 		>
-			<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-			</svg>
+			<span
+				class="inline-block h-5 w-5 shrink-0 bg-current"
+				style:mask-image="url('/callback.svg')"
+				style:mask-size="contain"
+				style:mask-repeat="no-repeat"
+				style:mask-position="center"
+				style:-webkit-mask-image="url('/callback.svg')"
+				style:-webkit-mask-size="contain"
+				style:-webkit-mask-repeat="no-repeat"
+				style:-webkit-mask-position="center"
+				aria-hidden="true"
+			></span>
 			Callback stages
 		</a>
 	</nav>
@@ -86,8 +116,95 @@
 		{#if data.reportType === 'statistics'}
 			<PageSectionHeading
 				title="Statistics"
-				description="Upcoming posts, recent publishes, failures, and posts with failed Make.com callback stages."
+				description="Counts and pipeline health at a glance; upcoming posts, recent publishes, failures, and posts with failed Make.com callback stages."
 			/>
+			{#if data.statsChartSeries.length > 0}
+				<StatisticsMonthChart
+					points={data.statsChartSeries}
+					monthLabel={data.statsChartTitle}
+					prevHref={`/reports?report=statistics&statsMonth=${encodeURIComponent(data.statsChartPrevMonth)}`}
+					nextHref={`/reports?report=statistics&statsMonth=${encodeURIComponent(data.statsChartNextMonth)}`}
+					timezoneLabel={data.timezone}
+				/>
+			{/if}
+			{#if data.stats}
+				<div class="mb-6 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:overflow-visible">
+					<div class="flex w-max max-w-full flex-wrap gap-1.5 md:w-auto md:max-w-none">
+						<a
+							href="/posts"
+							title="Total posts"
+							class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+						>
+							<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Total</p>
+							<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.totalPosts}</p>
+						</a>
+						<a
+							href="/posts?status=draft"
+							title="Draft posts"
+							class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+						>
+							<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Drafts</p>
+							<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.draft}</p>
+						</a>
+						<a
+							href="/posts?status=scheduled"
+							title="Scheduled posts"
+							class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+						>
+							<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Sched.</p>
+							<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.scheduled}</p>
+						</a>
+						<a
+							href="/posts?status=sent"
+							title="Sent posts"
+							class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+						>
+							<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Sent</p>
+							<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.sent}</p>
+						</a>
+						<a
+							href="/posts?status=failed"
+							title="Failed posts"
+							class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+						>
+							<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Failed</p>
+							<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.failed}</p>
+						</a>
+						<a
+							href="/schedules"
+							title="Schedules"
+							class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+						>
+							<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Sched.</p>
+							<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.scheduleCount}</p>
+						</a>
+						<a
+							href="/account?section=globals"
+							title="Webhooks"
+							class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+						>
+							<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Hooks</p>
+							<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.webhookCount}</p>
+						</a>
+						<div class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5" title="Posts sent this week">
+							<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Week</p>
+							<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.sentThisWeek}</p>
+						</div>
+						<a
+							href="/reports?report=callback-stages"
+							title="Make.com callback stages (pass / fail)"
+							class="content-card min-w-[5.25rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
+						>
+							<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Stages</p>
+							<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">
+								<span class="text-green-600 dark:text-green-400">{data.stagePasses ?? 0}</span>
+								<span class="mx-0.5 text-[var(--text-muted)] font-normal text-sm">/</span>
+								<span class="text-red-600 dark:text-red-400">{data.stageFails ?? 0}</span>
+							</p>
+						</a>
+					</div>
+				</div>
+			{/if}
 			<div>
 				<div class="mb-4 flex items-center justify-between gap-3">
 					<h3 class="text-base font-semibold text-[var(--text)]">Upcoming posts</h3>

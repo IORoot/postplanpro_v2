@@ -173,19 +173,20 @@
 	<title>Edit: {data.post.title} – PostPlan</title>
 </svelte:head>
 
+<div class="flex min-w-0 max-w-full flex-col overflow-x-clip">
 <PageSectionHeading title="Edit post">
 	{#snippet trail()}
 		<button
 			type="button"
 			onclick={copyPostId}
-			class="rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-xs font-mono text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text)] cursor-pointer"
+			class="block w-full max-w-full whitespace-normal break-all rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-left text-xs font-mono text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text)] cursor-pointer"
 			title="Copy post ID"
 		>
 			{copyFeedback ? 'Copied!' : data.post.id}
 		</button>
 	{/snippet}
 </PageSectionHeading>
-<p class="mt-1 flex items-center gap-2">
+<p class="mt-1 flex min-w-0 max-w-full flex-wrap items-center gap-2">
 	<span
 		class="rounded px-2 py-1 text-xs font-medium capitalize {data.post.status === 'draft'
 			? 'status-draft'
@@ -198,16 +199,16 @@
 		{data.post.status}
 	</span>
 	{#if data.post.scheduled_at}
-		<span class="text-sm text-[var(--text-muted)]">
+		<span class="min-w-0 max-w-full break-words text-sm text-[var(--text-muted)]">
 			{data.post.status === 'scheduled' ? 'Scheduled for ' : ''}{formatInUserTimezone(data.post.scheduled_at)}
 		</span>
 	{/if}
 	{#if data.post.status === 'sent' && data.post.sent_at}
-		<span class="text-sm text-[var(--text-muted)]">Sent {formatInUserTimezone(data.post.sent_at)}</span>
+		<span class="min-w-0 max-w-full break-words text-sm text-[var(--text-muted)]">Sent {formatInUserTimezone(data.post.sent_at)}</span>
 	{/if}
 </p>
 
-<form method="POST" action="?/update" use:enhance>
+<form method="POST" action="?/update" use:enhance class="min-w-0 max-w-full">
 	{#if form?.error}
 		<p class="mb-4 rounded-lg px-3 py-2 text-sm alert-error">{form.error}</p>
 	{/if}
@@ -223,28 +224,28 @@
 		</p>
 	{/if}
 
-	<div class="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-		<div class="space-y-6">
+	<div class="grid min-w-0 max-w-full gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+		<div class="min-w-0 space-y-6">
 			<!-- Top section: title, content, image url, color -->
-			<section class="content-card rounded-xl border border-[var(--border)] p-6 shadow-sm">
+			<section class="content-card min-w-0 max-w-full rounded-xl border border-[var(--border)] p-4 shadow-sm sm:p-6">
 				<h2 class="text-base font-semibold text-[var(--text)] mb-4">Post</h2>
-				<div class="space-y-4">
-					<div>
+				<div class="min-w-0 space-y-4">
+					<div class="min-w-0">
 						<label for="title" class="block text-sm font-medium text-[var(--text)]">Title *</label>
-						<input id="title" type="text" name="title" bind:value={titleInput} required class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]" />
+						<input id="title" type="text" name="title" bind:value={titleInput} required class="mt-1 min-h-[44px] w-full min-w-0 max-w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" />
 					</div>
-					<div>
+					<div class="min-w-0">
 						<label for="content" class="block text-sm font-medium text-[var(--text)]">Content</label>
-						<textarea id="content" name="content" rows="5" bind:value={contentInput} class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]"></textarea>
+						<textarea id="content" name="content" rows="5" bind:value={contentInput} class="mt-1 w-full min-w-0 max-w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]"></textarea>
 					</div>
-					<div>
+					<div class="min-w-0">
 						<label for="image_url" class="block text-sm font-medium text-[var(--text)]">Image URL (optional)</label>
-						<input id="image_url" type="url" name="image_url" bind:value={imageUrlInput} placeholder="https://..." class="mt-1 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]" />
+						<input id="image_url" type="url" name="image_url" bind:value={imageUrlInput} placeholder="https://..." class="mt-1 min-h-[44px] w-full min-w-0 max-w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]" />
 					</div>
-					<div>
+					<div class="min-w-0">
 						<p class="block text-sm font-medium text-[var(--text)]">Post color</p>
 						<p class="mt-0.5 text-xs text-[var(--text-muted)]">Choose a Tailwind palette color or enter a HEX color.</p>
-						<div class="mt-2 flex flex-wrap gap-2">
+						<div class="mt-2 flex min-w-0 max-w-full flex-wrap gap-2">
 							{#each TAILWIND_POST_COLORS as color}
 								<button
 									type="button"
@@ -256,7 +257,7 @@
 								></button>
 							{/each}
 						</div>
-						<div class="mt-2 flex items-center gap-2">
+						<div class="mt-2 flex min-w-0 flex-wrap items-center gap-2">
 							<input
 								type="color"
 								value={hexColorInput}
@@ -269,9 +270,9 @@
 								value={hexColorInput}
 								oninput={(e) => onHexColorInput((e.currentTarget as HTMLInputElement).value)}
 								placeholder="#aabbcc"
-								class="w-32 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
+								class="min-w-0 max-w-full flex-1 rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] sm:max-w-[8rem] sm:flex-none"
 							/>
-							<span class="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
+							<span class="inline-flex min-w-0 max-w-full items-center gap-2 break-all text-xs text-[var(--text-muted)]">
 								<span class="inline-block h-4 w-4 rounded border border-[var(--border)]" style={`background-color: ${selectedColor};`}></span>
 								{selectedColor}
 							</span>
@@ -282,15 +283,17 @@
 			</section>
 
 			<!-- Custom fields -->
-			<section class="content-card rounded-xl border border-[var(--border)] p-6 shadow-sm">
+			<section class="content-card min-w-0 max-w-full rounded-xl border border-[var(--border)] p-4 shadow-sm sm:p-6">
 				<h2 class="text-base font-semibold text-[var(--text)] mb-4">Custom fields</h2>
-				<p class="text-xs text-[var(--text-muted)] mb-3">Use dotted paths for nesting (e.g. <code>instagram.title</code>). Use <code>json</code> type for arrays/objects.</p>
-				<div class="flex flex-wrap items-center gap-2 mb-3">
+				<p class="overflow-wrap-anywhere mb-3 min-w-0 max-w-full text-xs text-[var(--text-muted)]">
+					Use dotted paths for nesting (e.g. <code class="break-all">instagram.title</code>). Use <code class="break-all">json</code> type for arrays/objects.
+				</p>
+				<div class="mb-3 flex min-w-0 max-w-full flex-wrap items-center gap-2">
 					{#each data.templates as t}
 						<button
 							type="button"
 							onclick={() => appendTemplate(t.id)}
-							class="rounded-lg border-2 border-dashed border-[var(--border)] bg-transparent px-3 py-2 text-sm font-medium text-[var(--text-muted)] hover:border-[var(--primary)] hover:bg-[var(--primary)]/10 hover:text-[var(--primary)] min-h-[44px] transition-colors"
+							class="max-w-full whitespace-normal break-words rounded-lg border-2 border-dashed border-[var(--border)] bg-transparent px-3 py-2 text-left text-sm font-medium text-[var(--text-muted)] transition-colors hover:border-[var(--primary)] hover:bg-[var(--primary)]/10 hover:text-[var(--primary)] min-h-[44px]"
 						>
 							+ {t.name}{t.is_default ? ' (default)' : ''}
 						</button>
@@ -298,15 +301,21 @@
 				</div>
 				<div class="space-y-2">
 					{#each fieldRows as _, i}
-						<div class="flex flex-wrap gap-2">
+						<div
+							class="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,2fr)_auto] sm:items-center"
+						>
 							<input
 								type="text"
 								name="field_key_{i}"
 								placeholder="field.path"
 								bind:value={fieldRows[i].key}
-								class="rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-w-[140px] min-h-[44px]"
+								class="min-h-[44px] min-w-0 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]"
 							/>
-							<select name="field_type_{i}" bind:value={fieldRows[i].type} class="rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]">
+							<select
+								name="field_type_{i}"
+								bind:value={fieldRows[i].type}
+								class="min-h-[44px] w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] sm:w-auto"
+							>
 								<option value="string">string</option>
 								<option value="number">number</option>
 								<option value="boolean">boolean</option>
@@ -317,9 +326,13 @@
 								name="field_value_{i}"
 								placeholder="Value"
 								bind:value={fieldRows[i].value}
-								class="flex-1 min-w-[120px] rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]"
+								class="min-h-[44px] min-w-0 w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]"
 							/>
-							<button type="button" onclick={() => removeField(i)} class="btn-danger-outline min-h-[44px] rounded border px-2 py-1 text-sm">Remove</button>
+							<button
+								type="button"
+								onclick={() => removeField(i)}
+								class="btn-danger-outline min-h-[44px] w-full justify-self-start rounded border px-2 py-1 text-sm sm:w-auto"
+								>Remove</button>
 						</div>
 					{/each}
 				</div>
@@ -327,12 +340,12 @@
 			</section>
 
 			<!-- Webhook -->
-			<section class="content-card rounded-xl border border-[var(--border)] p-6 shadow-sm">
+			<section class="content-card min-w-0 max-w-full rounded-xl border border-[var(--border)] p-4 shadow-sm sm:p-6">
 				<h2 class="text-base font-semibold text-[var(--text)] mb-4">Webhooks</h2>
 				<p class="text-sm font-medium text-[var(--text)] mb-2">Target webhooks * (at least one; all will receive the post when published)</p>
 				<div class="mt-1 flex flex-wrap gap-x-4 gap-y-2">
 					{#each data.webhooks as w}
-						<label class="flex items-center gap-2 cursor-pointer">
+						<label class="flex min-w-0 max-w-full cursor-pointer items-start gap-2">
 							<input
 								type="checkbox"
 								name="webhook_ids"
@@ -344,7 +357,7 @@
 								}}
 								class="rounded border-[var(--border)]"
 							/>
-							<span class="text-sm text-[var(--text)]">{w.name}</span>
+							<span class="min-w-0 flex-1 break-words text-sm text-[var(--text)]">{w.name}</span>
 						</label>
 					{/each}
 				</div>
@@ -354,8 +367,8 @@
 			</section>
 
 			<!-- Schedule -->
-			<section class="content-card rounded-xl border border-[var(--border)] p-6 shadow-sm">
-				<div class="mb-4 flex flex-wrap items-center gap-2">
+			<section class="content-card min-w-0 max-w-full rounded-xl border border-[var(--border)] p-4 shadow-sm sm:p-6">
+				<div class="mb-4 flex min-w-0 max-w-full flex-wrap items-center gap-2">
 					<h2 class="text-base font-semibold text-[var(--text)]">Schedule</h2>
 					{#if webhookIds.length === 0}
 						<span
@@ -366,30 +379,30 @@
 				</div>
 				<p class="text-xs text-[var(--text-muted)] mb-3">Draft, pick a date/time, or assign the next free slot from a schedule.</p>
 				<div class="space-y-3">
-					<label class="flex items-center gap-2">
-						<input type="radio" name="schedule_by" value="none" class="rounded border-[var(--border)]" bind:group={scheduleByInput} />
-						<span class="text-sm text-[var(--text)]">No schedule (draft)</span>
+					<label class="flex min-w-0 max-w-full items-start gap-2">
+						<input type="radio" name="schedule_by" value="none" class="mt-1 shrink-0 rounded border-[var(--border)]" bind:group={scheduleByInput} />
+						<span class="min-w-0 break-words text-sm text-[var(--text)]">No schedule (draft)</span>
 					</label>
-					<label class="flex items-center gap-2">
-						<input type="radio" name="schedule_by" value="datetime" class="rounded border-[var(--border)]" bind:group={scheduleByInput} />
-						<span class="text-sm text-[var(--text)]">Specific date & time</span>
+					<label class="flex min-w-0 max-w-full items-start gap-2">
+						<input type="radio" name="schedule_by" value="datetime" class="mt-1 shrink-0 rounded border-[var(--border)]" bind:group={scheduleByInput} />
+						<span class="min-w-0 break-words text-sm text-[var(--text)]">Specific date & time</span>
 					</label>
-					<div class="ml-6 mt-1">
+					<div class="mt-1 min-w-0 max-w-full pl-6">
 						<input
 							id="scheduled_at"
 							type="datetime-local"
 							name="scheduled_at"
 							bind:value={scheduledAtInput}
-							class="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]"
+							class="min-h-[44px] w-full min-w-0 max-w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]"
 						/>
-						<p class="mt-1 text-xs text-[var(--text-muted)]">Timezone: {userTimezone}</p>
+						<p class="mt-1 break-words text-xs text-[var(--text-muted)]">Timezone: {userTimezone}</p>
 					</div>
-					<label class="flex items-center gap-2">
-						<input type="radio" name="schedule_by" value="schedule" class="rounded border-[var(--border)]" bind:group={scheduleByInput} />
-						<span class="text-sm text-[var(--text)]">Next free slot on a schedule</span>
+					<label class="flex min-w-0 max-w-full items-start gap-2">
+						<input type="radio" name="schedule_by" value="schedule" class="mt-1 shrink-0 rounded border-[var(--border)]" bind:group={scheduleByInput} />
+						<span class="min-w-0 break-words text-sm text-[var(--text)]">Next free slot on a schedule</span>
 					</label>
-					<div class="ml-6 mt-1">
-						<select id="schedule_id" name="schedule_id" class="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] min-h-[44px]">
+					<div class="mt-1 min-w-0 max-w-full pl-6">
+						<select id="schedule_id" name="schedule_id" class="min-h-[44px] w-full min-w-0 max-w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)]">
 							<option value="">Select schedule</option>
 							{#each data.schedules as s}
 								<option value={s.id} selected={s.id === data.post.schedule_id}>{s.name}</option>
@@ -419,33 +432,37 @@
 		</div>
 
 		<!-- Right column: Live JSON + JSON Override -->
-		<aside class="content-card rounded-xl border border-[var(--border)] p-4 shadow-sm xl:sticky xl:top-6 xl:h-fit space-y-4">
+		<aside
+			class="content-card min-w-0 max-w-full space-y-4 overflow-x-clip rounded-xl border border-[var(--border)] p-4 shadow-sm xl:sticky xl:top-6 xl:h-fit"
+		>
 			{#if imageUrlInput?.trim()}
 				<div class="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--bg)]">
 					<img
 						src={imageUrlInput.trim()}
 						alt={titleInput ? `Preview: ${titleInput}` : 'Post preview'}
-						class="w-full object-cover object-center"
+						class="max-h-[min(40vh,320px)] w-full max-w-full object-contain object-center"
 						loading="lazy"
 					/>
 				</div>
 			{/if}
 
-			<div>
-				<div class="mb-2 flex items-center justify-between gap-2">
-					<h2 class="text-sm font-semibold text-[var(--text)]">Live JSON output</h2>
-					<span class="text-[11px] text-[var(--text-muted)]">{overrideEnabled ? 'Override active' : 'Generated'}</span>
+			<div class="min-w-0">
+				<div class="mb-2 flex min-w-0 items-center justify-between gap-2">
+					<h2 class="min-w-0 shrink text-sm font-semibold text-[var(--text)]">Live JSON output</h2>
+					<span class="shrink-0 text-[11px] text-[var(--text-muted)]">{overrideEnabled ? 'Override active' : 'Generated'}</span>
 				</div>
-				<pre class="max-h-[40vh] overflow-auto rounded border border-[var(--border)] bg-[var(--bg)] p-3 text-xs leading-5 text-[var(--text)]"><code>{liveJson}</code></pre>
+				<pre
+					class="overflow-wrap-anywhere max-h-[40vh] min-w-0 max-w-full overflow-x-auto overflow-y-auto whitespace-pre-wrap break-words rounded border border-[var(--border)] bg-[var(--bg)] p-3 text-xs leading-5 text-[var(--text)]"
+				><code class="block min-w-0 break-words">{liveJson}</code></pre>
 			</div>
 
 			<!-- JSON Override (under Live JSON Output) -->
-			<div class="py-3 mb-3 border-[var(--border)]">
-				<div class="flex items-center justify-between gap-2 mb-1">
+			<div class="mb-3 min-w-0 border-[var(--border)] py-3">
+				<div class="mb-1 flex min-w-0 items-center justify-between gap-2">
 					<button
 						type="button"
 						onclick={() => (overrideEnabled = !overrideEnabled)}
-						class="rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--text)] hover:bg-[var(--surface-hover)]"
+						class="min-w-0 max-w-full whitespace-normal rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-left text-xs font-medium text-[var(--text)] hover:bg-[var(--surface-hover)]"
 					>
 						{overrideEnabled ? 'Disable override' : 'Enable JSON override'}
 					</button>
@@ -456,7 +473,7 @@
 					<textarea
 						bind:value={overrideText}
 						rows="12"
-						class="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 font-mono text-xs text-[var(--text)]"
+						class="min-w-0 max-w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 font-mono text-xs text-[var(--text)]"
 						spellcheck="false"
 					></textarea>
 					{#if overrideError}
@@ -466,9 +483,11 @@
 			</div>
 
 			<!-- Make.com stages (under JSON Override) -->
-			<div class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-				<h3 class="text-sm font-semibold text-[var(--text)] mb-1">Callback stages</h3>
-				<p class="text-xs text-[var(--text-muted)] mb-3">Sequence of stages completed by your Make.com scenario for this post.</p>
+			<div class="min-w-0 max-w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+				<h3 class="mb-1 text-sm font-semibold text-[var(--text)]">Callback stages</h3>
+				<p class="mb-3 min-w-0 max-w-full text-xs text-[var(--text-muted)]">
+					Sequence of stages completed by your Make.com scenario for this post.
+				</p>
 				{#if stages.length > 0}
 					<div class="overflow-x-auto rounded border border-[var(--border)]">
 						<table class="w-full min-w-[240px] text-left text-sm">
@@ -508,3 +527,4 @@
 		</aside>
 	</div>
 </form>
+</div>

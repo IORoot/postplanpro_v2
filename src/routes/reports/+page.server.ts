@@ -1,11 +1,50 @@
 import { getDatabase } from '$lib/db/index.js';
-import { loadReportStatistics } from '$lib/server/overviewData.js';
-import { ensureValidTimeZone } from '$lib/server/timezone.js';
+import {
+	loadCalendarOverview,
+	loadMonthlyActivitySeries,
+	loadReportStatistics
+} from '$lib/server/overviewData.js';
+import { ensureValidTimeZone, localDateTimeToUtcIso, utcIsoToLocalDateTime } from '$lib/server/timezone.js';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 const CALLBACK_ORDER_COLS = ['title', 'stage', 'status', 'date'] as const;
 type CallbackOrderCol = (typeof CALLBACK_ORDER_COLS)[number];
+
+function shiftYearMonth(yearMonth: string, delta: number): string {
+	const [ys, ms] = yearMonth.split('-');
+	const y = Number(ys);
+	const mo = Number(ms);
+	const d = new Date(y, mo - 1 + delta, 1);
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function currentYearMonthInTimezone(timeZone: string): string {
+	const local = utcIsoToLocalDateTime(new Date().toISOString(), ensureValidTimeZone(timeZone));
+	return local?.date.slice(0, 7) ?? new Date().toISOString().slice(0, 7);
+}
+
+function parseStatsMonthParam(raw: string | null, timeZone: string): string {
+	const tz = ensureValidTimeZone(timeZone);
+	if (!raw || !/^\d{4}-\d{2}$/.test(raw)) return currentYearMonthInTimezone(tz);
+	const [y, m] = raw.split('-').map(Number);
+	if (!y || m < 1 || m > 12 || y < 2000 || y > 2100) return currentYearMonthInTimezone(tz);
+	return `${y}-${String(m).padStart(2, '0')}`;
+}
+
+function statsMonthLongLabel(yearMonth: string, timeZone: string): string {
+	const m = /^(\d{4})-(\d{2})$/.exec(yearMonth);
+	if (!m) return yearMonth;
+	const y = Number(m[1]);
+	const mo = Number(m[2]);
+	const iso = localDateTimeToUtcIso(`${y}-${m[2]}-15T12:00:00`, ensureValidTimeZone(timeZone));
+	if (!iso) return yearMonth;
+	return new Intl.DateTimeFormat(undefined, {
+		timeZone: ensureValidTimeZone(timeZone),
+		month: 'long',
+		year: 'numeric'
+	}).format(new Date(iso));
+}
 
 function parseReportType(url: URL): 'logs' | 'callback-stages' | 'statistics' {
 	const r = url.searchParams.get('report');
@@ -28,7 +67,17 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			upcomingPosts: [],
 			lastPublishedPosts: [],
 			failedPosts: [],
-			postsWithFailedStages: []
+			postsWithFailedStages: [],
+			stats: null,
+			sentThisWeek: 0,
+			stagePasses: 0,
+			stageFails: 0,
+			timezone: ensureValidTimeZone(null),
+			statsChartMonth: '',
+			statsChartSeries: [],
+			statsChartTitle: '',
+			statsChartPrevMonth: '',
+			statsChartNextMonth: ''
 		};
 
 	const db = getDatabase();
@@ -45,6 +94,24 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 					failedPosts: [],
 					postsWithFailedStages: []
 				};
+
+	const overview =
+		reportType === 'statistics'
+			? loadCalendarOverview(db, accountId)
+			: { stats: null, sentThisWeek: 0, stagePasses: 0, stageFails: 0 };
+
+	let statsChartMonth = '';
+	let statsChartSeries: ReturnType<typeof loadMonthlyActivitySeries> = [];
+	let statsChartTitle = '';
+	let statsChartPrevMonth = '';
+	let statsChartNextMonth = '';
+	if (reportType === 'statistics') {
+		statsChartMonth = parseStatsMonthParam(url.searchParams.get('statsMonth'), timezone);
+		statsChartSeries = loadMonthlyActivitySeries(db, accountId, statsChartMonth, timezone);
+		statsChartTitle = statsMonthLongLabel(statsChartMonth, timezone);
+		statsChartPrevMonth = shiftYearMonth(statsChartMonth, -1);
+		statsChartNextMonth = shiftYearMonth(statsChartMonth, 1);
+	}
 
 	const reports =
 		reportType === 'logs'
@@ -129,7 +196,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		callbackOrderBy,
 		callbackOrderDir,
 		callbackFilters: { title: filterTitle, stage: filterStage, status: filterStatus },
-		...statistics
+		statsChartMonth,
+		statsChartSeries,
+		statsChartTitle,
+		statsChartPrevMonth,
+		statsChartNextMonth,
+		...statistics,
+		...overview
 	};
 };
 

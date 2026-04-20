@@ -53,7 +53,7 @@
 	{/if}
 
 	<main
-		class="min-h-screen { ($page.url.pathname.startsWith('/auth') || isMarketingPath($page.url.pathname) || $page.url.pathname === '/blocked') ? 'bg-[var(--bg)]' : 'bg-[var(--sidebar-bg)] md:pl-[280px]' }"
+		class="min-h-screen min-w-0 w-full max-w-full { ($page.url.pathname.startsWith('/auth') || isMarketingPath($page.url.pathname) || $page.url.pathname === '/blocked') ? 'bg-[var(--bg)]' : 'bg-[var(--sidebar-bg)] md:pl-[280px]' }"
 	>
 		{#if isMarketingPath($page.url.pathname)}
 			<div class="w-full">
