@@ -36,6 +36,7 @@ describe('+layout.server load', () => {
 	it('returns null sidebar and tier when logged out', async () => {
 		const r = await layoutLoad(mockRequestEvent({ userId: null }, 'http://test/') as Parameters<typeof layoutLoad>[0]);
 		expect(r.sidebarCalendar).toBeNull();
+		expect(r.sidebarPlanUsage).toBeNull();
 		expect(r.userTier).toBeNull();
 		expect(r.session).toBeNull();
 	});
@@ -47,6 +48,11 @@ describe('+layout.server load', () => {
 		expect(r.sidebarCalendar?.markers).toBeDefined();
 		const keys = Object.keys(r.sidebarCalendar?.markers ?? {});
 		expect(keys.length).toBeGreaterThanOrEqual(1);
+		expect(r.sidebarPlanUsage).not.toBeNull();
+		expect(r.sidebarPlanUsage?.posts.used).toBeGreaterThanOrEqual(1);
+		expect(r.sidebarPlanUsage?.posts.limit).toBeGreaterThan(0);
+		expect(r.sidebarPlanUsage?.imports.limit).toBeGreaterThan(0);
+		expect(r.sidebarPlanUsage?.callbacks.limit).toBeGreaterThan(0);
 	});
 });
 

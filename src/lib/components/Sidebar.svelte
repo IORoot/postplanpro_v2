@@ -13,6 +13,18 @@
 	];
 	const userTier = $page.data.userTier as string | null | undefined;
 	const userTimezone = $derived(($page.data.userTimezone as string | null | undefined) ?? 'Europe/London');
+	const sidebarPlanUsage = $page.data.sidebarPlanUsage as
+		| {
+				posts: { used: number; limit: number | null };
+				imports: { used: number; limit: number | null };
+				callbacks: { used: number; limit: number | null };
+		  }
+		| null
+		| undefined;
+
+	function capStr(limit: number | null): string {
+		return limit === null ? '∞' : String(limit);
+	}
 	const navItems = $derived(
 		userTier === 'admin'
 			? [...baseNavItems, { href: '/admin', label: 'Admin', icon: 'gear' as const }]
@@ -186,6 +198,42 @@
 		</div>
 		<!-- Main menu -->
 		<nav class="flex-1 overflow-y-auto p-3">
+			{#if sidebarPlanUsage}
+				<a
+					href="/account?section=billing"
+					class="mb-2 block border-b border-[var(--sidebar-border)]/70 px-1 pb-2 transition-colors hover:opacity-95"
+					title="Plan and usage (account)"
+					aria-label="Monthly plan usage: posts, imports, and callbacks. Opens billing."
+					onclick={closeSidebar}
+				>
+					<div class="flex flex-row gap-1">
+						<span
+							class="flex min-h-[2.5rem] min-w-0 flex-1 basis-0 flex-col items-center justify-center rounded-md border border-[var(--sidebar-border)] bg-[var(--sidebar-hover)]/35 px-0.5 py-1 text-[var(--sidebar-text)]"
+						>
+							<span class="text-[10px] font-medium leading-none tabular-nums">
+								{sidebarPlanUsage.posts.used}{' '}/{' '}{capStr(sidebarPlanUsage.posts.limit)}
+							</span>
+							<span class="mt-0.5 text-[8px] font-normal leading-none text-[var(--sidebar-text-muted)]">posts</span>
+						</span>
+						<span
+							class="flex min-h-[2.5rem] min-w-0 flex-1 basis-0 flex-col items-center justify-center rounded-md border border-[var(--sidebar-border)] bg-[var(--sidebar-hover)]/35 px-0.5 py-1 text-[var(--sidebar-text)]"
+						>
+							<span class="text-[10px] font-medium leading-none tabular-nums">
+								{sidebarPlanUsage.imports.used}{' '}/{' '}{capStr(sidebarPlanUsage.imports.limit)}
+							</span>
+							<span class="mt-0.5 text-[8px] font-normal leading-none text-[var(--sidebar-text-muted)]">imports</span>
+						</span>
+						<span
+							class="flex min-h-[2.5rem] min-w-0 flex-1 basis-0 flex-col items-center justify-center rounded-md border border-[var(--sidebar-border)] bg-[var(--sidebar-hover)]/35 px-0.5 py-1 text-[var(--sidebar-text)]"
+						>
+							<span class="text-[10px] font-medium leading-none tabular-nums">
+								{sidebarPlanUsage.callbacks.used}{' '}/{' '}{capStr(sidebarPlanUsage.callbacks.limit)}
+							</span>
+							<span class="mt-0.5 text-[8px] font-normal leading-none text-[var(--sidebar-text-muted)]">callbacks</span>
+						</span>
+					</div>
+				</a>
+			{/if}
 			<div class="sidebar-mini-cal mb-4 rounded-lg border bg-neutral-950/10 p-2">
 				<div class="mb-2 flex items-center justify-between px-1">
 					<button

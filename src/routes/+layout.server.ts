@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getDatabase } from '$lib/db/index.js';
 import { ensureValidTimeZone } from '$lib/server/timezone.js';
+import { currentMonthKey, getUsageForMonth } from '$lib/usage.js';
+import { getTierLimits } from '$lib/tiers.js';
 import type { LayoutServerLoad } from './$types';
 
 // Must not use import.meta.url + relative path: SSR bundle lives under
@@ -28,6 +30,11 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
 	let sidebarCalendar: { year: number; month: number; markers: Record<string, number> } | null = null;
+	let sidebarPlanUsage: {
+		posts: { used: number; limit: number | null };
+		imports: { used: number; limit: number | null };
+		callbacks: { used: number; limit: number | null };
+	} | null = null;
 	let userTier: string | null = null;
 	let userTimezone = 'Europe/London';
 	if (accountId) {
@@ -37,6 +44,14 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			| undefined;
 		userTier = tierRow?.tier ?? null;
 		userTimezone = ensureValidTimeZone(tierRow?.timezone);
+		const monthKey = currentMonthKey();
+		const usage = getUsageForMonth(db, accountId, monthKey);
+		const limits = getTierLimits(userTier ?? 'free');
+		sidebarPlanUsage = {
+			posts: { used: usage.postsSent + usage.postsScheduled, limit: limits.postsSentPerMonth },
+			imports: { used: usage.importOperations, limit: limits.importOperationsPerMonth },
+			callbacks: { used: usage.callbackInputs, limit: limits.callbackInputsPerMonth }
+		};
 		const rows = db
 			.prepare(
 				`SELECT substr(scheduled_at, 1, 10) as day, COUNT(*) as count
@@ -62,6 +77,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	return {
 		session,
 		sidebarCalendar,
+		sidebarPlanUsage,
 		userTier,
 		userTimezone,
 		appVersion
