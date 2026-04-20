@@ -13,7 +13,8 @@ import {
 	TEST_USER_ID,
 	TEST_WEBHOOK_ID,
 	insertPostRow,
-	insertPostStage
+	insertPostStage,
+	insertSendLog
 } from '../helpers/testDb.js';
 import { mockRequestEvent } from '../helpers/mockRequest.js';
 
@@ -29,6 +30,12 @@ beforeAll(() => {
 		title: 'Cal',
 		status: 'scheduled',
 		scheduled_at: `${y}-${m}-${day}T12:00:00`
+	});
+	insertSendLog({
+		id: 'layout-send-1',
+		accountId: TEST_USER_ID,
+		postId: 'layout-cal-post',
+		success: 1
 	});
 });
 

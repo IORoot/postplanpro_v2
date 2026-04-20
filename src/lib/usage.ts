@@ -1,9 +1,11 @@
 import type { Database } from 'better-sqlite3';
-import { getTierLimits, type Tier } from '$lib/tiers.js';
+import { getTierLimits } from '$lib/tiers.js';
 
 export type UsageForMonth = {
-	postsSent: number;
-	postsScheduled: number;
+	/** Successful outbound webhook deliveries (rows in send_log with success=1). */
+	postOutputSends: number;
+	/** Posts still queued for output this calendar month (scheduled_at in month, status scheduled|failed). */
+	postsQueuedForSend: number;
 	callbackInputs: number;
 	importOperations: number;
 };
@@ -26,32 +28,76 @@ export function monthKeyFromDate(dateStr: string | null): string | null {
 	return `${y}-${m}`;
 }
 
+function monthRangeIso(month: string): { start: string; end: string } {
+	const start = `${month}-01T00:00:00.000Z`;
+	const [y, m] = month.split('-');
+	const lastDay = new Date(parseInt(y, 10), parseInt(m, 10), 0).getDate();
+	const end = `${month}-${String(lastDay).padStart(2, '0')}T23:59:59.999Z`;
+	return { start, end };
+}
+
 /**
- * Get posts sent + scheduled for an account in a given month (from post table).
- * Counts: status='sent' with sent_at in month, plus scheduled_at in month (draft/scheduled).
+ * Successful outbound HTTP deliveries this calendar month (send_log.success = 1).
+ * Rescheduling a post does not remove past rows — quota reflects actual sends.
+ */
+export function getSuccessfulOutputSendCountForMonth(db: Database, accountId: string, month: string): number {
+	return (
+		db
+			.prepare(
+				`SELECT COUNT(*) as n FROM send_log
+         WHERE account_id = ? AND success = 1 AND strftime('%Y-%m', sent_at) = ?`
+			)
+			.get(accountId, month) as { n: number }
+	).n;
+}
+
+/**
+ * Posts committed to send in this calendar month but not yet completed (still scheduled or failed retry).
+ */
+export function getPostsQueuedForOutputSendInMonth(db: Database, accountId: string, month: string): number {
+	const { start, end } = monthRangeIso(month);
+	return (
+		db
+			.prepare(
+				`SELECT COUNT(*) as n FROM post
+         WHERE account_id = ? AND scheduled_at IS NOT NULL AND scheduled_at >= ? AND scheduled_at <= ?
+           AND status IN ('scheduled', 'failed')`
+			)
+			.get(accountId, start, end) as { n: number }
+	).n;
+}
+
+export function getPostQuotaSnapshotForMonth(
+	db: Database,
+	accountId: string,
+	month: string
+): { outputSends: number; queuedInMonth: number } {
+	return {
+		outputSends: getSuccessfulOutputSendCountForMonth(db, accountId, month),
+		queuedInMonth: getPostsQueuedForOutputSendInMonth(db, accountId, month)
+	};
+}
+
+/**
+ * @deprecated Prefer getSuccessfulOutputSendCountForMonth / getPostQuotaSnapshotForMonth.
+ * Legacy post-table counts (not used for plan quota anymore).
  */
 export function getPostsSentAndScheduledForMonth(
 	db: Database,
 	accountId: string,
 	month: string
 ): { sent: number; scheduled: number } {
-	const start = `${month}-01T00:00:00.000Z`;
-	const [y, m] = month.split('-');
-	const lastDay = new Date(parseInt(y, 10), parseInt(m, 10), 0).getDate();
-	const end = `${month}-${String(lastDay).padStart(2, '0')}T23:59:59.999Z`;
-
+	const { start, end } = monthRangeIso(month);
 	const sent = (db
 		.prepare(
 			`SELECT COUNT(*) as n FROM post WHERE account_id = ? AND status = 'sent' AND sent_at >= ? AND sent_at <= ?`
 		)
 		.get(accountId, start, end) as { n: number }).n;
-
 	const scheduled = (db
 		.prepare(
 			`SELECT COUNT(*) as n FROM post WHERE account_id = ? AND scheduled_at >= ? AND scheduled_at <= ?`
 		)
 		.get(accountId, start, end) as { n: number }).n;
-
 	return { sent, scheduled };
 }
 
@@ -75,16 +121,13 @@ export function getUsageMonthRow(
 /**
  * Get full usage for an account for a given month.
  */
-export function getUsageForMonth(
-	db: Database,
-	accountId: string,
-	month: string
-): UsageForMonth {
-	const { sent, scheduled } = getPostsSentAndScheduledForMonth(db, accountId, month);
+export function getUsageForMonth(db: Database, accountId: string, month: string): UsageForMonth {
+	const postOutputSends = getSuccessfulOutputSendCountForMonth(db, accountId, month);
+	const postsQueuedForSend = getPostsQueuedForOutputSendInMonth(db, accountId, month);
 	const { callback_inputs, import_operations } = getUsageMonthRow(db, accountId, month);
 	return {
-		postsSent: sent,
-		postsScheduled: scheduled,
+		postOutputSends,
+		postsQueuedForSend,
 		callbackInputs: callback_inputs,
 		importOperations: import_operations
 	};
@@ -114,7 +157,23 @@ export function incrementUsageMonth(
 }
 
 /**
- * Check if account can add one more post scheduled for the given month (sent + scheduled + 1 <= limit).
+ * True when this account cannot run another successful output send in the given calendar month
+ * (send_log successes already at tier cap).
+ */
+export function isOutputSendQuotaBlockedForMonth(
+	db: Database,
+	accountId: string,
+	month: string,
+	tier: string
+): boolean {
+	const limits = getTierLimits(tier);
+	if (limits.postsSentPerMonth === null) return false;
+	return getSuccessfulOutputSendCountForMonth(db, accountId, month) >= limits.postsSentPerMonth;
+}
+
+/**
+ * Check if account can add one more post scheduled for the given month
+ * (successful sends this month + already-queued posts for that month + 1 <= cap).
  */
 export function canSchedulePostInMonth(
 	db: Database,
@@ -124,12 +183,12 @@ export function canSchedulePostInMonth(
 ): { allowed: boolean; reason?: string } {
 	const limits = getTierLimits(tier);
 	if (limits.postsSentPerMonth === null) return { allowed: true };
-	const { sent, scheduled } = getPostsSentAndScheduledForMonth(db, accountId, month);
-	const total = sent + scheduled + 1;
+	const { outputSends, queuedInMonth } = getPostQuotaSnapshotForMonth(db, accountId, month);
+	const total = outputSends + queuedInMonth + 1;
 	if (total > limits.postsSentPerMonth) {
 		return {
 			allowed: false,
-			reason: `Post limit for this month (${limits.postsSentPerMonth}) would be exceeded (${sent} sent, ${scheduled} scheduled).`
+			reason: `Post limit for this month (${limits.postsSentPerMonth}) would be exceeded (${outputSends} sends used, ${queuedInMonth} queued).`
 		};
 	}
 	return { allowed: true };
@@ -212,11 +271,11 @@ export function canBulkCreate(
 	if (limits.postsSentPerMonth === null) return { allowed: true };
 	for (const [m, addCount] of Object.entries(newPostsByMonth)) {
 		if (addCount <= 0) continue;
-		const { sent, scheduled } = getPostsSentAndScheduledForMonth(db, accountId, m);
-		if (sent + scheduled + addCount > limits.postsSentPerMonth) {
+		const { outputSends, queuedInMonth } = getPostQuotaSnapshotForMonth(db, accountId, m);
+		if (outputSends + queuedInMonth + addCount > limits.postsSentPerMonth) {
 			return {
 				allowed: false,
-				reason: `Post limit for ${m} (${limits.postsSentPerMonth}) would be exceeded (${sent} sent, ${scheduled} scheduled, +${addCount} new).`
+				reason: `Post limit for ${m} (${limits.postsSentPerMonth}) would be exceeded (${outputSends} sends used, ${queuedInMonth} queued, +${addCount} new).`
 			};
 		}
 	}

@@ -72,6 +72,19 @@
 		{:else}
 			<div class="mx-2 mb-4 flex min-h-[calc(100vh-2rem)] max-w-full min-w-0 flex-col pt-2 md:mx-4 md:mb-4 md:min-h-[calc(100vh-3rem)] md:pt-4">
 				<div class="main-content-shell content-area flex min-w-0 flex-1 flex-col rounded-xl bg-[var(--surface)]">
+					{#if $page.data.session && $page.data.sidebarPlanUsage}
+						{@const spu = $page.data.sidebarPlanUsage}
+						{#if spu.posts.limit != null && spu.posts.limit > 0 && spu.posts.used >= spu.posts.limit}
+							<div
+								role="alert"
+								class="rounded-t-xl border-b border-red-500/35 bg-red-950/55 px-4 py-2.5 text-center text-sm text-red-100 md:px-6"
+							>
+								<strong class="font-semibold">Monthly output send limit reached.</strong>
+								No more posts will be sent to your outputs until the month resets or you change plan. Count is
+								successful sends this month (rescheduling does not reduce it).
+							</div>
+						{/if}
+					{/if}
 					<div
 						class="min-w-0 flex-1 px-4 pt-16 pb-[max(2rem,env(safe-area-inset-bottom,0px))] md:px-6 md:pt-6 md:pb-8"
 					>

@@ -6,7 +6,7 @@ import {
 	currentMonthKey,
 	canUseCallbackImport,
 	incrementUsageMonth,
-	getPostsSentAndScheduledForMonth,
+	getPostQuotaSnapshotForMonth,
 	monthKeyFromDate
 } from '$lib/usage.js';
 import { getTierLimits } from '$lib/tiers.js';
@@ -256,9 +256,9 @@ export const POST: RequestHandler = async ({ request }) => {
 				if (limits.postsSentPerMonth != null && scheduledAt) {
 					const month = monthKeyFromDate(scheduledAt);
 					if (month) {
-						const { sent, scheduled } = getPostsSentAndScheduledForMonth(db, accountId, month);
+						const { outputSends, queuedInMonth } = getPostQuotaSnapshotForMonth(db, accountId, month);
 						const batchInMonth = postsPerMonthInBatch.get(month) ?? 0;
-						if (sent + scheduled + batchInMonth + 1 > limits.postsSentPerMonth) {
+						if (outputSends + queuedInMonth + batchInMonth + 1 > limits.postsSentPerMonth) {
 							throw new CallbackImportValidationError(
 								`Post limit for ${month} (${limits.postsSentPerMonth}) would be exceeded.`
 							);

@@ -517,7 +517,7 @@
 							<dd class="text-sm font-medium text-[var(--text)] capitalize">{data.tier}</dd>
 						</div>
 						<div class="flex justify-between gap-4">
-							<dt class="text-sm text-[var(--text-muted)]">Posts (sent + scheduled) this month</dt>
+							<dt class="text-sm text-[var(--text-muted)]">Successful sends to outputs this month</dt>
 							<dd class="text-sm text-[var(--text)]">
 								{data.usage.postsTotal}
 								{#if data.limits.postsSentPerMonth != null}
