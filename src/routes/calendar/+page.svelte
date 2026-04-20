@@ -1,6 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
+	import CalendarPostBadges from '$lib/components/calendar/CalendarPostBadges.svelte';
+	import CompactCalendarDayPostList from '$lib/components/calendar/CompactCalendarDayPostList.svelte';
 	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
@@ -20,6 +22,57 @@
 			void invalidateAll();
 		}, 10000);
 		return () => clearInterval(id);
+	});
+
+	/** HTML5 drag breaks tap-to-follow-link on many touch browsers; only enable with fine pointer (mouse / trackpad). */
+	let calendarDragEnabled = $state(false);
+	onMount(() => {
+		if (typeof window === 'undefined') return;
+		const mq = window.matchMedia('(pointer: fine)');
+		const sync = () => {
+			calendarDragEnabled = mq.matches;
+		};
+		sync();
+		mq.addEventListener('change', sync);
+		return () => mq.removeEventListener('change', sync);
+	});
+
+	/** Month view &lt;lg: selected day for list under grid; image taps set highlight id. */
+	let touchListSelectedKey = $state<string | null>(null);
+	let touchListHighlightPostId = $state<string | null>(null);
+	/** Only sync list day from URL when anchor actually changes (not on `invalidateAll` post refresh). */
+	let lastTouchListSyncedAnchor = $state<string | null>(null);
+
+	function dateFromLocalKey(key: string): Date {
+		const [y, m, d] = key.split('-').map(Number);
+		return new Date(y, m - 1, d);
+	}
+
+	function selectTouchListDay(d: Date, postId?: string | null) {
+		touchListSelectedKey = localDateKey(d);
+		touchListHighlightPostId = postId ?? null;
+	}
+
+	$effect(() => {
+		const v = data.view;
+		const ad = data.anchorDate;
+		if (v !== 'month') {
+			lastTouchListSyncedAnchor = null;
+			return;
+		}
+		if (lastTouchListSyncedAnchor !== ad) {
+			lastTouchListSyncedAnchor = ad;
+			touchListSelectedKey = ad;
+			touchListHighlightPostId = null;
+		}
+	});
+
+	$effect(() => {
+		const id = touchListHighlightPostId;
+		if (!id) return;
+		void tick().then(() => {
+			document.getElementById(`touch-post-${id}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+		});
 	});
 
 	function dismissQuickPath() {
@@ -70,6 +123,12 @@
 	/** Inline “no output webhook” pill (match posts list styling, calendar density). */
 	const calendarNoOutputPillClass =
 		'shrink-0 rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium leading-none text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100';
+
+	/** Light grey for unselected calendar buttons (tabs, arrows, chips). */
+	const calendarUnselectedBtnClass =
+		'bg-zinc-100 hover:bg-zinc-200/90 dark:bg-zinc-800/60 dark:hover:bg-zinc-700/80';
+	/** Unselected day cell / compact grid cell (selected stays primary or surface). */
+	const calendarUnselectedCellClass = 'bg-zinc-100 dark:bg-zinc-800/50';
 	type LiveStatusRow = {
 		id: string;
 		status: string;
@@ -126,8 +185,8 @@
 	const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 	const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 	const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-	const WEEK_HOUR_SLOT_PX = 56;
-	const WEEK_POST_HEIGHT_PX = 44;
+	const WEEK_HOUR_SLOT_PX = 64;
+	const WEEK_POST_HEIGHT_PX = 80;
 	const weekHours = Array.from({ length: 24 }, (_, hour) => hour);
 
 	const view = $derived(data.view as CalendarView);
@@ -148,6 +207,17 @@
 			byDate.set(key, list);
 		}
 		return byDate;
+	});
+
+	const touchListPosts = $derived.by(() => {
+		const key = touchListSelectedKey ?? data.anchorDate;
+		return [...(postsByDate.get(key) ?? [])].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+	});
+
+	const touchListHeading = $derived.by(() => {
+		const key = touchListSelectedKey ?? data.anchorDate;
+		const d = dateFromLocalKey(key);
+		return d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 	});
 	/** Year-scoped month buckets for month-year strip + year view only (avoids extra work on other views). */
 	const postsByYearMonth = $derived.by(() => {
@@ -252,6 +322,22 @@
 		const end = new Date(weekStartDate);
 		end.setDate(end.getDate() + 6);
 		return `${weekStartDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+	}
+
+	/** Shorter range for narrow week chips (mobile). */
+	function weekChipLabelCompact(weekStartDate: Date): string {
+		const end = new Date(weekStartDate);
+		end.setDate(end.getDate() + 6);
+		const sameMonth =
+			weekStartDate.getMonth() === end.getMonth() &&
+			weekStartDate.getFullYear() === end.getFullYear();
+		if (sameMonth) {
+			const m = weekStartDate.toLocaleDateString(undefined, { month: 'short' });
+			return `${weekStartDate.getDate()}–${end.getDate()} ${m}`;
+		}
+		const a = weekStartDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+		const b = end.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+		return `${a}–${b}`;
 	}
 
 	function weekNumberOfYear(date: Date): number {
@@ -630,13 +716,44 @@
 		);
 	}
 
-	const viewButtons: Array<{ id: CalendarView; label: string }> = [
-		{ id: 'day', label: 'Day' },
-		{ id: 'week', label: 'Week' },
-		{ id: 'month', label: 'Month' },
-		{ id: 'year', label: 'Year' },
-		{ id: 'agenda', label: 'Agenda' },
-		{ id: 'schedule', label: 'Schedule' }
+	/** MDI paths (@mdi/svg), Material Design Icons — see https://pictogrammers.com/library/mdi/ */
+	const viewButtons: Array<{ id: CalendarView; label: string; iconPath: string }> = [
+		{
+			id: 'day',
+			label: 'Day',
+			iconPath:
+				'M7,10H12V15H7M19,19H5V8H19M19,3H18V1H16V3H8V1H6V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3Z'
+		},
+		{
+			id: 'week',
+			label: 'Week',
+			iconPath:
+				'M6 1H8V3H16V1H18V3H19C20.11 3 21 3.9 21 5V19C21 20.11 20.11 21 19 21H5C3.89 21 3 20.1 3 19V5C3 3.89 3.89 3 5 3H6V1M5 8V19H19V8H5M7 10H17V12H7V10Z'
+		},
+		{
+			id: 'month',
+			label: 'Month',
+			iconPath:
+				'M9,10V12H7V10H9M13,10V12H11V10H13M17,10V12H15V10H17M19,3A2,2 0 0,1 21,5V19A2,2 0 0,1 19,21H5C3.89,21 3,20.1 3,19V5A2,2 0 0,1 5,3H6V1H8V3H16V1H18V3H19M19,19V8H5V19H19M9,14V16H7V14H9M13,14V16H11V14H13M17,14V16H15V14H17Z'
+		},
+		{
+			id: 'year',
+			label: 'Year',
+			iconPath:
+				'M21,17V8H7V17H21M21,3A2,2 0 0,1 23,5V17A2,2 0 0,1 21,19H7C5.89,19 5,18.1 5,17V5A2,2 0 0,1 7,3H8V1H10V3H18V1H20V3H21M3,21H17V23H3C1.89,23 1,22.1 1,21V9H3V21M19,15H15V11H19V15Z'
+		},
+		{
+			id: 'agenda',
+			label: 'Agenda',
+			iconPath:
+				'M7,5H21V7H7V5M7,13V11H21V13H7M4,4.5A1.5,1.5 0 0,1 5.5,6A1.5,1.5 0 0,1 4,7.5A1.5,1.5 0 0,1 2.5,6A1.5,1.5 0 0,1 4,4.5M4,10.5A1.5,1.5 0 0,1 5.5,12A1.5,1.5 0 0,1 4,13.5A1.5,1.5 0 0,1 2.5,12A1.5,1.5 0 0,1 4,10.5M7,19V17H21V19H7M4,16.5A1.5,1.5 0 0,1 5.5,18A1.5,1.5 0 0,1 4,19.5A1.5,1.5 0 0,1 2.5,18A1.5,1.5 0 0,1 4,16.5Z'
+		},
+		{
+			id: 'schedule',
+			label: 'Schedule',
+			iconPath:
+				'M15,13H16.5V15.82L18.94,17.23L18.19,18.53L15,16.69V13M19,8H5V19H9.67C9.24,18.09 9,17.07 9,16A7,7 0 0,1 16,9C17.07,9 18.09,9.24 19,9.67V8M5,21C3.89,21 3,20.1 3,19V5C3,3.89 3.89,3 5,3H6V1H8V3H16V1H18V3H19A2,2 0 0,1 21,5V11.1C22.24,12.36 23,14.09 23,16A7,7 0 0,1 16,23C14.09,23 12.36,22.24 11.1,21H5M16,11.15A4.85,4.85 0 0,0 11.15,16C11.15,18.68 13.32,20.85 16,20.85A4.85,4.85 0 0,0 20.85,16C20.85,13.32 18.68,11.15 16,11.15Z'
+		}
 	];
 	const showDateControls = $derived(view !== 'agenda');
 </script>
@@ -682,93 +799,6 @@
 			</div>
 		</aside>
 	{/if}
-
-	<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-		<div class="min-w-0 flex-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:overflow-visible">
-			<div class="flex w-max max-w-full flex-wrap gap-1.5 md:w-auto md:max-w-none">
-				<a
-					href="/posts"
-					title="Total posts"
-					class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
-				>
-					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Total</p>
-					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.totalPosts}</p>
-				</a>
-				<a
-					href="/posts?status=draft"
-					title="Draft posts"
-					class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
-				>
-					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Drafts</p>
-					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.draft}</p>
-				</a>
-				<a
-					href="/posts?status=scheduled"
-					title="Scheduled posts"
-					class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
-				>
-					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Sched.</p>
-					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.scheduled}</p>
-				</a>
-				<a
-					href="/posts?status=sent"
-					title="Sent posts"
-					class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
-				>
-					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Sent</p>
-					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.sent}</p>
-				</a>
-				<a
-					href="/posts?status=failed"
-					title="Failed posts"
-					class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
-				>
-					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Failed</p>
-					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.failed}</p>
-				</a>
-				<a
-					href="/schedules"
-					title="Schedules"
-					class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
-				>
-					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Sched.</p>
-					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.scheduleCount}</p>
-				</a>
-				<a
-					href="/account?section=globals"
-					title="Webhooks"
-					class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
-				>
-					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Hooks</p>
-					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.stats.webhookCount}</p>
-				</a>
-				<div class="content-card min-w-[4.75rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5" title="Posts sent this week">
-					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Week</p>
-					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">{data.sentThisWeek}</p>
-				</div>
-				<a
-					href="/reports?report=callback-stages"
-					title="Make.com callback stages (pass / fail)"
-					class="content-card min-w-[5.25rem] rounded-lg border border-[var(--primary-border-soft)] px-2 py-1.5 transition-colors hover:border-[var(--primary)]/50 hover:bg-[var(--surface-hover)]"
-				>
-					<p class="text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Stages</p>
-					<p class="mt-0.5 text-base font-semibold tabular-nums leading-none text-[var(--text)]">
-						<span class="text-green-600 dark:text-green-400">{data.stagePasses ?? 0}</span>
-						<span class="mx-0.5 text-[var(--text-muted)] font-normal text-sm">/</span>
-						<span class="text-red-600 dark:text-red-400">{data.stageFails ?? 0}</span>
-					</p>
-				</a>
-			</div>
-		</div>
-		<div class="shrink-0">
-			<a href="/posts/new" class="btn-primary btn-touch inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-sm">
-				<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-					<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-				</svg>
-				New post
-			</a>
-		</div>
-	</div>
 {:else}
 	<p class="mb-6 text-sm text-[var(--text-muted)]">Sign in to see your overview.</p>
 {/if}
@@ -791,43 +821,79 @@
 	</div>
 {/if}
 
-<div class="content-card mt-0 rounded-xl p-4 md:p-5" data-sveltekit-preload-data="tap">
-	<div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+<div class="content-card relative z-0 mt-0 min-w-0 overflow-x-clip rounded-xl p-4 md:p-5" data-sveltekit-preload-data="tap">
+	<div class="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
 		<div
-			class="-mx-1 flex max-w-full gap-1 overflow-x-auto overflow-y-hidden rounded-xl bg-[var(--surface)] p-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:pb-1 [&::-webkit-scrollbar]:hidden"
+			class="-mx-1 flex min-w-0 max-w-full gap-1 overflow-x-auto overflow-y-hidden rounded-xl bg-[var(--surface)] p-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] lg:mx-0 lg:flex-1 lg:flex-nowrap lg:overflow-x-auto lg:pb-1 [&::-webkit-scrollbar]:hidden"
 		>
 			{#each viewButtons as v}
 				<a
 					href={hrefFor(v.id, anchor)}
-					class="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-lg px-3 py-2 text-xs font-medium touch-manipulation md:min-h-[36px] {view === v.id
+					class="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg px-2 py-2 text-xs font-medium touch-manipulation md:min-w-0 md:px-3 lg:min-h-[36px] {view === v.id
 						? 'btn-primary text-white'
-						: 'text-[var(--text-muted)] hover:text-[var(--text)]'}"
+						: `${calendarUnselectedBtnClass} text-[var(--text-muted)] hover:text-[var(--text)]`}"
+					aria-label={v.label}
 				>
-					{v.label}
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-[1.35rem] w-[1.35rem] shrink-0 md:hidden"
+						viewBox="0 0 24 24"
+						aria-hidden="true"
+					>
+						<path fill="currentColor" d={v.iconPath} />
+					</svg>
+					<span class="hidden md:inline">{v.label}</span>
 				</a>
 			{/each}
 		</div>
 		{#if showDateControls}
-			<div class="flex w-full min-w-0 flex-wrap items-center justify-center gap-2 sm:flex-nowrap md:w-auto md:justify-end">
+			<div
+				class="flex w-full min-w-0 flex-wrap items-center justify-center gap-2 sm:flex-nowrap sm:justify-end lg:w-auto lg:max-w-none lg:shrink-0"
+			>
 				<a
 					href={hrefFor(view, withOffset(anchor, view, -1))}
-					class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] touch-manipulation"
+					class="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg px-3 py-2 text-sm text-[var(--text)] touch-manipulation {calendarUnselectedBtnClass}"
 					aria-label="Previous range"
 				>←</a>
 				<div
-					class="min-w-0 max-w-full flex-1 rounded-lg bg-[var(--surface)] px-2 py-2 text-center text-sm font-semibold text-[var(--text)] sm:min-w-[12rem] sm:flex-none sm:px-3 md:min-w-[210px]"
+					class="min-w-0 max-w-full flex-[1_1_14rem] rounded-lg px-2 py-2 text-center text-sm font-semibold text-[var(--text)] sm:flex-1 sm:basis-0 sm:px-3 md:max-w-md lg:max-w-lg {calendarUnselectedBtnClass}"
 				>
-					<span class="inline-block break-words">{rangeLabel()}</span>
+					<span class="inline-block max-w-full min-w-0 break-words sm:truncate">{rangeLabel()}</span>
 				</div>
 				<a
 					href={hrefFor(view, withOffset(anchor, view, 1))}
-					class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] touch-manipulation"
+					class="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg px-3 py-2 text-sm text-[var(--text)] touch-manipulation {calendarUnselectedBtnClass}"
 					aria-label="Next range"
 				>→</a>
 				<a
 					href={hrefFor(view, new Date())}
-					class="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] touch-manipulation"
+					class="inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg px-3 py-2 text-sm text-[var(--text)] touch-manipulation {calendarUnselectedBtnClass}"
 					>Today</a>
+				{#if data.stats}
+					<a
+						href="/posts/new"
+						class="btn-primary inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white shadow-sm touch-manipulation"
+						aria-label="New post"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+						</svg>
+					</a>
+				{/if}
+			</div>
+		{:else if data.stats}
+			<div
+				class="flex w-full min-w-0 shrink-0 justify-center lg:w-auto lg:flex-none lg:justify-end lg:self-center"
+			>
+				<a
+					href="/posts/new"
+					class="btn-primary inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white shadow-sm touch-manipulation"
+					aria-label="New post"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+					</svg>
+				</a>
 			</div>
 		{/if}
 	</div>
@@ -836,24 +902,24 @@
 {#if view === 'month'}
 	<div class="content-card mt-4 rounded-xl p-4">
 		<div class="mb-3 rounded-xl bg-[var(--surface)]">
-			<div class="mb-3 flex items-center justify-center gap-2">
+			<div class="mb-3 flex flex-nowrap items-center justify-center gap-2">
 				<a
 					href={hrefFor('month', new Date(anchor.getFullYear() - 1, anchor.getMonth(), 1))}
-					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 					title="Previous year"
 				>
 					←
 				</a>
-				<span class="text-lg font-semibold text-[var(--text)]">{anchor.getFullYear()}</span>
+				<span class="shrink-0 text-center text-lg font-semibold tabular-nums text-[var(--text)]">{anchor.getFullYear()}</span>
 				<a
 					href={hrefFor('month', new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
-					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-xs text-[var(--text)] hover:bg-[var(--surface-hover)]"
+					class="shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs text-[var(--text)] {calendarUnselectedBtnClass}"
 				>
 					This year
 				</a>
 				<a
 					href={hrefFor('month', new Date(anchor.getFullYear() + 1, anchor.getMonth(), 1))}
-					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 					title="Next year"
 				>
 					→
@@ -868,7 +934,7 @@
 						href={hrefFor('month', new Date(anchor.getFullYear(), monthIndex, 1))}
 						class="relative rounded-lg px-2 py-2 text-center text-xs transition {isActiveMonth
 							? 'btn-primary text-white'
-							: 'bg-[var(--bg)] text-[var(--text)] hover:bg-[var(--surface-hover)]'} {isCurrentMonth && !isActiveMonth ? 'calendar-today' : ''}"
+							: `${calendarUnselectedBtnClass} text-[var(--text)]`} {isCurrentMonth && !isActiveMonth ? 'calendar-today' : ''}"
 						title={monthPostCount > 0 ? `${monthNames[monthIndex]}: ${monthPostCount} post(s)` : monthNames[monthIndex]}
 					>
 						<div class="truncate font-medium">{monthNamesShort[monthIndex]}</div>
@@ -888,95 +954,176 @@
 			</div>
 		</div>
 	</div>
-	<div class="content-card mt-4 overflow-hidden ">
-		<div class="grid grid-cols-7 border-b border-[var(--border)] bg-[var(--surface)]">
-			{#each dayNames as day}
-				<div class="px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{day}</div>
-			{/each}
-		</div>
-		<div class="grid grid-cols-7 border-l border-[var(--border)] bg-[var(--surface)]">
-			{#each monthGridDays() as cell}
-				<div
-					class="min-h-[88px] border-r border-b border-[var(--border)] p-1.5 last:border-r-0 sm:min-h-[130px] sm:p-2 {isToday(cell.date) ? 'calendar-today' : ''}"
-					role="group"
-					aria-label="Drop to reschedule"
-					ondragover={(e) => monthDragOver(e, cell.date)}
-					ondrop={(e) => monthDrop(e, cell.date)}
-				>
+	<div class="content-card mt-4 overflow-hidden rounded-xl">
+		<div class="space-y-4 p-3 lg:hidden">
+			<div class="grid grid-cols-7 border-b border-[var(--border)] bg-[var(--surface)]">
+				{#each dayNames as day}
+					<div class="px-1 py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)] sm:px-2 sm:text-xs">
+						{day}
+					</div>
+				{/each}
+			</div>
+			<div class="grid grid-cols-7 border-l border-[var(--border)] bg-[var(--surface)]">
+				{#each monthGridDays() as cell}
+					{@const cellKey = localDateKey(cell.date)}
+					{@const listKey = touchListSelectedKey ?? data.anchorDate}
 					<div
-						class="flex justify-end text-xs {cell.inMonth ? 'text-[var(--text)]' : 'text-[var(--text-muted)] opacity-50'}"
+						class="min-h-[76px] border-r border-b border-[var(--border)] p-1 last:border-r-0 sm:min-h-[88px] sm:p-1.5 {isToday(cell.date)
+							? 'calendar-today'
+							: ''} {cellKey === listKey
+							? 'bg-[var(--surface)] ring-2 ring-inset ring-[var(--primary)]'
+							: calendarUnselectedCellClass}"
+						role="group"
+						aria-label="Drop to reschedule"
+						ondragover={(e) => monthDragOver(e, cell.date)}
+						ondrop={(e) => monthDrop(e, cell.date)}
 					>
-						<span class={isToday(cell.date) ? 'calendar-today-num' : ''}>{cell.date.getDate()}</span>
-					</div>
-					<div class="mt-2 space-y-1">
-						{#each postsForDay(cell.date) as post (post.id)}
-							<div
-								class="calendar-post-accent rounded-lg px-2 py-2 cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
-								style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? '#fafafa'};`}
-								role="button"
-								tabindex="-1"
-								aria-label="Drag to reschedule"
-								draggable={true}
-								ondragstart={(e) => handleDragStart(e, post)}
-								ondragend={handleDragEnd}
-							>
-								<div class="flex items-center gap-1">
+						<button
+							type="button"
+							class="flex w-full touch-manipulation justify-end text-xs {cell.inMonth
+								? 'text-[var(--text)]'
+								: 'text-[var(--text-muted)] opacity-50'}"
+							onclick={() => selectTouchListDay(cell.date)}
+							aria-label={`Select ${cellKey} to show posts below`}
+						>
+							<span class={isToday(cell.date) ? 'calendar-today-num' : ''}>{cell.date.getDate()}</span>
+						</button>
+						<div class="mt-1 flex flex-wrap justify-center gap-1">
+							{#each postsForDay(cell.date) as post (post.id)}
+								<button
+									type="button"
+									class="touch-manipulation overflow-hidden rounded-md border border-[var(--border)] shadow-sm outline-none ring-offset-1 {touchListHighlightPostId === post.id
+										? 'ring-2 ring-[var(--primary)]'
+										: calendarUnselectedCellClass}"
+									onclick={() => selectTouchListDay(cell.date, post.id)}
+									aria-label={`Show ${post.title} in the list below`}
+								>
 									{#if post.image_url}
-										<img src={post.image_url} alt={"Preview for " + post.title} class="h-5 w-5 rounded object-cover border border-[var(--border)]" loading="lazy" />
-									{/if}
-									<a href={"/posts/" + post.id} class="min-w-0 flex-1 truncate text-xs font-medium text-neutral-900 hover:underline">
-										{formatTime(post.scheduled_at)} {post.title}
-									</a>
-								</div>
-								<div class="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-									<span class="inline-flex min-w-0 flex-wrap items-center gap-1">
-										<span class={"shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium " + statusClass(post.status)}>{post.status}</span>
-										{#if !post.has_output_webhook}
-											<span class={calendarNoOutputPillClass} role="status">No output webhook</span>
-										{/if}
-									</span>
-									{#if post.has_output_webhook}
-										<button
-											type="button"
-											disabled={sendingId === post.id}
-											onclick={(e) => sendNow(post.id, e)}
-											class="min-h-[36px] min-w-[44px] shrink-0 touch-manipulation rounded px-2 py-1 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)] disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5"
+										<img
+											src={post.image_url}
+											alt=""
+											class="h-10 w-10 object-cover sm:h-11 sm:w-11"
+											loading="lazy"
+										/>
+									{:else}
+										<div
+											class="flex h-10 w-10 items-center justify-center bg-[var(--surface-hover)] text-[10px] font-semibold text-[var(--text-muted)] sm:h-11 sm:w-11"
+											aria-hidden="true"
 										>
-											{sendingId === post.id ? '…' : 'Send'}
-										</button>
+											{post.title.trim().slice(0, 1).toUpperCase() || '·'}
+										</div>
 									{/if}
-								</div>
-							</div>
-						{/each}
+								</button>
+							{/each}
+						</div>
 					</div>
-				</div>
-			{/each}
+				{/each}
+			</div>
+			<CompactCalendarDayPostList
+				heading={`Posts for ${touchListHeading}`}
+				posts={touchListPosts}
+				highlightPostId={touchListHighlightPostId}
+				sendingId={sendingId}
+				{formatTime}
+				{sendNow}
+			/>
+		</div>
+		<div class="hidden lg:block">
+			<div class="grid grid-cols-7 border-b border-[var(--border)] bg-[var(--surface)]">
+				{#each dayNames as day}
+					<div class="px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{day}</div>
+				{/each}
+			</div>
+			<div class="grid grid-cols-7 border-l border-[var(--border)] bg-[var(--surface)]">
+				{#each monthGridDays() as cell}
+					<div
+						class="min-h-[88px] border-r border-b border-[var(--border)] p-1.5 last:border-r-0 sm:min-h-[130px] sm:p-2 {isToday(cell.date) ? 'calendar-today' : ''}"
+						role="group"
+						aria-label="Drop to reschedule"
+						ondragover={(e) => monthDragOver(e, cell.date)}
+						ondrop={(e) => monthDrop(e, cell.date)}
+					>
+						<div
+							class="flex justify-end text-xs {cell.inMonth ? 'text-[var(--text)]' : 'text-[var(--text-muted)] opacity-50'}"
+						>
+							<span class={isToday(cell.date) ? 'calendar-today-num' : ''}>{cell.date.getDate()}</span>
+						</div>
+						<div class="mt-2 space-y-1">
+							{#each postsForDay(cell.date) as post (post.id)}
+								<div
+									class="calendar-post-accent rounded-lg px-2 py-2 {calendarDragEnabled
+										? 'cursor-grab active:cursor-grabbing'
+										: ''} {dragPostId === post.id ? 'opacity-50' : ''}"
+									style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? '#fafafa'};`}
+									role="button"
+									tabindex="-1"
+									aria-label={calendarDragEnabled ? 'Drag to reschedule' : 'Post'}
+									draggable={calendarDragEnabled}
+									ondragstart={(e) => handleDragStart(e, post)}
+									ondragend={handleDragEnd}
+								>
+									<div class="flex items-center gap-1">
+										{#if post.image_url}
+											<img src={post.image_url} alt={"Preview for " + post.title} class="h-5 w-5 rounded object-cover border border-[var(--border)]" loading="lazy" />
+										{/if}
+										<a
+											href={"/posts/" + post.id}
+											class="relative z-[1] min-w-0 flex-1 touch-manipulation truncate text-xs font-medium text-neutral-900 hover:underline"
+										>
+											{formatTime(post.scheduled_at)} {post.title}
+										</a>
+									</div>
+									<div class="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+										<CalendarPostBadges
+											status={post.status}
+											hasOutputWebhook={post.has_output_webhook}
+											postHref={'/posts/' + post.id}
+											textOnly={false}
+											hideStatus={false}
+										/>
+										{#if post.has_output_webhook}
+											<button
+												type="button"
+												disabled={sendingId === post.id}
+												onclick={(e) => sendNow(post.id, e)}
+												class="min-h-[36px] min-w-[44px] shrink-0 touch-manipulation rounded px-2 py-1 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)] disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5"
+											>
+												{sendingId === post.id ? '…' : 'Send'}
+											</button>
+										{/if}
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+				{/each}
+			</div>
 		</div>
 	</div>
 {:else if view === 'week'}
 	<div class="content-card mt-4 rounded-xl p-3">
 		<div class="mb-6 rounded-xl bg-[var(--surface)]">
-			<div class="mb-2 flex items-center justify-between">
+			<div class="mb-2 flex flex-nowrap items-center justify-between gap-2">
 				<a
 					href={hrefFor('week', new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))}
-					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 					title="Previous month"
 				>
 					←
 				</a>
-				<p class="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+				<p class="min-w-0 truncate text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
 					Weeks of {monthNames[anchor.getMonth()]} {anchor.getFullYear()}
 				</p>
 				<a
 					href={hrefFor('week', new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1))}
-					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 					title="Next month"
 				>
 					→
 				</a>
 			</div>
 			<div
-				class="grid w-full gap-2"
+				class="grid w-full gap-1 sm:gap-2"
 				style={`grid-template-columns: repeat(${monthWeekCount()}, minmax(0, 1fr));`}
 			>
 				{#each monthWeekStarts() as ws}
@@ -985,13 +1132,20 @@
 					{@const weekNo = weekNumberOfYear(ws)}
 					<a
 						href={hrefFor('week', ws)}
-						class="rounded-lg px-2 py-2 text-xs text-center transition {activeWeek
+						class="min-w-0 rounded-lg px-1.5 py-2 text-center text-xs transition sm:px-2 {activeWeek
 							? 'btn-primary text-white'
-							: 'bg-[var(--bg)] text-[var(--text)] hover:bg-[var(--surface-hover)]'}"
-						title={weekCount > 0 ? `${weekCount} post(s) this week` : undefined}
+							: `${calendarUnselectedBtnClass} text-[var(--text)]`}"
+						title={weekCount > 0 ? `Week ${weekNo}: ${weekChipLabel(ws)} — ${weekCount} post(s)` : `Week ${weekNo}: ${weekChipLabel(ws)}`}
 					>
-						<div class="truncate font-semibold text-4xl">W{weekNo}</div>
-						<div class="truncate opacity-90">{weekChipLabel(ws)}</div>
+						<div
+							class="font-semibold tabular-nums leading-none text-sm sm:text-base md:text-xl lg:text-4xl"
+						>
+							W{weekNo}
+						</div>
+						<div class="mt-1 text-[10px] leading-snug text-balance opacity-90 sm:text-xs md:text-sm lg:text-base">
+							<span class="md:hidden">{weekChipLabelCompact(ws)}</span>
+							<span class="hidden md:inline">{weekChipLabel(ws)}</span>
+						</div>
 						{#if weekCount > 0}
 							<div class="mt-1 flex items-center justify-center gap-1">
 								<span
@@ -1015,7 +1169,7 @@
 				>
 					<div class="border-b border-[var(--border)] bg-[var(--surface)]"></div>
 					{#each weekDays() as d}
-					<div class="border-b border-l border-[var(--border)] bg-[var(--surface)] px-2 py-2 text-center {isToday(d) ? 'calendar-today' : ''}">
+						<div class="border-b border-l border-[var(--border)] bg-[var(--surface)] px-2 py-2 text-center {isToday(d) ? 'calendar-today' : ''}">
 							<p class="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{d.toLocaleDateString(undefined, { weekday: 'short' })}</p>
 							<p class="text-sm font-semibold text-[var(--text)]">{d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
 						</div>
@@ -1050,35 +1204,54 @@
 
 							{#each weekPostsForDay(d) as post (post.id)}
 								<div
-									class="calendar-post-accent absolute left-1 right-1 rounded-lg px-2 py-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
+									class="calendar-post-accent absolute left-1 right-1 rounded-lg px-2 py-1.5 shadow-sm sm:px-2.5 sm:py-2 {calendarDragEnabled
+										? 'cursor-grab active:cursor-grabbing'
+										: ''} {dragPostId === post.id ? 'opacity-50' : ''}"
 									style={`top: ${weekPostTopPx(post.scheduled_at)}px; height: ${WEEK_POST_HEIGHT_PX}px; background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? '#fafafa'};`}
 									role="button"
 									tabindex="-1"
-									aria-label="Drag to reschedule"
-									draggable={true}
+									aria-label={calendarDragEnabled ? 'Drag to reschedule' : 'Post'}
+									draggable={calendarDragEnabled}
 									ondragstart={(e) => handleDragStart(e, post)}
 									ondragend={handleDragEnd}
 								>
-									<div class="flex min-w-0 items-center gap-1">
-										{#if post.image_url}
-											<img src={post.image_url} alt={"Preview for " + post.title} class="h-6 w-6 shrink-0 rounded object-cover border border-[var(--border)]" loading="lazy" />
-										{/if}
-										<a href={"/posts/" + post.id} class="min-w-0 flex-1 truncate text-xs font-medium text-neutral-900 hover:underline">
-											{formatTime(post.scheduled_at)} {post.title}
-										</a>
-										{#if !post.has_output_webhook}
-											<span class={calendarNoOutputPillClass} role="status">No output webhook</span>
-										{/if}
-										{#if post.has_output_webhook}
-											<button
-												type="button"
-												class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)]"
-												disabled={sendingId === post.id}
-												onclick={(e) => sendNow(post.id, e)}
+									<div class="flex h-full min-h-0 min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+										<div class="flex min-h-0 min-w-0 flex-1 items-start gap-2 sm:items-center">
+											{#if post.image_url}
+												<img
+													src={post.image_url}
+													alt={"Preview for " + post.title}
+													class="h-9 w-9 shrink-0 rounded object-cover border border-[var(--border)] sm:h-10 sm:w-10"
+													loading="lazy"
+												/>
+											{/if}
+											<a
+												href={"/posts/" + post.id}
+												class="relative z-[1] min-h-0 min-w-0 flex-1 touch-manipulation text-xs font-medium leading-snug text-neutral-900 line-clamp-2 hover:underline sm:text-sm"
 											>
-												{sendingId === post.id ? '…' : 'Send'}
-											</button>
-										{/if}
+												<span class="text-[var(--text-muted)]">{formatTime(post.scheduled_at)}</span>
+												{' '}{post.title}
+											</a>
+										</div>
+										<div class="flex shrink-0 flex-wrap items-center justify-end gap-1 sm:ml-auto">
+											<CalendarPostBadges
+												status={post.status}
+												hasOutputWebhook={post.has_output_webhook}
+												postHref={'/posts/' + post.id}
+												textOnly={false}
+												hideStatus={true}
+											/>
+											{#if post.has_output_webhook}
+												<button
+													type="button"
+													class="shrink-0 touch-manipulation rounded px-1.5 py-0.5 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)]"
+													disabled={sendingId === post.id}
+													onclick={(e) => sendNow(post.id, e)}
+												>
+													{sendingId === post.id ? '…' : 'Send'}
+												</button>
+											{/if}
+										</div>
 									</div>
 								</div>
 							{/each}
@@ -1091,35 +1264,43 @@
 {:else if view === 'day'}
 	<div class="content-card mt-4 rounded-xl p-4">
 		<div class="mb-4 rounded-xl bg-[var(--surface)] p-3">
-			<div class="mb-2 flex items-center justify-between">
+			<div class="mb-2 flex flex-nowrap items-center justify-between gap-2">
 				<a
 					href={hrefFor('day', withOffset(anchor, 'week', -1))}
-					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 				>
 					←
 				</a>
-				<p class="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Day quick navigation</p>
+				<p class="shrink-0 px-1 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+					Day quick navigation
+				</p>
 				<a
 					href={hrefFor('day', withOffset(anchor, 'week', 1))}
-					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 				>
 					→
 				</a>
 			</div>
-			<div class="grid grid-cols-7 gap-2">
+			<div class="grid grid-cols-7 gap-1 sm:gap-2">
 				{#each weekDays() as d}
 					{@const isActiveDay = localDateKey(d) === localDateKey(anchor)}
 					{@const isTodayDay = isToday(d)}
 					{@const dayPosts = postsForDay(d)}
 					<a
 						href={hrefFor('day', d)}
-						class="relative rounded-lg px-2 py-2 text-center text-xs transition {isActiveDay
+						class="relative min-w-0 rounded-lg px-1 py-1.5 text-center text-xs transition sm:px-2 sm:py-2 {isActiveDay
 							? 'btn-primary text-white'
-							: 'bg-[var(--bg)] text-[var(--text)] hover:bg-[var(--surface-hover)]'} {isTodayDay && !isActiveDay ? 'calendar-today' : ''}"
+							: `${calendarUnselectedBtnClass} text-[var(--text)]`} {isTodayDay && !isActiveDay ? 'calendar-today' : ''}"
 						title={dayPosts.length > 0 ? `${dayPosts.length} post(s)` : undefined}
 					>
-						<div class="text-2xl">{d.toLocaleDateString(undefined, { weekday: 'short' })}</div>
-						<div class="text-2xl lg:text-6xl font-semibold">{d.getDate()}</div>
+						<div
+							class="text-[10px] font-semibold leading-tight sm:text-xs md:text-sm lg:text-2xl"
+						>
+							{d.toLocaleDateString(undefined, { weekday: 'short' })}
+						</div>
+						<div class="text-base font-semibold tabular-nums sm:text-lg md:text-2xl lg:text-6xl">
+							{d.getDate()}
+						</div>
 						{#if dayPosts.length > 0}
 							<div class="mt-1 flex items-center justify-center gap-1">
 								{#each dayPosts.slice(0, 3) as p (p.id)}
@@ -1135,35 +1316,6 @@
 							</div>
 						{/if}
 					</a>
-				{/each}
-			</div>
-		</div>
-		<!-- Day overview: full width, markers only -->
-		<div class="mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2">
-			<p class="mb-2 text-xs font-medium text-[var(--text-muted)]">Day overview</p>
-			<div
-				class="grid w-full"
-				style="grid-template-columns: repeat(24, minmax(0, 1fr));"
-			>
-				{#each weekHours as hour}
-					<div class="border-r border-[var(--border)] px-0.5 py-1 text-center text-[10px] text-[var(--text-muted)] last:border-r-0">
-						{formatHourLabel(hour)}
-					</div>
-				{/each}
-				{#each weekHours as hour}
-					<div class="flex min-h-[28px] flex-wrap items-center justify-center gap-0.5 border-r border-t border-[var(--border)] px-0.5 py-1 last:border-r-0">
-						{#each postsAtHour(hour) as post (post.id)}
-							<a
-								href={"/posts/" + post.id}
-								class="block h-2 w-2 rounded-full border border-[var(--border)] hover:scale-125 {!post.has_output_webhook ? 'ring-1 ring-amber-500' : ''}"
-								style={`background-color: ${post.color ?? '#e5e5e5'};`}
-								title={post.title +
-									' — ' +
-									formatTime(post.scheduled_at) +
-									(!post.has_output_webhook ? ' — No output webhook' : '')}
-							></a>
-						{/each}
-					</div>
 				{/each}
 			</div>
 		</div>
@@ -1229,24 +1381,24 @@
 {:else if view === 'year'}
 	<div class="content-card mt-4 rounded-xl p-4">
 		<div class="mb-4 rounded-xl bg-[var(--surface)] p-3">
-			<div class="flex items-center justify-center gap-2">
+			<div class="flex flex-nowrap items-center justify-center gap-2">
 				<a
 					href={hrefFor('year', new Date(anchor.getFullYear() - 1, 0, 1))}
-					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 					title="Previous year"
 				>
 					←
 				</a>
-				<span class="text-lg font-semibold text-[var(--text)]">{anchor.getFullYear()}</span>
+				<span class="shrink-0 text-lg font-semibold tabular-nums text-[var(--text)]">{anchor.getFullYear()}</span>
 				<a
 					href={hrefFor('year', new Date(new Date().getFullYear(), 0, 1))}
-					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-xs text-[var(--text)] hover:bg-[var(--surface-hover)]"
+					class="shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs text-[var(--text)] {calendarUnselectedBtnClass}"
 				>
 					This year
 				</a>
 				<a
 					href={hrefFor('year', new Date(anchor.getFullYear() + 1, 0, 1))}
-					class="rounded-lg bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
 					title="Next year"
 				>
 					→
@@ -1277,10 +1429,12 @@
 							{#each postsToShow as post (post.id)}
 								<a
 									href={"/posts/" + post.id}
-									class="calendar-post-accent flex min-w-0 cursor-grab items-center gap-1 rounded-md px-2 py-1 text-xs text-neutral-900 hover:underline active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
+									class="calendar-post-accent flex min-w-0 touch-manipulation items-center gap-1 rounded-md px-2 py-1 text-xs text-neutral-900 hover:underline {calendarDragEnabled
+										? 'cursor-grab active:cursor-grabbing'
+										: ''} {dragPostId === post.id ? 'opacity-50' : ''}"
 									style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? '#fafafa'};`}
 									title={`${formatScheduledAt(post.scheduled_at, { day: '2-digit', month: 'short' })} · ${post.title}${!post.has_output_webhook ? ' · No output webhook' : ''}`}
-									draggable={true}
+									draggable={calendarDragEnabled}
 									ondragstart={(e) => handleDragStart(e, post)}
 									ondragend={handleDragEnd}
 								>
@@ -1322,12 +1476,17 @@
 						class="calendar-post-accent rounded-lg p-2 {isPostToday ? 'calendar-today' : ''}"
 						style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? '#fafafa'};`}
 					>
-						<div class="flex min-w-0 flex-wrap items-center gap-2">
+						<div class="flex min-w-0 flex-wrap items-start gap-2">
 							{#if post.image_url}
 								<img src={post.image_url} alt={"Preview for " + post.title} class="h-8 w-8 shrink-0 rounded object-cover border border-[var(--border)]" loading="lazy" />
 							{/if}
-							<a href={"/posts/" + post.id} class="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900 hover:underline">
-								{formatScheduledAt(post.scheduled_at)} · {post.title}
+							<a
+								href={"/posts/" + post.id}
+								class="min-w-0 max-w-full flex-1 break-words text-sm font-medium leading-snug text-neutral-900 hover:underline md:truncate"
+							>
+								<span class="text-[var(--text-muted)]">{formatScheduledAt(post.scheduled_at)}</span>
+								<span class="text-[var(--text-muted)]"> · </span>
+								<span>{post.title}</span>
 							</a>
 							{#if !post.has_output_webhook}
 								<span class={calendarNoOutputPillClass} role="status">No output webhook</span>

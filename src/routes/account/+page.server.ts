@@ -107,7 +107,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const limits = getTierLimits(tier);
 	const month = currentMonthKey();
 	const usage = getUsageForMonth(db, userId, month);
-	const postsTotal = usage.postsSent + usage.postsScheduled;
+	const postsTotal = usage.postOutputSends;
 
 	const oauthAccounts = db
 		.prepare('SELECT id, provider, provider_account_id, created_at FROM oauth_account WHERE user_id = ? ORDER BY provider')
@@ -166,8 +166,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		hasPassword: !!user.password_hash,
 		tier,
 		usage: {
-			postsSent: usage.postsSent,
-			postsScheduled: usage.postsScheduled,
+			postOutputSends: usage.postOutputSends,
+			postsQueuedForSend: usage.postsQueuedForSend,
 			postsTotal,
 			callbackInputs: usage.callbackInputs,
 			importOperations: usage.importOperations

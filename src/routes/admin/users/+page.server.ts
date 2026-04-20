@@ -20,7 +20,7 @@ export const load: PageServerLoad = async (event) => {
 		return {
 			...u,
 			usage: {
-				postsTotal: usage.postsSent + usage.postsScheduled,
+				postsTotal: usage.postOutputSends,
 				callbackInputs: usage.callbackInputs,
 				importOperations: usage.importOperations
 			}

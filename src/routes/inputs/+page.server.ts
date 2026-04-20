@@ -6,7 +6,7 @@ import {
 	currentMonthKey,
 	canRunImportOperation,
 	incrementUsageMonth,
-	getPostsSentAndScheduledForMonth,
+	getPostQuotaSnapshotForMonth,
 	monthKeyFromDate
 } from '$lib/usage.js';
 import { getTierLimits } from '$lib/tiers.js';
@@ -796,9 +796,9 @@ export const actions: Actions = {
 					if (limits.postsSentPerMonth != null) {
 						const slotMonth = monthKeyFromDate(slot);
 						if (slotMonth) {
-							const { sent, scheduled } = getPostsSentAndScheduledForMonth(db, accountId, slotMonth);
+							const { outputSends, queuedInMonth } = getPostQuotaSnapshotForMonth(db, accountId, slotMonth);
 							const batchInMonth = postsPerMonthInBatch.get(slotMonth) ?? 0;
-							if (sent + scheduled + batchInMonth + 1 > limits.postsSentPerMonth) {
+							if (outputSends + queuedInMonth + batchInMonth + 1 > limits.postsSentPerMonth) {
 								return fail(403, {
 									error: `Post limit for ${slotMonth} (${limits.postsSentPerMonth}) would be exceeded.`
 								});
@@ -971,9 +971,9 @@ export const actions: Actions = {
 					if (limitsSq.postsSentPerMonth != null) {
 						const slotMonth = monthKeyFromDate(slot);
 						if (slotMonth) {
-							const { sent, scheduled } = getPostsSentAndScheduledForMonth(db, accountId, slotMonth);
+							const { outputSends, queuedInMonth } = getPostQuotaSnapshotForMonth(db, accountId, slotMonth);
 							const batchInMonth = postsPerMonthSq.get(slotMonth) ?? 0;
-							if (sent + scheduled + batchInMonth + 1 > limitsSq.postsSentPerMonth) {
+							if (outputSends + queuedInMonth + batchInMonth + 1 > limitsSq.postsSentPerMonth) {
 								return fail(403, {
 									error: `Post limit for ${slotMonth} (${limitsSq.postsSentPerMonth}) would be exceeded.`
 								});
@@ -1169,9 +1169,9 @@ export const actions: Actions = {
 					if (limitsRss.postsSentPerMonth != null) {
 						const slotMonth = monthKeyFromDate(slot);
 						if (slotMonth) {
-							const { sent, scheduled } = getPostsSentAndScheduledForMonth(db, accountId, slotMonth);
+							const { outputSends, queuedInMonth } = getPostQuotaSnapshotForMonth(db, accountId, slotMonth);
 							const batchInMonth = postsPerMonthRss.get(slotMonth) ?? 0;
-							if (sent + scheduled + batchInMonth + 1 > limitsRss.postsSentPerMonth) {
+							if (outputSends + queuedInMonth + batchInMonth + 1 > limitsRss.postsSentPerMonth) {
 								return fail(403, {
 									error: `Post limit for ${slotMonth} (${limitsRss.postsSentPerMonth}) would be exceeded.`
 								});
@@ -1391,9 +1391,9 @@ export const actions: Actions = {
 					if (limitsCsv.postsSentPerMonth != null) {
 						const slotMonth = monthKeyFromDate(slot);
 						if (slotMonth) {
-							const { sent, scheduled } = getPostsSentAndScheduledForMonth(db, accountId, slotMonth);
+							const { outputSends, queuedInMonth } = getPostQuotaSnapshotForMonth(db, accountId, slotMonth);
 							const batchInMonth = postsPerMonthCsv.get(slotMonth) ?? 0;
-							if (sent + scheduled + batchInMonth + 1 > limitsCsv.postsSentPerMonth) {
+							if (outputSends + queuedInMonth + batchInMonth + 1 > limitsCsv.postsSentPerMonth) {
 								return fail(403, {
 									error: `Post limit for ${slotMonth} (${limitsCsv.postsSentPerMonth}) would be exceeded.`,
 									action: 'importFromCsv'

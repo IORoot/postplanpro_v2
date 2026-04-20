@@ -2,6 +2,7 @@
 	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import { syncDiagramDefaultWithViewport } from '$lib/syncDiagramDefaultWithViewport.js';
 	import { showInputAnimations } from '$lib/stores/uiPrefs.js';
 
 	let { data, form } = $props();
@@ -10,7 +11,11 @@
 	let newWebhook = $state(false);
 	let editingHeaders = $state<{ key: string; value: string }[]>([]);
 	let newWebhookHeaders = $state<{ key: string; value: string }[]>([]);
-	let showAnimOutputWebhooks = $state(true);
+	let showAnimOutputWebhooks = $state(false);
+
+	syncDiagramDefaultWithViewport((open) => {
+		showAnimOutputWebhooks = open;
+	});
 
 	function openEditWebhook(webhook: { id: string; headers?: { key: string; value: string }[] }) {
 		editingWebhookId = webhook.id;

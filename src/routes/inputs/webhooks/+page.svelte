@@ -1,12 +1,17 @@
 <script lang="ts">
 	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import InboundAuthTokenCard from '$lib/components/InboundAuthTokenCard.svelte';
+	import { syncDiagramDefaultWithViewport } from '$lib/syncDiagramDefaultWithViewport.js';
 	import { showInputAnimations } from '$lib/stores/uiPrefs.js';
 
 	let { data, form } = $props();
 
 	let importExampleTab = $state<'json' | 'curl'>('json');
-	let showAnimImportWebhook = $state(true);
+	let showAnimImportWebhook = $state(false);
+
+	syncDiagramDefaultWithViewport((open) => {
+		showAnimImportWebhook = open;
+	});
 </script>
 
 <svelte:head>

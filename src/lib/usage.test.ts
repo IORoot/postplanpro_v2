@@ -44,8 +44,8 @@ describe('usage', () => {
 			const db = getDatabase();
 			const month = currentMonthKey();
 			const usage = getUsageForMonth(db, TEST_USER_ID, month);
-			expect(usage.postsSent).toBe(0);
-			expect(usage.postsScheduled).toBe(0);
+			expect(usage.postOutputSends).toBe(0);
+			expect(usage.postsQueuedForSend).toBe(0);
 			expect(usage.callbackInputs).toBe(0);
 			expect(usage.importOperations).toBe(0);
 		});

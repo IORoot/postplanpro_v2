@@ -15,6 +15,6 @@
     "description": "Receives a PostPlan webhook and automatically posts the video, and caption to YouTube via a Github Action.",
     "link": "https://eu1.make.com/public/shared-scenario/5eqlMdElm1y/webhook-to-youtube-via-github-advanced",
     "target": "make",
-    "tags": ["youtube", "gtihub", "social"]
+    "tags": ["youtube", "github", "social"]
   }
 ]

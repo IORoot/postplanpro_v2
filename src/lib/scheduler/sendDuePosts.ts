@@ -3,6 +3,7 @@ import { getWebhookIdsForPost } from '$lib/db/postWebhooks.js';
 import { buildPostPayload } from '$lib/payload.js';
 import { env } from '$env/dynamic/private';
 import { utcNowIso } from '$lib/server/timezone.js';
+import { currentMonthKey, isOutputSendQuotaBlockedForMonth } from '$lib/usage.js';
 
 const MAX_RESPONSE_BODY = 50000;
 const WEBHOOK_REQUEST_FAILED = 'Webhook request failed';
@@ -123,12 +124,24 @@ export async function sendDuePosts(): Promise<{ sent: number; failed: number; er
 	const updateFailed = db.prepare(
 		"UPDATE post SET status = 'failed', error_message = ?, updated_at = datetime('now') WHERE id = ?"
 	);
+	const tierStmt = db.prepare('SELECT tier FROM user WHERE id = ?');
+	function tierFor(accountId: string): string {
+		const row = tierStmt.get(accountId) as { tier: string | null } | undefined;
+		return row?.tier ?? 'free';
+	}
 
+	const sendQuotaMonth = currentMonthKey();
 	let sent = 0;
 	let failed = 0;
 	const errors: string[] = [];
 
 	for (const post of due) {
+		if (isOutputSendQuotaBlockedForMonth(db, post.account_id, sendQuotaMonth, tierFor(post.account_id))) {
+			errors.push(
+				`Post ${post.id}: Monthly output send limit reached for ${sendQuotaMonth}; post left scheduled until quota resets or plan upgrades.`
+			);
+			continue;
+		}
 		const webhookIds = getWebhookIdsForPost(db, post.id, post.webhook_id);
 		if (webhookIds.length === 0) {
 			updateFailed.run('No webhook configured', post.id);
@@ -224,6 +237,17 @@ export type SendPostResult =
 
 export async function sendPost(postId: string, accountId: string): Promise<SendPostResult> {
 	const db = getDatabase();
+	const tierRow = db.prepare('SELECT tier FROM user WHERE id = ?').get(accountId) as { tier: string | null } | undefined;
+	const tier = tierRow?.tier ?? 'free';
+	const quotaMonth = currentMonthKey();
+	if (isOutputSendQuotaBlockedForMonth(db, accountId, quotaMonth, tier)) {
+		return {
+			success: false,
+			error: `Monthly output send limit reached for ${quotaMonth}. Upgrade your plan or wait until next month.`,
+			responseStatus: null,
+			responseBody: null
+		};
+	}
 	const post = db
 		.prepare(
 			`SELECT id, account_id, webhook_id, title, content, image_url, payload_override, scheduled_at, status FROM post WHERE id = ? AND account_id = ?`

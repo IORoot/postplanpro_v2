@@ -7,6 +7,7 @@
 	import RssImporter from './importers/RssImporter.svelte';
 	import CsvImporter from './importers/CsvImporter.svelte';
 	import InboundAuthTokenCard from '$lib/components/InboundAuthTokenCard.svelte';
+	import { syncDiagramDefaultWithViewport } from '$lib/syncDiagramDefaultWithViewport.js';
 	import { showInputAnimations } from '$lib/stores/uiPrefs.js';
 
 	let { data, form } = $props();
@@ -25,10 +26,17 @@
 	});
 
 	let postNotificationExampleTab = $state<'json' | 'curl'>('json');
-	let showAnimImportCms = $state(true);
-	let showAnimImportSpreadsheets = $state(true);
-	let showAnimImportFeeds = $state(true);
-	let showAnimImportCallbacks = $state(true);
+	let showAnimImportCms = $state(false);
+	let showAnimImportSpreadsheets = $state(false);
+	let showAnimImportFeeds = $state(false);
+	let showAnimImportCallbacks = $state(false);
+
+	syncDiagramDefaultWithViewport((open) => {
+		showAnimImportCms = open;
+		showAnimImportSpreadsheets = open;
+		showAnimImportFeeds = open;
+		showAnimImportCallbacks = open;
+	});
 
 	const inputDiagramIframe = $derived.by(() => {
 		switch (section) {

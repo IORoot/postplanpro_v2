@@ -1,4 +1,6 @@
 import { getDatabase } from '$lib/db/index.js';
+import type { StatsDailyPoint } from '$lib/types/statsChart.js';
+import { ensureValidTimeZone, localDateTimeToUtcIso, utcIsoToLocalDateTime } from '$lib/server/timezone.js';
 
 type Db = ReturnType<typeof getDatabase>;
 
@@ -43,6 +45,86 @@ export type PostWithFailedStageRow = {
 	title: string;
 	sent_at: string | null;
 };
+
+export type { StatsDailyPoint } from '$lib/types/statsChart.js';
+
+function pad2(n: number): string {
+	return String(n).padStart(2, '0');
+}
+
+/** Map DB timestamp to local calendar date in `timeZone` (aligns with calendar naive + Z heuristic). */
+function postTimestampToLocalDate(iso: string, timeZone: string): string | null {
+	const normalized = iso.trim().replace(' ', 'T');
+	const hasTz = /[zZ]$/.test(normalized) || /[+-]\d{2}:?\d{2}$/.test(normalized);
+	const d = hasTz ? new Date(normalized) : new Date(`${normalized}Z`);
+	if (Number.isNaN(d.getTime())) return null;
+	return utcIsoToLocalDateTime(d.toISOString(), timeZone)?.date ?? null;
+}
+
+/**
+ * Per-day counts for a calendar month in `timeZone`: posts sent that local day (`status=sent`),
+ * and posts with `scheduled_at` falling on that local day (any status).
+ */
+export function loadMonthlyActivitySeries(
+	db: Db,
+	accountId: string,
+	yearMonth: string,
+	timeZone: string
+): StatsDailyPoint[] {
+	const m = /^(\d{4})-(\d{2})$/.exec(yearMonth);
+	if (!m) return [];
+	const y = Number(m[1]);
+	const mo = Number(m[2]);
+	if (!y || mo < 1 || mo > 12) return [];
+	const tz = ensureValidTimeZone(timeZone);
+
+	const startIso = localDateTimeToUtcIso(`${y}-${pad2(mo)}-01T00:00:00`, tz);
+	const nextMo = mo === 12 ? 1 : mo + 1;
+	const nextY = mo === 12 ? y + 1 : y;
+	const endIso = localDateTimeToUtcIso(`${nextY}-${pad2(nextMo)}-01T00:00:00`, tz);
+	if (!startIso || !endIso) return [];
+
+	const daysInMonth = new Date(y, mo, 0).getDate();
+	const keys: string[] = [];
+	const sentByDay = new Map<string, number>();
+	const schedByDay = new Map<string, number>();
+	for (let d = 1; d <= daysInMonth; d++) {
+		const key = `${y}-${pad2(mo)}-${pad2(d)}`;
+		keys.push(key);
+		sentByDay.set(key, 0);
+		schedByDay.set(key, 0);
+	}
+
+	const sentRows = db
+		.prepare(
+			`SELECT sent_at FROM post WHERE account_id = ? AND status = 'sent' AND sent_at IS NOT NULL
+       AND sent_at >= ? AND sent_at < ?`
+		)
+		.all(accountId, startIso, endIso) as { sent_at: string }[];
+
+	for (const row of sentRows) {
+		const day = postTimestampToLocalDate(row.sent_at, tz);
+		if (day && sentByDay.has(day)) sentByDay.set(day, (sentByDay.get(day) ?? 0) + 1);
+	}
+
+	const schedRows = db
+		.prepare(
+			`SELECT scheduled_at FROM post WHERE account_id = ? AND scheduled_at IS NOT NULL
+       AND scheduled_at >= ? AND scheduled_at < ?`
+		)
+		.all(accountId, startIso, endIso) as { scheduled_at: string }[];
+
+	for (const row of schedRows) {
+		const day = postTimestampToLocalDate(row.scheduled_at, tz);
+		if (day && schedByDay.has(day)) schedByDay.set(day, (schedByDay.get(day) ?? 0) + 1);
+	}
+
+	return keys.map((date) => ({
+		date,
+		sent: sentByDay.get(date) ?? 0,
+		scheduled: schedByDay.get(date) ?? 0
+	}));
+}
 
 export function loadCalendarOverview(
 	db: Db,
