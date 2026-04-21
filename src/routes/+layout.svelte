@@ -80,8 +80,7 @@
 								class="rounded-t-xl border-b border-red-500/35 bg-red-950/55 px-4 py-2.5 text-center text-sm text-red-100 md:px-6"
 							>
 								<strong class="font-semibold">Monthly output send limit reached.</strong>
-								No more posts will be sent to your outputs until the month resets or you change plan. Count is
-								successful sends this month (rescheduling does not reduce it).
+								No more posts will be sent to your outputs until the month resets or you change plan.
 							</div>
 						{/if}
 					{/if}

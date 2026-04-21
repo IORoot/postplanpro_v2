@@ -1,5 +1,6 @@
 import type { Database } from 'better-sqlite3';
 import { getTierLimits } from '$lib/tiers.js';
+import { getAccountEmailNorm, getEmailQuotaCarryoverForMonth } from '$lib/server/emailQuotaCarryover.js';
 
 export type UsageForMonth = {
 	/** Successful outbound webhook deliveries (rows in send_log with success=1). */
@@ -40,7 +41,7 @@ function monthRangeIso(month: string): { start: string; end: string } {
  * Successful outbound HTTP deliveries this calendar month (send_log.success = 1).
  * Rescheduling a post does not remove past rows — quota reflects actual sends.
  */
-export function getSuccessfulOutputSendCountForMonth(db: Database, accountId: string, month: string): number {
+function countSuccessfulSendLogRowsForMonth(db: Database, accountId: string, month: string): number {
 	return (
 		db
 			.prepare(
@@ -49,6 +50,15 @@ export function getSuccessfulOutputSendCountForMonth(db: Database, accountId: st
 			)
 			.get(accountId, month) as { n: number }
 	).n;
+}
+
+/** Successful sends this month for this account plus any carryover for the account email (after prior account deletes). */
+export function getSuccessfulOutputSendCountForMonth(db: Database, accountId: string, month: string): number {
+	const fromLog = countSuccessfulSendLogRowsForMonth(db, accountId, month);
+	const emailNorm = getAccountEmailNorm(db, accountId);
+	if (!emailNorm) return fromLog;
+	const carry = getEmailQuotaCarryoverForMonth(db, emailNorm, month);
+	return fromLog + carry.output_sends;
 }
 
 /**
@@ -101,10 +111,7 @@ export function getPostsSentAndScheduledForMonth(
 	return { sent, scheduled };
 }
 
-/**
- * Get callback_inputs and import_operations for account + month from usage_month table.
- */
-export function getUsageMonthRow(
+function getUsageMonthRowAccountOnly(
 	db: Database,
 	accountId: string,
 	month: string
@@ -115,6 +122,24 @@ export function getUsageMonthRow(
 	return {
 		callback_inputs: row?.callback_inputs ?? 0,
 		import_operations: row?.import_operations ?? 0
+	};
+}
+
+/**
+ * Callback/import counts for this account month, plus any carryover for the same normalized email.
+ */
+export function getUsageMonthRow(
+	db: Database,
+	accountId: string,
+	month: string
+): { callback_inputs: number; import_operations: number } {
+	const base = getUsageMonthRowAccountOnly(db, accountId, month);
+	const emailNorm = getAccountEmailNorm(db, accountId);
+	if (!emailNorm) return base;
+	const carry = getEmailQuotaCarryoverForMonth(db, emailNorm, month);
+	return {
+		callback_inputs: base.callback_inputs + carry.callback_inputs,
+		import_operations: base.import_operations + carry.import_operations
 	};
 }
 
