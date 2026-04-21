@@ -1,5 +1,6 @@
 import { getDatabase } from '$lib/db/index.js';
 import { getUsageForMonth, currentMonthKey } from '$lib/usage.js';
+import { mergeAccountUsageIntoEmailCarryover, normalizeQuotaEmail } from '$lib/server/emailQuotaCarryover.js';
 import { requireAdmin } from '$lib/admin.js';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -62,8 +63,8 @@ export const actions: Actions = {
 			return fail(400, { error: 'Missing user_id.' });
 		}
 		const db = getDatabase();
-		const target = db.prepare('SELECT id, tier FROM user WHERE id = ?').get(userId) as
-			| { id: string; tier: string }
+		const target = db.prepare('SELECT id, tier, email FROM user WHERE id = ?').get(userId) as
+			| { id: string; tier: string; email: string | null }
 			| undefined;
 		if (!target) {
 			return fail(404, { error: 'User not found.' });
@@ -75,6 +76,7 @@ export const actions: Actions = {
 		// Delete user and all related data in dependency order (child tables first)
 		db.exec('BEGIN TRANSACTION');
 		try {
+			mergeAccountUsageIntoEmailCarryover(db, userId, normalizeQuotaEmail(target.email));
 			// send_log (account_id)
 			db.prepare('DELETE FROM send_log WHERE account_id = ?').run(userId);
 			// post_stage, post_field, post_webhook for this account's posts

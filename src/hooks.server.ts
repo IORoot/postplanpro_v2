@@ -4,6 +4,7 @@ import { redirect, type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { getDatabase } from '$lib/db/index.js';
 import { startInternalCronIfEnabled } from '$lib/server/internalCron.js';
+import { clearAuthJsSessionCookies, sessionOnlyIfUserExists } from '$lib/server/authSessionCleanup.js';
 
 function isMarketingPublicPath(pathname: string): boolean {
 	return pathname === '/' || pathname.startsWith('/welcome');
@@ -35,6 +36,13 @@ const appAuthGuard: Handle = async ({ event, resolve }) => {
 		} catch (err) {
 			console.error('[auth] session load failed:', err instanceof Error ? err.message : err);
 			session = null;
+		}
+		if (session?.user?.id) {
+			const checked = sessionOnlyIfUserExists(getDatabase(), session);
+			if (!checked) {
+				clearAuthJsSessionCookies(event.cookies);
+			}
+			session = checked;
 		}
 		const stableAuth = async () => session;
 		event.locals.auth = stableAuth;

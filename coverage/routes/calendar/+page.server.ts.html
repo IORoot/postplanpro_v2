@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">95.52% </span>
+                <span class="strong">95.71% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>64/67</span>
+                <span class='fraction'>67/70</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">86.66% </span>
+                <span class="strong">87.5% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>26/30</span>
+                <span class='fraction'>28/32</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>63/63</span>
+                <span class='fraction'>66/66</span>
             </div>
         
             
@@ -210,7 +210,22 @@
 <a name='L145'></a><a href='#L145'>145</a>
 <a name='L146'></a><a href='#L146'>146</a>
 <a name='L147'></a><a href='#L147'>147</a>
-<a name='L148'></a><a href='#L148'>148</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a>
+<a name='L154'></a><a href='#L154'>154</a>
+<a name='L155'></a><a href='#L155'>155</a>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a>
+<a name='L159'></a><a href='#L159'>159</a>
+<a name='L160'></a><a href='#L160'>160</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -306,6 +321,13 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">9x</span>
 <span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -336,6 +358,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
@@ -358,6 +382,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { getDatabase } from '$lib/db/index.js';
+import { loadCalendarOverview } from '$lib/server/overviewData.js';
+import { ensureValidTimeZone } from '$lib/server/timezone.js';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 &nbsp;
@@ -370,6 +396,7 @@ type CalendarPostRow = {
 	scheduled_at: string;
 	status: string;
 	webhook_name: string;
+	has_output_webhook: number;
 };
 &nbsp;
 const ALLOWED_VIEWS = new Set&lt;CalendarView&gt;([
@@ -452,22 +479,29 @@ export const load: PageServerLoad = async ({ url, locals }) =&gt; {
 	const endStr = sqliteIso(end);
 &nbsp;
 	const db = getDatabase();
+	const overview = loadCalendarOverview(db, accountId);
+	const user = accountId
+		? (db.prepare('SELECT timezone FROM user WHERE id = ?').get(accountId) as { timezone: string | null } | undefined)
+		: undefined;
+	const timezone = ensureValidTimeZone(user?.timezone);
 	const posts: CalendarPostRow[] = accountId
 		? ((view === 'agenda'
 				? db.prepare(
 					`
-		SELECT p.id, p.title, p.image_url, p.color, p.scheduled_at, p.status, w.name as webhook_name
+		SELECT p.id, p.title, p.image_url, p.color, p.scheduled_at, p.status, COALESCE(w.name, 'No webhook') as webhook_name,
+			CASE WHEN p.webhook_id IS NOT NULL OR EXISTS (SELECT 1 FROM post_webhook pw WHERE pw.post_id = p.id) THEN 1 ELSE 0 END as has_output_webhook
 		FROM post p
-		JOIN webhook_config w ON p.webhook_id = w.id
+		LEFT JOIN webhook_config w ON p.webhook_id = w.id
 		WHERE p.account_id = ? AND p.scheduled_at IS NOT NULL
 		ORDER BY p.scheduled_at
 	`
 				  ).all(accountId)
 				: db.prepare(
 					`
-		SELECT p.id, p.title, p.image_url, p.color, p.scheduled_at, p.status, w.name as webhook_name
+		SELECT p.id, p.title, p.image_url, p.color, p.scheduled_at, p.status, COALESCE(w.name, 'No webhook') as webhook_name,
+			CASE WHEN p.webhook_id IS NOT NULL OR EXISTS (SELECT 1 FROM post_webhook pw WHERE pw.post_id = p.id) THEN 1 ELSE 0 END as has_output_webhook
 		FROM post p
-		JOIN webhook_config w ON p.webhook_id = w.id
+		LEFT JOIN webhook_config w ON p.webhook_id = w.id
 		WHERE p.account_id = ? AND p.scheduled_at IS NOT NULL AND p.scheduled_at &gt;= ? AND p.scheduled_at &lt;= ?
 		ORDER BY p.scheduled_at
 	`
@@ -476,10 +510,12 @@ export const load: PageServerLoad = async ({ url, locals }) =&gt; {
 &nbsp;
 	return {
 		posts,
+		timezone,
 		view,
 		anchorDate: anchor.toISOString().slice(0, 10),
 		rangeStart: start.toISOString().slice(0, 10),
-		rangeEnd: end.toISOString().slice(0, 10)
+		rangeEnd: end.toISOString().slice(0, 10),
+		...overview
 	};
 };
 &nbsp;
@@ -511,7 +547,7 @@ export const actions: Actions = {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-28T16:49:51.785Z
+                at 2026-04-21T07:45:59.008Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

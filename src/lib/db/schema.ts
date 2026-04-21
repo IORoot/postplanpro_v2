@@ -227,4 +227,15 @@ CREATE TABLE IF NOT EXISTS usage_month (
   PRIMARY KEY (account_id, month)
 );
 CREATE INDEX IF NOT EXISTS idx_usage_month_account ON usage_month(account_id);
+
+-- Monthly limits keyed by normalized email: survives user deletion so limits cannot be reset by re-registering.
+CREATE TABLE IF NOT EXISTS email_quota_carryover_month (
+  email_norm TEXT NOT NULL,
+  month TEXT NOT NULL,
+  output_sends INTEGER NOT NULL DEFAULT 0,
+  callback_inputs INTEGER NOT NULL DEFAULT 0,
+  import_operations INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (email_norm, month)
+);
+CREATE INDEX IF NOT EXISTS idx_email_quota_carryover_email ON email_quota_carryover_month(email_norm);
 `;

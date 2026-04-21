@@ -8,6 +8,7 @@ import {
 	normalizeScheduledAtForStorage
 } from '$lib/server/timezone.js';
 import { getUsageForMonth, currentMonthKey } from '$lib/usage.js';
+import { mergeAccountUsageIntoEmailCarryover, normalizeQuotaEmail } from '$lib/server/emailQuotaCarryover.js';
 import { getTierLimits } from '$lib/tiers.js';
 import { sendResetPasswordEmail, signOut } from '../../auth.js';
 import { redirect, fail } from '@sveltejs/kit';
@@ -274,13 +275,20 @@ export const actions: Actions = {
 		const session = await event.locals.auth();
 		if (!session?.user?.id) return fail(401, { error: 'Not signed in.' });
 		const userId = session.user.id as string;
-		const data = await event.request.formData();
+		// Confirm from clone so `signOut(event)` can still read the body (redirectTo hidden field, etc.).
+		const data = await event.request.clone().formData();
 		const confirm = (data.get('confirm') as string)?.trim()?.toLowerCase();
 		if (confirm !== 'delete') {
 			return fail(400, { error: 'Type DELETE to confirm account deletion.' });
 		}
 		const db = getDatabase();
-		db.prepare('DELETE FROM user WHERE id = ?').run(userId);
+		const userRow = db.prepare('SELECT email FROM user WHERE id = ?').get(userId) as { email: string | null } | undefined;
+		const emailNorm = normalizeQuotaEmail(userRow?.email ?? null);
+		const runDelete = db.transaction(() => {
+			mergeAccountUsageIntoEmailCarryover(db, userId, emailNorm);
+			db.prepare('DELETE FROM user WHERE id = ?').run(userId);
+		});
+		runDelete();
 		return signOut(event);
 	},
 

@@ -484,6 +484,7 @@
 						Permanently delete your account and all your data (posts, schedules, webhooks). This cannot be undone.
 					</p>
 					<form method="POST" action="?/deleteAccount" use:enhance class="mt-4">
+						<input type="hidden" name="redirectTo" value="/" />
 						<label for="delete-confirm" class="block text-sm font-medium text-[var(--text)]"
 							>Type <strong>DELETE</strong> to confirm</label
 						>
