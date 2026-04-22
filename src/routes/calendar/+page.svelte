@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
 	import CalendarPostBadges from '$lib/components/calendar/CalendarPostBadges.svelte';
 	import CompactCalendarDayPostList from '$lib/components/calendar/CompactCalendarDayPostList.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -8,12 +7,27 @@
 	let { data } = $props();
 
 	const QUICK_PATH_KEY = 'postplan-dismiss-dashboard-path';
+	const FAILED_POST_NOTICE_KEY = 'postplan-dismissed-failed-post-ids';
 	let showQuickPath = $state(false);
 
 	onMount(() => {
 		if (typeof localStorage === 'undefined') return;
 		if (localStorage.getItem(QUICK_PATH_KEY) === '1') return;
 		showQuickPath = true;
+	});
+
+	onMount(() => {
+		if (typeof localStorage === 'undefined') return;
+		const raw = localStorage.getItem(FAILED_POST_NOTICE_KEY);
+		if (!raw) return;
+		try {
+			const parsed = JSON.parse(raw) as unknown;
+			if (Array.isArray(parsed)) {
+				dismissedFailedPostIds = parsed.filter((v): v is string => typeof v === 'string');
+			}
+		} catch {
+			// Ignore malformed local storage data.
+		}
 	});
 
 	onMount(() => {
@@ -79,9 +93,21 @@
 		localStorage.setItem(QUICK_PATH_KEY, '1');
 		showQuickPath = false;
 	}
+
+	function dismissFailedNotice() {
+		const merged = new Set(dismissedFailedPostIds);
+		for (const post of failedUndismissedPosts) {
+			merged.add(post.id);
+		}
+		dismissedFailedPostIds = Array.from(merged);
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem(FAILED_POST_NOTICE_KEY, JSON.stringify(dismissedFailedPostIds));
+		}
+	}
 	let sendingId = $state<string | null>(null);
 	let sendError = $state<string | null>(null);
 	let sendSuccess = $state<string | null>(null);
+	let dismissedFailedPostIds = $state<string[]>([]);
 	let dragPostId = $state<string | null>(null);
 	let reschedulePending = $state(false);
 	let dragPreviewText = $state<string | null>(null);
@@ -198,6 +224,10 @@
 	const posts = $derived(
 		[...livePosts].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
 	);
+	const failedUndismissedPosts = $derived(
+		posts.filter((p) => p.status === 'failed' && !dismissedFailedPostIds.includes(p.id))
+	);
+	const failedPostCount = $derived(failedUndismissedPosts.length);
 	const postsByDate = $derived.by(() => {
 		const byDate = new Map<string, CalendarPost[]>();
 		for (const post of posts) {
@@ -803,12 +833,70 @@
 	<p class="mb-6 text-sm text-[var(--text-muted)]">Sign in to see your overview.</p>
 {/if}
 
-<PageSectionHeading title="Calendar" description="Modern multi-view calendar for scheduled posts." />
+<div class="mb-0 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2">
+	<div class="min-w-0">
+		<h1 class="truncate text-2xl font-semibold text-[var(--text)]">Calendar</h1>
+		<p class="mt-1 text-sm text-[var(--text-muted)]">Modern multi-view calendar for scheduled posts.</p>
+	</div>
+	<div
+		class="row-start-1 col-start-2 ml-auto hidden min-w-0 max-w-[28rem] gap-1 overflow-x-auto overflow-y-hidden rounded-xl bg-[var(--surface)] p-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] md:flex md:justify-end [&::-webkit-scrollbar]:hidden"
+	>
+		{#each viewButtons as v}
+			<a
+				href={hrefFor(v.id, anchor)}
+				class="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg px-2 py-2 text-xs font-medium touch-manipulation md:min-w-0 md:px-3 lg:min-h-[36px] {view === v.id
+					? 'btn-primary text-white'
+					: `${calendarUnselectedBtnClass} text-[var(--text-muted)] hover:text-[var(--text)]`}"
+				aria-label={v.label}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					class="h-[1.35rem] w-[1.35rem] shrink-0 lg:hidden"
+					viewBox="0 0 24 24"
+					aria-hidden="true"
+				>
+					<path fill="currentColor" d={v.iconPath} />
+				</svg>
+				<span class="hidden lg:inline">{v.label}</span>
+			</a>
+		{/each}
+	</div>
+</div>
+<div
+	class="fixed z-30 flex min-w-0 max-w-[71vw] gap-1 overflow-x-auto overflow-y-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 pb-1 shadow md:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+	style="right: max(1rem, env(safe-area-inset-right, 0px)); top: max(1rem, env(safe-area-inset-top, 0px));"
+>
+	{#each viewButtons as v}
+		<a
+			href={hrefFor(v.id, anchor)}
+			class="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg px-2 py-2 text-xs font-medium touch-manipulation {view === v.id
+				? 'btn-primary text-white'
+				: `${calendarUnselectedBtnClass} text-[var(--text-muted)] hover:text-[var(--text)]`}"
+			aria-label={v.label}
+		>
+			<svg xmlns="http://www.w3.org/2000/svg" class="h-[1.35rem] w-[1.35rem] shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+				<path fill="currentColor" d={v.iconPath} />
+			</svg>
+		</a>
+	{/each}
+</div>
 {#if sendError}
 	<p class="rounded-lg px-3 py-2 text-sm alert-error">{sendError}</p>
 {/if}
 {#if sendSuccess}
 	<p class="rounded-lg px-3 py-2 text-sm alert-success">{sendSuccess}</p>
+{/if}
+{#if failedPostCount > 0 && !failedNoticeDismissed}
+	<div class="alert-error mt-2 flex items-start justify-between gap-3 rounded-lg px-3 py-2 text-sm">
+		<p>{failedPostCount} {failedPostCount === 1 ? 'post has' : 'posts have'} failed. Open failed post to retry or fix webhook settings.</p>
+		<button
+			type="button"
+			class="shrink-0 rounded px-2 py-1 text-xs font-medium text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
+			onclick={dismissFailedNotice}
+		>
+			Close
+		</button>
+	</div>
 {/if}
 
 {#if dragPostId && dragPreviewText != null && dragPreviewPos}
@@ -822,34 +910,10 @@
 {/if}
 
 <div class="content-card relative z-0 mt-0 min-w-0 overflow-x-clip rounded-xl p-4 md:p-5" data-sveltekit-preload-data="tap">
-	<div class="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+	{#if showDateControls}
 		<div
-			class="-mx-1 flex min-w-0 max-w-full gap-1 overflow-x-auto overflow-y-hidden rounded-xl bg-[var(--surface)] p-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] lg:mx-0 lg:flex-1 lg:flex-nowrap lg:overflow-x-auto lg:pb-1 [&::-webkit-scrollbar]:hidden"
+			class="flex w-full min-w-0 flex-wrap items-center justify-center gap-2 sm:flex-nowrap sm:justify-center lg:w-auto lg:max-w-none lg:shrink-0"
 		>
-			{#each viewButtons as v}
-				<a
-					href={hrefFor(v.id, anchor)}
-					class="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg px-2 py-2 text-xs font-medium touch-manipulation md:min-w-0 md:px-3 lg:min-h-[36px] {view === v.id
-						? 'btn-primary text-white'
-						: `${calendarUnselectedBtnClass} text-[var(--text-muted)] hover:text-[var(--text)]`}"
-					aria-label={v.label}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-[1.35rem] w-[1.35rem] shrink-0 md:hidden"
-						viewBox="0 0 24 24"
-						aria-hidden="true"
-					>
-						<path fill="currentColor" d={v.iconPath} />
-					</svg>
-					<span class="hidden md:inline">{v.label}</span>
-				</a>
-			{/each}
-		</div>
-		{#if showDateControls}
-			<div
-				class="flex w-full min-w-0 flex-wrap items-center justify-center gap-2 sm:flex-nowrap sm:justify-end lg:w-auto lg:max-w-none lg:shrink-0"
-			>
 				<a
 					href={hrefFor(view, withOffset(anchor, view, -1))}
 					class="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg px-3 py-2 text-sm text-[var(--text)] touch-manipulation {calendarUnselectedBtnClass}"
@@ -880,11 +944,11 @@
 						</svg>
 					</a>
 				{/if}
-			</div>
-		{:else if data.stats}
-			<div
-				class="flex w-full min-w-0 shrink-0 justify-center lg:w-auto lg:flex-none lg:justify-end lg:self-center"
-			>
+		</div>
+	{:else if data.stats}
+		<div
+			class="flex w-full min-w-0 shrink-0 justify-center lg:w-auto lg:flex-none lg:justify-end lg:self-center"
+		>
 				<a
 					href="/posts/new"
 					class="btn-primary inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white shadow-sm touch-manipulation"
@@ -894,37 +958,13 @@
 						<path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
 					</svg>
 				</a>
-			</div>
-		{/if}
-	</div>
+		</div>
+	{/if}
 </div>
 
 {#if view === 'month'}
-	<div class="content-card mt-4 rounded-xl p-4">
+	<div class="content-card rounded-xl px-4 pb-4">
 		<div class="mb-3 rounded-xl bg-[var(--surface)]">
-			<div class="mb-3 flex flex-nowrap items-center justify-center gap-2">
-				<a
-					href={hrefFor('month', new Date(anchor.getFullYear() - 1, anchor.getMonth(), 1))}
-					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
-					title="Previous year"
-				>
-					←
-				</a>
-				<span class="shrink-0 text-center text-lg font-semibold tabular-nums text-[var(--text)]">{anchor.getFullYear()}</span>
-				<a
-					href={hrefFor('month', new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
-					class="shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs text-[var(--text)] {calendarUnselectedBtnClass}"
-				>
-					This year
-				</a>
-				<a
-					href={hrefFor('month', new Date(anchor.getFullYear() + 1, anchor.getMonth(), 1))}
-					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
-					title="Next year"
-				>
-					→
-				</a>
-			</div>
 			<div class="grid w-full grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-12">
 				{#each Array.from({ length: 12 }, (_, i) => i) as monthIndex}
 					{@const isActiveMonth = anchor.getMonth() === monthIndex}
@@ -1103,25 +1143,6 @@
 {:else if view === 'week'}
 	<div class="content-card mt-4 rounded-xl p-3">
 		<div class="mb-6 rounded-xl bg-[var(--surface)]">
-			<div class="mb-2 flex flex-nowrap items-center justify-between gap-2">
-				<a
-					href={hrefFor('week', new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))}
-					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
-					title="Previous month"
-				>
-					←
-				</a>
-				<p class="min-w-0 truncate text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-					Weeks of {monthNames[anchor.getMonth()]} {anchor.getFullYear()}
-				</p>
-				<a
-					href={hrefFor('week', new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1))}
-					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
-					title="Next month"
-				>
-					→
-				</a>
-			</div>
 			<div
 				class="grid w-full gap-1 sm:gap-2"
 				style={`grid-template-columns: repeat(${monthWeekCount()}, minmax(0, 1fr));`}
@@ -1262,25 +1283,8 @@
 		</div>
 	</div>
 {:else if view === 'day'}
-	<div class="content-card mt-4 rounded-xl p-4">
+	<div class="content-card rounded-xl px-4 pb-4">
 		<div class="mb-4 rounded-xl bg-[var(--surface)] p-3">
-			<div class="mb-2 flex flex-nowrap items-center justify-between gap-2">
-				<a
-					href={hrefFor('day', withOffset(anchor, 'week', -1))}
-					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
-				>
-					←
-				</a>
-				<p class="shrink-0 px-1 text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-					Day quick navigation
-				</p>
-				<a
-					href={hrefFor('day', withOffset(anchor, 'week', 1))}
-					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
-				>
-					→
-				</a>
-			</div>
 			<div class="grid grid-cols-7 gap-1 sm:gap-2">
 				{#each weekDays() as d}
 					{@const isActiveDay = localDateKey(d) === localDateKey(anchor)}
@@ -1379,32 +1383,7 @@
 		</div>
 	</div>
 {:else if view === 'year'}
-	<div class="content-card mt-4 rounded-xl p-4">
-		<div class="mb-4 rounded-xl bg-[var(--surface)] p-3">
-			<div class="flex flex-nowrap items-center justify-center gap-2">
-				<a
-					href={hrefFor('year', new Date(anchor.getFullYear() - 1, 0, 1))}
-					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
-					title="Previous year"
-				>
-					←
-				</a>
-				<span class="shrink-0 text-lg font-semibold tabular-nums text-[var(--text)]">{anchor.getFullYear()}</span>
-				<a
-					href={hrefFor('year', new Date(new Date().getFullYear(), 0, 1))}
-					class="shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs text-[var(--text)] {calendarUnselectedBtnClass}"
-				>
-					This year
-				</a>
-				<a
-					href={hrefFor('year', new Date(anchor.getFullYear() + 1, 0, 1))}
-					class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-[var(--text)] {calendarUnselectedBtnClass}"
-					title="Next year"
-				>
-					→
-				</a>
-			</div>
-		</div>
+	<div class="content-card rounded-xl px-4 pb-4">
 		<div class="overflow-hidden rounded-xl border border-[var(--border)]">
 			<div class="grid grid-cols-1 gap-px bg-[var(--border)] md:grid-cols-2 xl:grid-cols-3">
 				{#each yearMonthAnchors as monthDate}
@@ -1460,7 +1439,7 @@
 		</div>
 	</div>
 {:else if view === 'agenda'}
-	<div class="content-card mt-4 rounded-xl p-4">
+	<div class="content-card rounded-xl px-4 pb-4">
 		{#if posts.length === 0}
 			<p class="text-sm text-[var(--text-muted)]">
 				No posts in this date range. Adjust the range above, or go to
@@ -1508,7 +1487,7 @@
 		{/if}
 	</div>
 {:else if view === 'schedule'}
-	<div class="content-card mt-4 rounded-xl p-4">
+	<div class="content-card rounded-xl px-4 pb-4">
 		<div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
 			{#each yearMonthAnchors as monthDate}
 				<div class="rounded-xl bg-[var(--surface)] p-3">
@@ -1541,7 +1520,7 @@
 		</div>
 	</div>
 {:else}
-	<div class="content-card mt-4 rounded-xl p-4">
+	<div class="content-card rounded-xl px-4 pb-4">
 		<p class="text-sm text-[var(--text-muted)]">Unsupported calendar view.</p>
 	</div>
 {/if}
