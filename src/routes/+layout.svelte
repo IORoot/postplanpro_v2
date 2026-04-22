@@ -74,13 +74,31 @@
 				<div class="main-content-shell content-area flex min-w-0 flex-1 flex-col rounded-xl bg-[var(--surface)]">
 					{#if $page.data.session && $page.data.sidebarPlanUsage}
 						{@const spu = $page.data.sidebarPlanUsage}
-						{#if spu.posts.limit != null && spu.posts.limit > 0 && spu.posts.used >= spu.posts.limit}
+						{@const postsAtLimit = spu.posts.limit != null && spu.posts.limit > 0 && spu.posts.used >= spu.posts.limit}
+						{@const importsAtLimit = spu.imports.limit != null && spu.imports.limit > 0 && spu.imports.used >= spu.imports.limit}
+						{@const callbacksAtLimit = spu.callbacks.limit != null && spu.callbacks.limit > 0 && spu.callbacks.used >= spu.callbacks.limit}
+						{@const quotaExceeded = postsAtLimit || importsAtLimit || callbacksAtLimit}
+						{#if quotaExceeded && $page.data.userTier === 'free'}
 							<div
 								role="alert"
-								class="rounded-t-xl border-b border-red-500/35 bg-red-950/55 px-4 py-2.5 text-center text-sm text-red-100 md:px-6"
+								class="rounded-t-xl border-b border-red-500/35 bg-red-950/55 px-4 py-3 text-center text-sm text-red-100 md:px-6"
 							>
-								<strong class="font-semibold">Monthly output send limit reached.</strong>
-								No more posts will be sent to your outputs until the month resets or you change plan.
+								<strong class="font-semibold">Monthly free-plan quota reached.</strong>
+								<span class="ml-1">Upgrade to Pro for higher limits on posts, imports, and callbacks.</span>
+								<div class="mt-2 flex flex-wrap items-center justify-center gap-3">
+									<a
+										href="/api/stripe/checkout"
+										class="inline-flex min-h-[36px] items-center rounded-md bg-[var(--primary)] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+									>
+										Upgrade to Pro
+									</a>
+									<a
+										href="/account?section=billing"
+										class="text-xs text-red-200 underline underline-offset-2 hover:text-white"
+									>
+										View billing
+									</a>
+								</div>
 							</div>
 						{/if}
 					{/if}

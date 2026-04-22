@@ -131,6 +131,77 @@ describe('POST /api/stripe/webhook', () => {
 		expect(tier).toBe('pro');
 	});
 
+	it('sets pro tier on customer.subscription.created', async () => {
+		getDatabase()
+			.prepare('UPDATE user SET tier = ?, stripe_customer_id = ?, stripe_subscription_id = NULL WHERE id = ?')
+			.run('free', 'cus_create', STRIPE_USER);
+		stripeMocks.constructEvent.mockReturnValue({
+			type: 'customer.subscription.created',
+			data: {
+				object: {
+					id: 'sub_created',
+					customer: 'cus_create'
+				}
+			}
+		});
+		const { POST } = await import('../../src/routes/api/stripe/webhook/+server.js');
+		const res = await POST({
+			request: new Request('http://test', {
+				method: 'POST',
+				headers: { 'stripe-signature': 'sig' },
+				body: '{}'
+			})
+		} as Parameters<typeof POST>[0]);
+		expect(res.status).toBe(200);
+		const user = getDatabase()
+			.prepare('SELECT tier, stripe_subscription_id FROM user WHERE id = ?')
+			.get(STRIPE_USER) as { tier: string; stripe_subscription_id: string | null };
+		expect(user.tier).toBe('pro');
+		expect(user.stripe_subscription_id).toBe('sub_created');
+	});
+
+	it('downgrades user on customer.subscription.paused', async () => {
+		getDatabase()
+			.prepare('UPDATE user SET tier = ?, stripe_subscription_id = ? WHERE id = ?')
+			.run('pro', 'sub_pause', STRIPE_USER);
+		stripeMocks.constructEvent.mockReturnValue({
+			type: 'customer.subscription.paused',
+			data: { object: { id: 'sub_pause' } }
+		});
+		const { POST } = await import('../../src/routes/api/stripe/webhook/+server.js');
+		const res = await POST({
+			request: new Request('http://test', {
+				method: 'POST',
+				headers: { 'stripe-signature': 'sig' },
+				body: '{}'
+			})
+		} as Parameters<typeof POST>[0]);
+		expect(res.status).toBe(200);
+		const tier = (getDatabase().prepare('SELECT tier FROM user WHERE id = ?').get(STRIPE_USER) as { tier: string }).tier;
+		expect(tier).toBe('free');
+	});
+
+	it('restores pro tier on customer.subscription.resumed', async () => {
+		getDatabase()
+			.prepare('UPDATE user SET tier = ?, stripe_subscription_id = ? WHERE id = ?')
+			.run('free', 'sub_resume', STRIPE_USER);
+		stripeMocks.constructEvent.mockReturnValue({
+			type: 'customer.subscription.resumed',
+			data: { object: { id: 'sub_resume' } }
+		});
+		const { POST } = await import('../../src/routes/api/stripe/webhook/+server.js');
+		const res = await POST({
+			request: new Request('http://test', {
+				method: 'POST',
+				headers: { 'stripe-signature': 'sig' },
+				body: '{}'
+			})
+		} as Parameters<typeof POST>[0]);
+		expect(res.status).toBe(200);
+		const tier = (getDatabase().prepare('SELECT tier FROM user WHERE id = ?').get(STRIPE_USER) as { tier: string }).tier;
+		expect(tier).toBe('pro');
+	});
+
 	it('downgrades user on customer.subscription.deleted', async () => {
 		getDatabase()
 			.prepare('UPDATE user SET tier = ?, stripe_subscription_id = ? WHERE id = ?')

@@ -14,7 +14,6 @@
 	},
 	"exclude": [
 		"node_modules/**",
-		"tests/**",
 		"src/service-worker/**",
 		"src/service-worker.js",
 		"src/service-worker.ts"

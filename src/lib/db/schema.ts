@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS user (
   email_verified_at TEXT,
   timezone TEXT DEFAULT 'Europe/London',
   timezone_migrated_at TEXT,
+  last_login_at TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -224,6 +225,7 @@ CREATE TABLE IF NOT EXISTS usage_month (
   month TEXT NOT NULL,
   callback_inputs INTEGER NOT NULL DEFAULT 0,
   import_operations INTEGER NOT NULL DEFAULT 0,
+  post_sends_override INTEGER,
   PRIMARY KEY (account_id, month)
 );
 CREATE INDEX IF NOT EXISTS idx_usage_month_account ON usage_month(account_id);
@@ -238,4 +240,11 @@ CREATE TABLE IF NOT EXISTS email_quota_carryover_month (
   PRIMARY KEY (email_norm, month)
 );
 CREATE INDEX IF NOT EXISTS idx_email_quota_carryover_email ON email_quota_carryover_month(email_norm);
+
+-- Single-tenant app config (e.g. admin Stripe mode override)
+CREATE TABLE IF NOT EXISTS app_setting (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT DEFAULT (datetime('now'))
+);
 `;

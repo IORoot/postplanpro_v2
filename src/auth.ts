@@ -371,7 +371,20 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 				console.error('[auth][signIn] denied: missing account.provider', { hasAccount: !!account });
 				return false;
 			}
-			if (account.provider === 'credentials') return true;
+			function touchLastLogin(userId: string | undefined) {
+				if (!userId) return;
+				try {
+					getDatabase()
+						.prepare("UPDATE user SET last_login_at = datetime('now') WHERE id = ?")
+						.run(userId);
+				} catch (e) {
+					console.error('[auth][signIn] last_login_at update failed:', e);
+				}
+			}
+			if (account.provider === 'credentials') {
+				touchLastLogin((user as { id?: string } | undefined)?.id);
+				return true;
+			}
 			if (account.providerAccountId == null || account.providerAccountId === '') {
 				console.error('[auth][signIn] denied: missing providerAccountId', {
 					provider: account.provider,
@@ -388,6 +401,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 					image: user?.image
 				});
 				if (user) (user as { id?: string }).id = userId;
+				touchLastLogin(userId);
 			} catch (e) {
 				console.error('[auth][signIn] ensureOAuthUser failed:', e instanceof Error ? e.stack : e);
 				throw e;

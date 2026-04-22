@@ -344,6 +344,27 @@
 		{#if $page.data.session}
 			<div class="border-t border-[var(--sidebar-border)] p-3">
 				<div class="px-3">
+					{#if userTier === 'free'}
+						<div class="mb-3 rounded-lg border border-[var(--sidebar-border)] bg-[var(--sidebar-hover)]/40 p-3">
+							<p class="text-xs text-[var(--sidebar-text-muted)]">Need higher monthly limits?</p>
+							<div class="mt-2 flex items-center gap-2">
+								<a
+									href="/api/stripe/checkout"
+									class="inline-flex min-h-[36px] items-center rounded-md bg-[var(--primary)] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+									onclick={closeSidebar}
+								>
+									Upgrade to Pro
+								</a>
+								<a
+									href="/account?section=billing"
+									class="inline-flex min-h-[36px] items-center rounded-md px-2.5 py-1.5 text-xs font-medium text-[var(--sidebar-text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--sidebar-text)]"
+									onclick={closeSidebar}
+								>
+									View usage
+								</a>
+							</div>
+						</div>
+					{/if}
 					<a
 						href="/account"
 						class="flex items-center gap-2 rounded-lg py-1 pr-2 -ml-2 pl-2 transition-[background-color,color] [transition-duration:var(--motion-snappy)] [transition-timing-function:var(--ease-out-quart)] hover:bg-[var(--sidebar-hover)]"
