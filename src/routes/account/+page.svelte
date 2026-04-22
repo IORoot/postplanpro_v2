@@ -551,6 +551,25 @@
 							</dd>
 						</div>
 					</dl>
+					{#if data.tier === 'free'}
+						<div class="mt-4 rounded-lg border border-[var(--border)] bg-[var(--surface-hover)]/50 p-4">
+							<p class="text-sm text-[var(--text)]">Free plan limits reached faster? Upgrade to Pro for higher monthly quotas.</p>
+							<div class="mt-3 flex flex-wrap items-center gap-3">
+								<a
+									href="/api/stripe/checkout"
+									class="rounded-lg border border-[var(--primary)] bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 min-h-[44px]"
+								>
+									Upgrade to Pro (£5/month)
+								</a>
+								<a
+									href="/account?section=billing"
+									class="text-sm text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text)]"
+								>
+									See full billing options
+								</a>
+							</div>
+						</div>
+					{/if}
 				</section>
 
 				<section class="content-card rounded-xl p-6 shadow-sm">
@@ -569,7 +588,7 @@
 						</a>
 					{:else if data.tier === 'enterprise'}
 						<p class="mt-4 text-sm text-[var(--text)]">Enterprise – contact for billing.</p>
-					{:else}
+					{:else if data.tier === 'free'}
 						<p class="mt-4 text-sm text-[var(--text-muted)]">
 							You're on the Free plan. Upgrade for more posts, callback inputs, and imports.
 						</p>
@@ -582,6 +601,10 @@
 							</a>
 							<span class="text-sm text-[var(--text-muted)]">or contact us for Enterprise.</span>
 						</div>
+					{:else if data.tier === 'blocked'}
+						<p class="mt-4 text-sm text-[var(--text-muted)]">
+							Your account is blocked. Please contact support if you think this is a mistake.
+						</p>
 					{/if}
 				</section>
 			</div>

@@ -33,6 +33,25 @@ export const POST: RequestHandler = async ({ request }) => {
 				'UPDATE user SET tier = ?, stripe_customer_id = ?, stripe_subscription_id = ? WHERE id = ?'
 			).run('pro', customerId, subscriptionId, userId);
 		}
+	} else if (event.type === 'customer.subscription.created') {
+		const subscription = event.data.object as Stripe.Subscription;
+		const customerId =
+			typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id;
+		if (customerId) {
+			db.prepare(
+				'UPDATE user SET tier = ?, stripe_subscription_id = ? WHERE stripe_customer_id = ?'
+			).run('pro', subscription.id, customerId);
+		}
+	} else if (event.type === 'customer.subscription.paused') {
+		const subscription = event.data.object as Stripe.Subscription;
+		db.prepare(
+			"UPDATE user SET tier = 'free' WHERE stripe_subscription_id = ?"
+		).run(subscription.id);
+	} else if (event.type === 'customer.subscription.resumed') {
+		const subscription = event.data.object as Stripe.Subscription;
+		db.prepare(
+			"UPDATE user SET tier = 'pro' WHERE stripe_subscription_id = ?"
+		).run(subscription.id);
 	} else if (event.type === 'customer.subscription.deleted' || event.type === 'customer.subscription.updated') {
 		const subscription = event.data.object as Stripe.Subscription;
 		if (event.type === 'customer.subscription.updated' && subscription.status !== 'canceled' && subscription.status !== 'unpaid') {

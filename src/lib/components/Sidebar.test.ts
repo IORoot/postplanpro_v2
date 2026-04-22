@@ -14,6 +14,7 @@ vi.mock('$app/stores', () => ({
 						imports: { used: 3, limit: 100 },
 						callbacks: { used: 1, limit: 100 }
 					},
+					userTier: 'free',
 					session: { user: { name: 'Test', email: 'test@test.com' } }
 				},
 				url: { pathname: '/calendar' }
@@ -49,5 +50,11 @@ describe('Sidebar', () => {
 		expect(billing.textContent).toMatch(/posts/);
 		expect(billing.textContent).toMatch(/imports/);
 		expect(billing.textContent).toMatch(/callbacks/);
+	});
+
+	it('renders free-tier upgrade CTA above profile', () => {
+		render(Sidebar);
+		expect(screen.getByRole('link', { name: 'Upgrade to Pro' })).toHaveAttribute('href', '/api/stripe/checkout');
+		expect(screen.getByRole('link', { name: 'View usage' })).toHaveAttribute('href', '/account?section=billing');
 	});
 });
