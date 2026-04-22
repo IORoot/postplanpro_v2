@@ -182,6 +182,16 @@ function getDb(): Database.Database {
 		} catch {
 			// Column already exists
 		}
+		try {
+			db.exec('ALTER TABLE user ADD COLUMN last_login_at TEXT');
+		} catch {
+			// Column already exists
+		}
+		try {
+			db.exec('ALTER TABLE usage_month ADD COLUMN post_sends_override INTEGER');
+		} catch {
+			// Column already exists
+		}
 		// Backfill tier once: when tier exists but some users have null/empty, set first user admin, rest free
 		try {
 			const userCols = db.prepare('PRAGMA table_info(user)').all() as { name: string }[];

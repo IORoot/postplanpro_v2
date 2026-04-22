@@ -52,13 +52,37 @@ function countSuccessfulSendLogRowsForMonth(db: Database, accountId: string, mon
 	).n;
 }
 
+/** Per-account `usage_month` row (no email carryover). `post_sends_override` replaces send_log count for quota when set. */
+export type UsageMonthAccountRow = {
+	callback_inputs: number;
+	import_operations: number;
+	post_sends_override: number | null;
+};
+
+export function getUsageMonthAccountRow(db: Database, accountId: string, month: string): UsageMonthAccountRow {
+	const row = db
+		.prepare(
+			'SELECT callback_inputs, import_operations, post_sends_override FROM usage_month WHERE account_id = ? AND month = ?'
+		)
+		.get(accountId, month) as
+			| { callback_inputs: number; import_operations: number; post_sends_override: number | null }
+			| undefined;
+	return {
+		callback_inputs: row?.callback_inputs ?? 0,
+		import_operations: row?.import_operations ?? 0,
+		post_sends_override: row?.post_sends_override ?? null
+	};
+}
+
 /** Successful sends this month for this account plus any carryover for the account email (after prior account deletes). */
 export function getSuccessfulOutputSendCountForMonth(db: Database, accountId: string, month: string): number {
 	const fromLog = countSuccessfulSendLogRowsForMonth(db, accountId, month);
+	const acct = getUsageMonthAccountRow(db, accountId, month);
+	const fromAccount = acct.post_sends_override !== null ? acct.post_sends_override : fromLog;
 	const emailNorm = getAccountEmailNorm(db, accountId);
-	if (!emailNorm) return fromLog;
+	if (!emailNorm) return fromAccount;
 	const carry = getEmailQuotaCarryoverForMonth(db, emailNorm, month);
-	return fromLog + carry.output_sends;
+	return fromAccount + carry.output_sends;
 }
 
 /**
@@ -116,13 +140,8 @@ function getUsageMonthRowAccountOnly(
 	accountId: string,
 	month: string
 ): { callback_inputs: number; import_operations: number } {
-	const row = db
-		.prepare('SELECT callback_inputs, import_operations FROM usage_month WHERE account_id = ? AND month = ?')
-		.get(accountId, month) as { callback_inputs: number; import_operations: number } | undefined;
-	return {
-		callback_inputs: row?.callback_inputs ?? 0,
-		import_operations: row?.import_operations ?? 0
-	};
+	const r = getUsageMonthAccountRow(db, accountId, month);
+	return { callback_inputs: r.callback_inputs, import_operations: r.import_operations };
 }
 
 /**

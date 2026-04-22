@@ -93,7 +93,15 @@ export function mergeAccountUsageIntoEmailCarryover(
        import_operations = email_quota_carryover_month.import_operations + excluded.import_operations`
 	);
 	for (const month of months) {
-		const output_sends = countSuccessfulSendsInMonth(db, accountId, month);
+		const overrideRow = db
+			.prepare(
+				'SELECT post_sends_override FROM usage_month WHERE account_id = ? AND month = ?'
+			)
+			.get(accountId, month) as { post_sends_override: number | null } | undefined;
+		const output_sends =
+			overrideRow?.post_sends_override != null
+				? overrideRow.post_sends_override
+				: countSuccessfulSendsInMonth(db, accountId, month);
 		const { callback_inputs, import_operations } = getUsageMonthRowRaw(db, accountId, month);
 		if (output_sends === 0 && callback_inputs === 0 && import_operations === 0) continue;
 		upsert.run({ email_norm: emailNorm, month, output_sends, callback_inputs, import_operations });

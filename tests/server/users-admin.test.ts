@@ -4,6 +4,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { load, actions } from '../../src/routes/admin/users/+page.server.js';
 import { getDatabase } from '$lib/db/index.js';
+import { currentMonthKey } from '../../src/lib/usage.js';
 import {
 	resetTestDatabase,
 	seedAdminUser,
@@ -47,6 +48,35 @@ describe('admin/users +page.server', () => {
 		expect(r.users.length).toBe(2);
 		const emails = r.users.map((u) => u.email).sort();
 		expect(emails).toEqual(['admin@test.com', 'victim@test.com']);
+	});
+
+	it('setUsage writes usage_month and optional post override', async () => {
+		const month = currentMonthKey();
+		const res = await actions.setUsage?.({
+			request: formRequest('http://test/admin/users', {
+				user_id: VICTIM_ID,
+				month,
+				callback_inputs: '7',
+				import_operations: '3',
+				post_sends_override: '42'
+			}),
+			locals: { userId: ADMIN_USER_ID },
+			params: {},
+			...({} as never)
+		} as Parameters<NonNullable<typeof actions.setUsage>>[0]);
+		expect(res).toMatchObject({ updatedUsage: true });
+		const row = getDatabase()
+			.prepare(
+				'SELECT callback_inputs, import_operations, post_sends_override FROM usage_month WHERE account_id = ? AND month = ?'
+			)
+			.get(VICTIM_ID, month) as {
+				callback_inputs: number;
+				import_operations: number;
+				post_sends_override: number | null;
+			};
+		expect(row.callback_inputs).toBe(7);
+		expect(row.import_operations).toBe(3);
+		expect(row.post_sends_override).toBe(42);
 	});
 
 	it('removeUser deletes victim and related posts', async () => {
