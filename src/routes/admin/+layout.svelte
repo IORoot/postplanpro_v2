@@ -5,6 +5,7 @@
 
 	const links = [
 		{ href: '/admin/users', label: 'Users' },
+		{ href: '/admin/stripe', label: 'Stripe' },
 		{ href: '/admin/status', label: 'Status' }
 	] as const;
 </script>

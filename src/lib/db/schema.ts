@@ -238,4 +238,11 @@ CREATE TABLE IF NOT EXISTS email_quota_carryover_month (
   PRIMARY KEY (email_norm, month)
 );
 CREATE INDEX IF NOT EXISTS idx_email_quota_carryover_email ON email_quota_carryover_month(email_norm);
+
+-- Single-tenant app config (e.g. admin Stripe mode override)
+CREATE TABLE IF NOT EXISTS app_setting (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT DEFAULT (datetime('now'))
+);
 `;
