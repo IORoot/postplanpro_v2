@@ -7,27 +7,12 @@
 	let { data } = $props();
 
 	const QUICK_PATH_KEY = 'postplan-dismiss-dashboard-path';
-	const FAILED_POST_NOTICE_KEY = 'postplan-dismissed-failed-post-ids';
 	let showQuickPath = $state(false);
 
 	onMount(() => {
 		if (typeof localStorage === 'undefined') return;
 		if (localStorage.getItem(QUICK_PATH_KEY) === '1') return;
 		showQuickPath = true;
-	});
-
-	onMount(() => {
-		if (typeof localStorage === 'undefined') return;
-		const raw = localStorage.getItem(FAILED_POST_NOTICE_KEY);
-		if (!raw) return;
-		try {
-			const parsed = JSON.parse(raw) as unknown;
-			if (Array.isArray(parsed)) {
-				dismissedFailedPostIds = parsed.filter((v): v is string => typeof v === 'string');
-			}
-		} catch {
-			// Ignore malformed local storage data.
-		}
 	});
 
 	onMount(() => {
@@ -93,21 +78,9 @@
 		localStorage.setItem(QUICK_PATH_KEY, '1');
 		showQuickPath = false;
 	}
-
-	function dismissFailedNotice() {
-		const merged = new Set(dismissedFailedPostIds);
-		for (const post of failedUndismissedPosts) {
-			merged.add(post.id);
-		}
-		dismissedFailedPostIds = Array.from(merged);
-		if (typeof localStorage !== 'undefined') {
-			localStorage.setItem(FAILED_POST_NOTICE_KEY, JSON.stringify(dismissedFailedPostIds));
-		}
-	}
 	let sendingId = $state<string | null>(null);
 	let sendError = $state<string | null>(null);
 	let sendSuccess = $state<string | null>(null);
-	let dismissedFailedPostIds = $state<string[]>([]);
 	let dragPostId = $state<string | null>(null);
 	let reschedulePending = $state(false);
 	let dragPreviewText = $state<string | null>(null);
@@ -224,10 +197,6 @@
 	const posts = $derived(
 		[...livePosts].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
 	);
-	const failedUndismissedPosts = $derived(
-		posts.filter((p) => p.status === 'failed' && !dismissedFailedPostIds.includes(p.id))
-	);
-	const failedPostCount = $derived(failedUndismissedPosts.length);
 	const postsByDate = $derived.by(() => {
 		const byDate = new Map<string, CalendarPost[]>();
 		for (const post of posts) {
@@ -863,7 +832,7 @@
 	</div>
 </div>
 <div
-	class="fixed z-30 flex min-w-0 max-w-[71vw] gap-1 overflow-x-auto overflow-y-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 pb-1 shadow md:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+	class="fixed z-30 flex min-w-0 max-w-[65vw] gap-1 overflow-x-auto overflow-y-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 pb-2 shadow md:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 	style="right: max(1rem, env(safe-area-inset-right, 0px)); top: max(1rem, env(safe-area-inset-top, 0px));"
 >
 	{#each viewButtons as v}
@@ -885,18 +854,6 @@
 {/if}
 {#if sendSuccess}
 	<p class="rounded-lg px-3 py-2 text-sm alert-success">{sendSuccess}</p>
-{/if}
-{#if failedPostCount > 0 && !failedNoticeDismissed}
-	<div class="alert-error mt-2 flex items-start justify-between gap-3 rounded-lg px-3 py-2 text-sm">
-		<p>{failedPostCount} {failedPostCount === 1 ? 'post has' : 'posts have'} failed. Open failed post to retry or fix webhook settings.</p>
-		<button
-			type="button"
-			class="shrink-0 rounded px-2 py-1 text-xs font-medium text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
-			onclick={dismissFailedNotice}
-		>
-			Close
-		</button>
-	</div>
 {/if}
 
 {#if dragPostId && dragPreviewText != null && dragPreviewPos}
