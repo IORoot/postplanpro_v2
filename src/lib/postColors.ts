@@ -5,18 +5,18 @@ export const DEFAULT_POST_COLOR = '#fafafa';
 export const DEFAULT_MANUAL_POST_COLOR = '#f5f5f5';
 
 export const TAILWIND_POST_COLORS = [
-	'#fee2e2', // red-100
-	'#ffedd5', // orange-100
-	'#fef3c7', // amber-100
-	'#fef9c3', // yellow-100
-	'#dcfce7', // green-100
-	'#ccfbf1', // teal-100
-	'#cffafe', // cyan-100
-	'#dbeafe', // blue-100
-	'#e0e7ff', // indigo-100
-	'#ede9fe', // violet-100
-	'#f3e8ff', // purple-100
-	'#fce7f3' // pink-100
+	'#f87171', // red-400
+	'#fb923c', // orange-400
+	'#fbbf24', // amber-400
+	'#facc15', // yellow-400
+	'#4ade80', // green-400
+	'#2dd4bf', // teal-400
+	'#22d3ee', // cyan-400
+	'#60a5fa', // blue-400
+	'#818cf8', // indigo-400
+	'#a78bfa', // violet-400
+	'#c084fc', // purple-400
+	'#f472b6' // pink-400
 ] as const;
 
 const HEX_COLOR_RE = /^#([0-9a-fA-F]{6})$/;

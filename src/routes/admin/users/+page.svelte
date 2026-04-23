@@ -159,7 +159,7 @@
 			aria-modal="true"
 			aria-labelledby={modalTitleId}
 			tabindex="-1"
-			class="relative z-10 max-h-[min(92vh,800px)] w-full max-w-xl overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-xl outline-none"
+			class="relative z-10 max-h-[min(92vh,800px)] w-full max-w-4xl overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-xl outline-none"
 		>
 			<div class="mb-5 flex items-start justify-between gap-3">
 				<div class="min-w-0">
@@ -219,20 +219,49 @@
 
 			<section class="mb-6 rounded-lg border border-[var(--border)] bg-[var(--sidebar-bg)]/30 p-4">
 				<h3 class="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Plan limits (tier)</h3>
-				<p class="mt-2 text-sm text-[var(--text)]">
-					Posts / mo: <strong>{capLabel(selected.limits.posts)}</strong> · Callbacks:
-					<strong>{capLabel(selected.limits.callbacks)}</strong> · Imports:
-					<strong>{capLabel(selected.limits.imports)}</strong>
-				</p>
-				<p class="mt-3 text-sm text-[var(--text-muted)]">
-					<strong class="text-[var(--text)]">{data.usageMonthKey}</strong> usage — posts (quota):
-					<strong class="text-[var(--text)]">{selected.usage.postsTotal}</strong>
-					({selected.postSendsFromLog} from send log{#if selected.usageMonthAccount.post_sends_override != null},
-						override {selected.usageMonthAccount.post_sends_override}{/if}), queued:
-					<strong class="text-[var(--text)]">{selected.usage.postsQueued}</strong>, callbacks:
-					<strong class="text-[var(--text)]">{selected.usage.callbackInputs}</strong>, imports:
-					<strong class="text-[var(--text)]">{selected.usage.importOperations}</strong>
-				</p>
+				<div class="mt-3 grid gap-2 sm:grid-cols-3">
+					<div class="rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 px-3 py-2">
+						<p class="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Posts / month</p>
+						<p class="mt-1 text-base font-semibold text-[var(--text)]">{capLabel(selected.limits.posts)}</p>
+					</div>
+					<div class="rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 px-3 py-2">
+						<p class="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Callbacks</p>
+						<p class="mt-1 text-base font-semibold text-[var(--text)]">{capLabel(selected.limits.callbacks)}</p>
+					</div>
+					<div class="rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 px-3 py-2">
+						<p class="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">Imports</p>
+						<p class="mt-1 text-base font-semibold text-[var(--text)]">{capLabel(selected.limits.imports)}</p>
+					</div>
+				</div>
+				<div class="mt-3 rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 p-3">
+					<div class="mb-2 flex items-center justify-between gap-2">
+						<p class="text-xs font-semibold text-[var(--text)]">Usage ({data.usageMonthKey})</p>
+						<p class="text-[11px] text-[var(--text-muted)]">
+							Send log: <strong class="text-[var(--text)]">{selected.postSendsFromLog}</strong>
+							{#if selected.usageMonthAccount.post_sends_override != null}
+								<span> · Override: <strong class="text-[var(--text)]">{selected.usageMonthAccount.post_sends_override}</strong></span>
+							{/if}
+						</p>
+					</div>
+					<div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+						<div class="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2">
+							<p class="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">Posts (quota)</p>
+							<p class="mt-1 text-sm font-semibold text-[var(--text)]">{selected.usage.postsTotal}</p>
+						</div>
+						<div class="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2">
+							<p class="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">Queued</p>
+							<p class="mt-1 text-sm font-semibold text-[var(--text)]">{selected.usage.postsQueued}</p>
+						</div>
+						<div class="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2">
+							<p class="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">Callbacks</p>
+							<p class="mt-1 text-sm font-semibold text-[var(--text)]">{selected.usage.callbackInputs}</p>
+						</div>
+						<div class="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2">
+							<p class="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">Imports</p>
+							<p class="mt-1 text-sm font-semibold text-[var(--text)]">{selected.usage.importOperations}</p>
+						</div>
+					</div>
+				</div>
 			</section>
 
 			<div class="space-y-6">
@@ -272,28 +301,8 @@
 							Save tier
 						</button>
 					</form>
-					<div class="mt-3 flex flex-wrap gap-2">
-						{#if selected.tier !== 'blocked'}
-							<form
-								method="POST"
-								action="?/updateTier"
-								use:enhance={() => {
-									return async ({ result, update }) => {
-										await update();
-										if (result.type === 'success') await resyncSelectedAfterSave();
-									};
-								}}
-							>
-								<input type="hidden" name="user_id" value={selected.id} />
-								<input type="hidden" name="tier" value="blocked" />
-								<button
-									type="submit"
-									class="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-500/15 dark:text-red-300"
-								>
-									Disable account
-								</button>
-							</form>
-						{:else}
+					{#if selected.tier === 'blocked'}
+						<div class="mt-3 flex flex-wrap gap-2">
 							<form
 								method="POST"
 								action="?/updateTier"
@@ -313,8 +322,8 @@
 									Enable account (free tier)
 								</button>
 							</form>
-						{/if}
-					</div>
+						</div>
+					{/if}
 				</section>
 
 				<section>
@@ -338,7 +347,7 @@
 					>
 						<input type="hidden" name="user_id" value={selected.id} />
 						<input type="hidden" name="month" value={data.usageMonthKey} />
-						<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+						<div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
 							<div>
 								<label for="usage-cb" class="mb-1 block text-xs font-medium text-[var(--text-muted)]"
 									>Callback inputs (stored)</label
@@ -367,21 +376,21 @@
 									class="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
 								/>
 							</div>
-						</div>
-						<div>
-							<label for="usage-post" class="mb-1 block text-xs font-medium text-[var(--text-muted)]"
-								>Post sends for quota (optional)</label
-							>
-							<input
-								id="usage-post"
-								name="post_sends_override"
-								type="text"
-								inputmode="numeric"
-								autocomplete="off"
-								bind:value={usagePostOverride}
-								placeholder="Blank = {selected.postSendsFromLog} from send log this month"
-								class="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 font-mono text-sm text-[var(--text)] tabular-nums"
-							/>
+							<div>
+								<label for="usage-post" class="mb-1 block text-xs font-medium text-[var(--text-muted)]"
+									>Post sends for quota (optional)</label
+								>
+								<input
+									id="usage-post"
+									name="post_sends_override"
+									type="text"
+									inputmode="numeric"
+									autocomplete="off"
+									bind:value={usagePostOverride}
+									placeholder="Blank = {selected.postSendsFromLog} from send log this month"
+									class="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 font-mono text-sm text-[var(--text)] tabular-nums"
+								/>
+							</div>
 						</div>
 						<button
 							type="submit"
