@@ -306,7 +306,7 @@ export function closeDatabaseForTesting(): void {
 	}
 }
 
-export type WebhookConfig = {
+type WebhookConfig = {
 	id: string;
 	account_id: string;
 	name: string;
@@ -315,7 +315,7 @@ export type WebhookConfig = {
 	api_key: string | null;
 };
 
-export type GlobalVariable = {
+type GlobalVariable = {
 	id: string;
 	account_id: string;
 	key: string;
@@ -323,7 +323,7 @@ export type GlobalVariable = {
 	type: string;
 };
 
-export type Schedule = {
+type Schedule = {
 	id: string;
 	account_id: string;
 	name: string;
@@ -331,14 +331,14 @@ export type Schedule = {
 	created_at: string;
 };
 
-export type ScheduleSlot = {
+type ScheduleSlot = {
 	id: string;
 	schedule_id: string;
 	scheduled_at: string;
 	order_index: number;
 };
 
-export type ScheduleRule = {
+type ScheduleRule = {
 	id: string;
 	schedule_id: string;
 	type: 'cron' | 'weekly' | 'daily' | 'monthly' | 'yearly' | 'interval' | 'once';
@@ -348,7 +348,7 @@ export type ScheduleRule = {
 	order_index: number;
 };
 
-export type ScheduleField = {
+type ScheduleField = {
 	id: string;
 	schedule_id: string;
 	key: string;
@@ -356,7 +356,7 @@ export type ScheduleField = {
 	value: string | null;
 };
 
-export type Post = {
+type Post = {
 	id: string;
 	account_id: string;
 	webhook_id: string | null;
@@ -374,7 +374,7 @@ export type Post = {
 	updated_at: string;
 };
 
-export type PostField = {
+type PostField = {
 	id: string;
 	post_id: string;
 	key: string;
@@ -382,4 +382,3 @@ export type PostField = {
 	value: string | null;
 };
 
-export { schema };

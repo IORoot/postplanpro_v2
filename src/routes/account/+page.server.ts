@@ -1,6 +1,5 @@
 import { getDatabase } from '$lib/db/index.js';
 import {
-	DEFAULT_TIMEZONE,
 	ensureValidTimeZone,
 	isNaiveScheduledAt,
 	isValidTimeZone,

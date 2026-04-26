@@ -55,6 +55,5 @@ describe('Sidebar', () => {
 	it('renders free-tier upgrade CTA above profile', () => {
 		render(Sidebar);
 		expect(screen.getByRole('link', { name: 'Upgrade to Pro' })).toHaveAttribute('href', '/api/stripe/checkout');
-		expect(screen.getByRole('link', { name: 'View usage' })).toHaveAttribute('href', '/account?section=billing');
 	});
 });

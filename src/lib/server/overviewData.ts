@@ -8,7 +8,7 @@ function sqliteIso(value: Date): string {
 	return value.toISOString().slice(0, 19);
 }
 
-export type OverviewStats = {
+type OverviewStats = {
 	totalPosts: number;
 	draft: number;
 	scheduled: number;
@@ -18,7 +18,7 @@ export type OverviewStats = {
 	webhookCount: number;
 };
 
-export type UpcomingPostRow = {
+type UpcomingPostRow = {
 	id: string;
 	title: string;
 	scheduled_at: string;
@@ -26,27 +26,25 @@ export type UpcomingPostRow = {
 	webhook_name: string;
 };
 
-export type LastPublishedRow = {
+type LastPublishedRow = {
 	id: string;
 	title: string;
 	sent_at: string | null;
 	webhook_name: string;
 };
 
-export type FailedPostRow = {
+type FailedPostRow = {
 	id: string;
 	title: string;
 	error_message: string | null;
 	updated_at: string;
 };
 
-export type PostWithFailedStageRow = {
+type PostWithFailedStageRow = {
 	id: string;
 	title: string;
 	sent_at: string | null;
 };
-
-export type { StatsDailyPoint } from '$lib/types/statsChart.js';
 
 function pad2(n: number): string {
 	return String(n).padStart(2, '0');

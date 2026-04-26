@@ -5,11 +5,11 @@ import {
 	ACCOUNT_IMPORT_CONFIRM_PHRASE
 } from '$lib/accountBackupConstants.js';
 
-export { ACCOUNT_BACKUP_FORMAT, ACCOUNT_BACKUP_VERSION, ACCOUNT_IMPORT_CONFIRM_PHRASE };
+export { ACCOUNT_BACKUP_FORMAT, ACCOUNT_IMPORT_CONFIRM_PHRASE };
 
 const POST_STATUSES = new Set(['draft', 'scheduled', 'sent', 'failed']);
 
-export type AccountBackupUserSnapshot = {
+type AccountBackupUserSnapshot = {
 	timezone: string | null;
 	email: string | null;
 	name: string | null;
@@ -17,7 +17,7 @@ export type AccountBackupUserSnapshot = {
 	tier: string | null;
 };
 
-export type AccountBackupPayload = {
+type AccountBackupPayload = {
 	format: typeof ACCOUNT_BACKUP_FORMAT;
 	version: typeof ACCOUNT_BACKUP_VERSION;
 	exportedAt: string;
@@ -105,7 +105,7 @@ export type AccountBackupPayload = {
 	clientPreferences?: { theme?: string; showInputAnimations?: boolean };
 };
 
-export type ExportAccountDataOptions = {
+type ExportAccountDataOptions = {
 	includeSendLog?: boolean;
 };
 

@@ -20,6 +20,7 @@ export function initUiPrefs() {
 	});
 }
 
+/** @public */
 export function toggleInputAnimations() {
 	showInputAnimations.update((v) => !v);
 }

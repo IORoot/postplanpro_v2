@@ -2,7 +2,7 @@ import type { Database } from 'better-sqlite3';
 import { getTierLimits } from '$lib/tiers.js';
 import { getAccountEmailNorm, getEmailQuotaCarryoverForMonth } from '$lib/server/emailQuotaCarryover.js';
 
-export type UsageForMonth = {
+type UsageForMonth = {
 	/** Successful outbound webhook deliveries (rows in send_log with success=1). */
 	postOutputSends: number;
 	/** Posts still queued for output this calendar month (scheduled_at in month, status scheduled|failed). */
@@ -53,7 +53,7 @@ function countSuccessfulSendLogRowsForMonth(db: Database, accountId: string, mon
 }
 
 /** Per-account `usage_month` row (no email carryover). `post_sends_override` replaces send_log count for quota when set. */
-export type UsageMonthAccountRow = {
+type UsageMonthAccountRow = {
 	callback_inputs: number;
 	import_operations: number;
 	post_sends_override: number | null;
@@ -88,7 +88,7 @@ export function getSuccessfulOutputSendCountForMonth(db: Database, accountId: st
 /**
  * Posts committed to send in this calendar month but not yet completed (still scheduled or failed retry).
  */
-export function getPostsQueuedForOutputSendInMonth(db: Database, accountId: string, month: string): number {
+function getPostsQueuedForOutputSendInMonth(db: Database, accountId: string, month: string): number {
 	const { start, end } = monthRangeIso(month);
 	return (
 		db
