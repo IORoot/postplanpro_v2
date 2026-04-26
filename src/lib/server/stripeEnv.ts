@@ -1,7 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { getDatabase } from '$lib/db/index.js';
 
-export type StripeMode = 'test' | 'live';
+type StripeMode = 'test' | 'live';
 
 export const STRIPE_MODE_SETTING_KEY = 'stripe_mode' as const;
 

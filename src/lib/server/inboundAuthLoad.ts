@@ -1,7 +1,7 @@
 import { getDatabase } from '$lib/db/index.js';
 import { env } from '$env/dynamic/private';
 
-export type InboundAuthLoad = {
+type InboundAuthLoad = {
 	callbackTokenMasked: string | null;
 	callbackUrl: string | null;
 	importCallbackUrl: string | null;

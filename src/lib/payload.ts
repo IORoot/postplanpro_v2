@@ -1,4 +1,4 @@
-export type PayloadField = {
+type PayloadField = {
 	key: string;
 	type: string;
 	value: string | null;

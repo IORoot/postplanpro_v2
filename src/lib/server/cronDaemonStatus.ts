@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 
-export type CronDaemonStatus = {
+type CronDaemonStatus = {
 	running: boolean;
 	method: string;
 	detail?: string;

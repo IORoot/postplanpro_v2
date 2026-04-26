@@ -1,6 +1,6 @@
 const TZ_PARTS_FORMATTER_CACHE = new Map<string, Intl.DateTimeFormat>();
 
-export const DEFAULT_TIMEZONE = 'Europe/London';
+const DEFAULT_TIMEZONE = 'Europe/London';
 
 type ZonedParts = {
 	year: number;

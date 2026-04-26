@@ -12,6 +12,9 @@ node_modules
 .DS_Store
 Thumbs.db
 
+# cursor
+.cursor
+
 # Data
 /data
 
@@ -34,3 +37,8 @@ dependency-check-report/
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Reports
+coverage
+playwright-report
+test-results

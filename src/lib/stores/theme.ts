@@ -1,6 +1,6 @@
 import { writable, get } from 'svelte/store';
 
-export type Theme = 'light' | 'dark';
+type Theme = 'light' | 'dark';
 
 /** localStorage key for theme preference (used by backup import/export UI). */
 export const THEME_STORAGE_KEY = 'postplan-theme';

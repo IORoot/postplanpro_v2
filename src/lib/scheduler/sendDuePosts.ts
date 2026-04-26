@@ -226,7 +226,7 @@ export async function sendDuePosts(): Promise<{ sent: number; failed: number; er
 	return { sent, failed, errors };
 }
 
-export type SendPostResult =
+type SendPostResult =
 	| { success: true; responseStatus: number; responseBody: string | null }
 	| {
 			success: false;

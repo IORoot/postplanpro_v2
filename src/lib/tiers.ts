@@ -1,6 +1,6 @@
-export type Tier = 'free' | 'pro' | 'enterprise' | 'admin' | 'blocked';
+type Tier = 'free' | 'pro' | 'enterprise' | 'admin' | 'blocked';
 
-export interface TierLimits {
+interface TierLimits {
 	postsSentPerMonth: number | null; // null = unlimited
 	callbackInputsPerMonth: number | null;
 	importOperationsPerMonth: number | null;
