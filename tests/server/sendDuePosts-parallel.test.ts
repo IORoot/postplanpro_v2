@@ -54,7 +54,7 @@ describe('sendDuePosts parallel workers', () => {
 
 		// Force a known concurrency for deterministic timing assertion.
 		const prevConcurrency = process.env.SENDER_CONCURRENCY;
-		process.env.SENDER_CONCURRENCY = '25';
+		process.env.SENDER_CONCURRENCY = '50';
 		const t0 = Date.now();
 		const result = await sendDuePosts();
 		const elapsedMs = Date.now() - t0;

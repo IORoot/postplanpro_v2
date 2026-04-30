@@ -1,7 +1,9 @@
 <script lang="ts">
 	import PageSectionHeading from '$lib/components/PageSectionHeading.svelte';
+	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 
-	let { data } = $props();
+	let { data, form } = $props();
 </script>
 
 <svelte:head>
@@ -13,7 +15,95 @@
 	description="Host and scheduler hints for this server process (admin only)."
 />
 
+{#if form?.error}
+	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-error">{form.error}</p>
+{/if}
+{#if form?.senderSettingsSaved}
+	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-success">Sender settings saved.</p>
+{/if}
+{#if form?.senderSettingsCleared}
+	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-success">Sender settings reset to environment defaults.</p>
+{/if}
+
 <div class="mt-6 space-y-6">
+	<section class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 md:p-6">
+		<h2 class="text-base font-semibold text-[var(--text)]">Sender tuning</h2>
+		<p class="mt-2 text-sm text-[var(--text-muted)]">
+			These values control scheduler throughput and lock behavior. Database values override environment variables.
+		</p>
+		<form method="POST" action="?/saveSenderSettings" class="mt-4 grid gap-4 md:grid-cols-3" use:enhance={() => invalidateAll()}>
+			<div>
+				<label for="claim-batch" class="mb-1 block text-sm font-medium text-[var(--text)]">Claim batch</label>
+				<p class="mb-1 text-xs text-[var(--text-muted)]">
+					How many due posts the sender grabs from the database in one pass before it starts sending.
+				</p>
+				<input
+					id="claim-batch"
+					name="claimBatch"
+					type="number"
+					min="1"
+					max="5000"
+					required
+					value={data.senderSettings.effective.claimBatch}
+					class="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
+				/>
+			</div>
+			<div>
+				<label for="concurrency" class="mb-1 block text-sm font-medium text-[var(--text)]">Concurrency</label>
+				<p class="mb-1 text-xs text-[var(--text-muted)]">
+					How many posts can be sent at the same time.
+				</p>
+				<input
+					id="concurrency"
+					name="concurrency"
+					type="number"
+					min="1"
+					max="200"
+					required
+					value={data.senderSettings.effective.concurrency}
+					class="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
+				/>
+			</div>
+			<div>
+				<label for="lock-ttl" class="mb-1 block text-sm font-medium text-[var(--text)]">Lock TTL (ms)</label>
+				<p class="mb-1 text-xs text-[var(--text-muted)]">
+					How long a send run keeps its lock before another run is allowed to take over if it gets stuck.
+				</p>
+				<input
+					id="lock-ttl"
+					name="lockTtlMs"
+					type="number"
+					min="1000"
+					max="3600000"
+					required
+					value={data.senderSettings.effective.lockTtlMs}
+					class="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
+				/>
+			</div>
+			<div class="md:col-span-3 flex flex-wrap items-center gap-3">
+				<button type="submit" class="rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">
+					Save sender settings
+				</button>
+			</div>
+		</form>
+		<div class="mt-4 text-xs text-[var(--text-muted)]">
+			<p>
+				DB overrides:
+				claim batch <strong class="text-[var(--text)]">{data.senderSettings.dbOverrides.claimBatch ?? 'none'}</strong>,
+				concurrency <strong class="text-[var(--text)]">{data.senderSettings.dbOverrides.concurrency ?? 'none'}</strong>,
+				lock TTL <strong class="text-[var(--text)]">{data.senderSettings.dbOverrides.lockTtlMs ?? 'none'}</strong>.
+			</p>
+		</div>
+		<form method="POST" action="?/clearSenderSettings" class="mt-3" use:enhance={() => invalidateAll()}>
+			<button
+				type="submit"
+				class="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
+			>
+				Clear DB overrides (use env)
+			</button>
+		</form>
+	</section>
+
 	<section class="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 md:p-6">
 		<h2 class="text-base font-semibold text-[var(--text)]">System cron daemon</h2>
 		<p class="mt-2 text-sm text-[var(--text-muted)]">

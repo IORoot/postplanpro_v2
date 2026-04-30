@@ -6,28 +6,10 @@ import { env } from '$env/dynamic/private';
 import { utcNowIso } from '$lib/server/timezone.js';
 import { currentMonthKey, isOutputSendQuotaBlockedForMonth } from '$lib/usage.js';
 import { getTierLimits } from '$lib/tiers.js';
+import { readSenderSettingsWithFallback } from '$lib/server/senderSettings.js';
 
 const MAX_RESPONSE_BODY = 50000;
 const WEBHOOK_REQUEST_FAILED = 'Webhook request failed';
-
-const DEFAULT_CLAIM_BATCH = 500;
-const MAX_CLAIM_BATCH = 5000;
-const DEFAULT_CONCURRENCY = 25;
-const MAX_CONCURRENCY = 200;
-
-function readPositiveInt(raw: string | undefined, fallback: number, max: number): number {
-	const n = raw ? Number.parseInt(raw, 10) : NaN;
-	if (!Number.isFinite(n) || n < 1) return fallback;
-	return Math.min(n, max);
-}
-
-function getClaimBatchSize(): number {
-	return readPositiveInt(process.env.SENDER_CLAIM_BATCH, DEFAULT_CLAIM_BATCH, MAX_CLAIM_BATCH);
-}
-
-function getConcurrency(): number {
-	return readPositiveInt(process.env.SENDER_CONCURRENCY, DEFAULT_CONCURRENCY, MAX_CONCURRENCY);
-}
 
 async function runWithConcurrency<T, R>(
 	items: T[],
@@ -328,8 +310,9 @@ async function dispatchPost(
 export async function sendDuePosts(): Promise<{ sent: number; failed: number; errors: string[] }> {
 	const db = getDatabase();
 	const now = utcNowIso();
-	const claimLimit = getClaimBatchSize();
-	const concurrency = getConcurrency();
+	const senderSettings = readSenderSettingsWithFallback();
+	const claimLimit = senderSettings.claimBatch;
+	const concurrency = senderSettings.concurrency;
 
 	const updateSent = db.prepare(
 		"UPDATE post SET status = 'sent', sent_at = datetime('now'), error_message = NULL, updated_at = datetime('now') WHERE id = ?"
