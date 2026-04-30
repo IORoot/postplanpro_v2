@@ -76,7 +76,7 @@
 				type="datetime-local"
 				required
 				min={data.minStartAt}
-				value={form?.startAt ?? data.minStartAt}
+				value={data.minStartAt}
 				class="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)]"
 			/>
 			<p class="mt-1 text-xs text-[var(--text-muted)]">Timezone: {data.userTimezone}</p>
@@ -105,7 +105,6 @@
 			name="highVolumeConfirm"
 			type="text"
 			placeholder={data.constraints.highVolumeConfirmText}
-			value={form?.highVolumeConfirm ?? ''}
 			class="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 font-mono text-sm text-[var(--text)]"
 		/>
 	</div>
