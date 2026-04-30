@@ -4,39 +4,70 @@ import { ensureValidTimeZone } from '$lib/server/timezone.js';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
+const VALID_PAGE_SIZES = [20, 50, 100, 200] as const;
+type PageSize = (typeof VALID_PAGE_SIZES)[number];
+
+function parsePageSize(raw: string | null): PageSize {
+	const n = Number(raw);
+	return (VALID_PAGE_SIZES.includes(n as PageSize) ? n : 50) as PageSize;
+}
+
+function parsePage(raw: string | null): number {
+	const n = Number(raw);
+	return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+}
+
+function buildWhereClause(
+	status: string,
+	webhookId: string,
+	scheduled: string
+): { clause: string; params: (string | number)[] } {
+	let clause = '';
+	const params: (string | number)[] = [];
+	if (status && ['draft', 'scheduled', 'sent', 'failed'].includes(status)) {
+		clause += ' AND p.status = ?';
+		params.push(status);
+	}
+	if (webhookId) {
+		clause += ' AND (p.webhook_id = ? OR EXISTS (SELECT 1 FROM post_webhook pw WHERE pw.post_id = p.id AND pw.webhook_id = ?))';
+		params.push(webhookId, webhookId);
+	}
+	if (scheduled === 'yes') {
+		clause += ' AND p.scheduled_at IS NOT NULL';
+	} else if (scheduled === 'no') {
+		clause += ' AND p.scheduled_at IS NULL';
+	}
+	return { clause, params };
+}
+
 export const load: PageServerLoad = async ({ url, locals }) => {
 	const accountId = locals.userId;
-	if (!accountId) return { posts: [], webhooks: [], schedules: [], filters: { status: '', webhookId: '', scheduled: '' } };
+	if (!accountId) return { posts: [], webhooks: [], schedules: [], filters: { status: '', webhookId: '', scheduled: '' }, page: 1, pageSize: 50 as PageSize, total: 0 };
 	const db = getDatabase();
 	const status = url.searchParams.get('status') ?? '';
 	const webhookId = url.searchParams.get('webhook') ?? '';
 	const scheduled = url.searchParams.get('scheduled') ?? ''; // 'yes' | 'no' | ''
+	const pageSize = parsePageSize(url.searchParams.get('pageSize'));
+	const page = parsePage(url.searchParams.get('page'));
+	const offset = (page - 1) * pageSize;
 
-	let sql = `
+	const { clause, params: filterParams } = buildWhereClause(status, webhookId, scheduled);
+
+	const countSql = `SELECT COUNT(*) AS total FROM post p WHERE p.account_id = ?${clause}`;
+	const { total } = db.prepare(countSql).get(accountId, ...filterParams) as { total: number };
+
+	const sql = `
 		SELECT p.id, p.webhook_id, p.schedule_id, p.title, p.content, p.image_url, p.color, p.scheduled_at, p.status, p.sent_at, p.created_at,
 			COALESCE(w.name, 'No webhook') as webhook_name,
 			CASE WHEN p.webhook_id IS NOT NULL OR EXISTS (SELECT 1 FROM post_webhook pw WHERE pw.post_id = p.id) THEN 1 ELSE 0 END as has_output_webhook
 		FROM post p
 		LEFT JOIN webhook_config w ON p.webhook_id = w.id
-		WHERE p.account_id = ?
+		WHERE p.account_id = ?${clause}
+		ORDER BY p.created_at DESC
+		LIMIT ? OFFSET ?
 	`;
-	const params: (string | number)[] = [accountId];
-	if (status && ['draft', 'scheduled', 'sent', 'failed'].includes(status)) {
-		sql += ' AND p.status = ?';
-		params.push(status);
-	}
-	if (webhookId) {
-		sql += ' AND (p.webhook_id = ? OR EXISTS (SELECT 1 FROM post_webhook pw WHERE pw.post_id = p.id AND pw.webhook_id = ?))';
-		params.push(webhookId, webhookId);
-	}
-	if (scheduled === 'yes') {
-		sql += ' AND p.scheduled_at IS NOT NULL';
-	} else if (scheduled === 'no') {
-		sql += ' AND p.scheduled_at IS NULL';
-	}
-	sql += ' ORDER BY p.created_at DESC';
 
-	const posts = db.prepare(sql).all(...params) as {
+	const posts = db.prepare(sql).all(accountId, ...filterParams, pageSize, offset) as {
 		id: string;
 		webhook_id: string | null;
 		schedule_id: string | null;
@@ -57,7 +88,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const user = db.prepare('SELECT timezone FROM user WHERE id = ?').get(accountId) as { timezone: string | null } | undefined;
 	const timezone = ensureValidTimeZone(user?.timezone);
 
-	return { posts, webhooks, schedules, timezone, filters: { status, webhookId, scheduled } };
+	return { posts, webhooks, schedules, timezone, filters: { status, webhookId, scheduled }, page, pageSize, total };
 };
 
 function getIds(formData: FormData): string[] {
@@ -129,5 +160,35 @@ export const actions: Actions = {
 		const stmt = db.prepare("UPDATE post SET webhook_id = ?, updated_at = datetime('now') WHERE id = ? AND account_id = ?");
 		for (const id of ids) stmt.run(webhookId, id, accountId);
 		return { success: true, bulkUpdated: ids.length };
+	},
+	deleteAll: async ({ request, locals }) => {
+		const accountId = locals.userId;
+		if (!accountId) return fail(401, { error: 'Unauthorized' });
+		const data = await request.formData();
+		const status = (data.get('status') as string) ?? '';
+		const webhookId = (data.get('webhookId') as string) ?? '';
+		const scheduled = (data.get('scheduled') as string) ?? '';
+
+		const db = getDatabase();
+
+		// Build WHERE with the same filter logic, but against the post table directly
+		let deleteSql = 'DELETE FROM post WHERE account_id = ?';
+		const deleteParams: (string | number)[] = [accountId];
+		if (status && ['draft', 'scheduled', 'sent', 'failed'].includes(status)) {
+			deleteSql += ' AND status = ?';
+			deleteParams.push(status);
+		}
+		if (webhookId) {
+			deleteSql += ' AND (webhook_id = ? OR EXISTS (SELECT 1 FROM post_webhook pw WHERE pw.post_id = post.id AND pw.webhook_id = ?))';
+			deleteParams.push(webhookId, webhookId);
+		}
+		if (scheduled === 'yes') {
+			deleteSql += ' AND scheduled_at IS NOT NULL';
+		} else if (scheduled === 'no') {
+			deleteSql += ' AND scheduled_at IS NULL';
+		}
+
+		const result = db.prepare(deleteSql).run(...deleteParams);
+		return { success: true, deleted: result.changes };
 	}
 };

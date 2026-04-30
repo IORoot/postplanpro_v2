@@ -73,6 +73,21 @@
 	const allSelected = $derived(filteredPosts.length > 0 && selectedIds.size === filteredPosts.length);
 	const someSelected = $derived(selectedIds.size > 0);
 
+	const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
+
+	function pageHref(p: number): string {
+		const params = new URLSearchParams();
+		if (data.filters.status) params.set('status', data.filters.status);
+		if (data.filters.webhookId) params.set('webhook', data.filters.webhookId);
+		if (data.filters.scheduled) params.set('scheduled', data.filters.scheduled);
+		params.set('pageSize', String(data.pageSize));
+		params.set('page', String(p));
+		return `/posts?${params.toString()}`;
+	}
+
+	const showingFrom = $derived((data.page - 1) * data.pageSize + 1);
+	const showingTo = $derived(Math.min(data.page * data.pageSize, data.total));
+
 	async function sendNow(postId: string) {
 		sendingId = postId;
 		sendError = null;
@@ -132,26 +147,64 @@
 		<option value="yes" selected={data.filters.scheduled === 'yes'}>Scheduled</option>
 		<option value="no" selected={data.filters.scheduled === 'no'}>Unscheduled</option>
 	</select>
+	<select name="pageSize" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] min-h-[44px] shadow-sm">
+		<option value="20" selected={data.pageSize === 20}>20 per page</option>
+		<option value="50" selected={data.pageSize === 50}>50 per page</option>
+		<option value="100" selected={data.pageSize === 100}>100 per page</option>
+		<option value="200" selected={data.pageSize === 200}>200 per page</option>
+	</select>
+	<!-- Reset to page 1 when filters change -->
+	<input type="hidden" name="page" value="1" />
 	<button type="submit" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] shadow-sm">Filter</button>
 </form>
-<div>
-	<input
-		id="posts-search"
-		type="search"
-		aria-label="Search posts"
-		placeholder="Search by title, webhook, content, or status"
-		bind:value={searchQuery}
-		class="w-full max-w-md rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] min-h-[44px] shadow-sm"
-		autocomplete="off"
-	/>
-	{#if searchQuery.trim()}
-		<p class="mt-1 text-xs text-[var(--text-muted)]">
-			{filteredPosts.length} of {data.posts.length}
-			{data.posts.length === 1 ? 'post' : 'posts'}
-			{#if filteredPosts.length !== data.posts.length}
-				<span class="text-[var(--text-muted)]"> matching your search</span>
-			{/if}
-		</p>
+<div class="flex flex-wrap items-center gap-3">
+	<div class="flex-1">
+		<input
+			id="posts-search"
+			type="search"
+			aria-label="Search posts"
+			placeholder="Search by title, webhook, content, or status"
+			bind:value={searchQuery}
+			class="w-full max-w-md rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] min-h-[44px] shadow-sm"
+			autocomplete="off"
+		/>
+		{#if searchQuery.trim()}
+			<p class="mt-1 text-xs text-[var(--text-muted)]">
+				{filteredPosts.length} of {data.posts.length} on this page match — {data.total.toLocaleString()} total
+			</p>
+		{:else if data.total > 0}
+			<p class="mt-1 text-xs text-[var(--text-muted)]">
+				Showing {showingFrom.toLocaleString()}–{showingTo.toLocaleString()} of {data.total.toLocaleString()} posts
+			</p>
+		{/if}
+	</div>
+	{#if data.total > 0}
+		<form
+			method="post"
+			action="?/deleteAll"
+			use:enhance={({ cancel }) => {
+				const filterDesc = data.filters.status || data.filters.webhookId || data.filters.scheduled
+					? 'matching the current filters'
+					: '(all posts)';
+				if (!confirm(`Permanently delete all ${data.total.toLocaleString()} posts ${filterDesc}? This cannot be undone.`)) {
+					cancel();
+					return;
+				}
+				return async ({ result }) => {
+					if (result.type === 'success') {
+						clearSelection();
+						await invalidateAll();
+					}
+				};
+			}}
+		>
+			<input type="hidden" name="status" value={data.filters.status} />
+			<input type="hidden" name="webhookId" value={data.filters.webhookId} />
+			<input type="hidden" name="scheduled" value={data.filters.scheduled} />
+			<button type="submit" class="btn-danger-outline min-h-[44px] rounded-lg px-4 py-2 text-sm font-medium">
+				Delete all {data.total.toLocaleString()}
+			</button>
+		</form>
 	{/if}
 </div>
 </div>
@@ -194,7 +247,7 @@
 
 <!-- List as cards -->
 <div class="flex flex-col gap-4">
-	{#if data.posts.length === 0}
+	{#if data.total === 0}
 		<EmptyState title="No posts yet" titleId="posts-empty-list">
 			<p>
 				Add a webhook in
@@ -202,7 +255,7 @@
 				<a href="/posts/new" class="font-medium text-[var(--primary)] hover:underline">create a post</a>
 				or
 				<a href="/inputs/webhooks" class="font-medium text-[var(--primary)] hover:underline">import</a>
-				— attach a schedule when you’re ready to send on a timer.
+				— attach a schedule when you're ready to send on a timer.
 			</p>
 		</EmptyState>
 	{:else if filteredPosts.length === 0}
@@ -221,7 +274,7 @@
 		<div class="flex items-center gap-3 pb-2">
 			<label class="flex items-center gap-2 text-sm text-[var(--text-muted)] cursor-pointer">
 				<input type="checkbox" checked={allSelected} onchange={toggleAll} class="rounded border-[var(--border)]" />
-				Select all in this list
+				Select all on this page
 			</label>
 		</div>
 		{#each filteredPosts as post}
@@ -297,4 +350,60 @@
 		{/each}
 	{/if}
 </div>
+
+<!-- Pagination bar -->
+{#if totalPages > 1}
+	<div class="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-4">
+		<p class="text-sm text-[var(--text-muted)]">
+			Page {data.page} of {totalPages.toLocaleString()}
+		</p>
+		<div class="flex items-center gap-1">
+			{#if data.page > 1}
+				<a
+					href={pageHref(1)}
+					class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center"
+					aria-label="First page"
+				>«</a>
+				<a
+					href={pageHref(data.page - 1)}
+					class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center"
+				>Prev</a>
+			{:else}
+				<span class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-muted)] opacity-40 min-h-[44px] inline-flex items-center">«</span>
+				<span class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-muted)] opacity-40 min-h-[44px] inline-flex items-center">Prev</span>
+			{/if}
+
+			{#each Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+				// Show pages around current; clamp to valid range
+				const half = 3;
+				let start = Math.max(1, Math.min(data.page - half, totalPages - 6));
+				return start + i;
+			}).filter(p => p >= 1 && p <= totalPages) as p}
+				{#if p === data.page}
+					<span class="rounded-lg bg-[var(--primary)] px-3 py-2 text-sm font-medium text-white min-h-[44px] inline-flex items-center">{p}</span>
+				{:else}
+					<a
+						href={pageHref(p)}
+						class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center"
+					>{p}</a>
+				{/if}
+			{/each}
+
+			{#if data.page < totalPages}
+				<a
+					href={pageHref(data.page + 1)}
+					class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center"
+				>Next</a>
+				<a
+					href={pageHref(totalPages)}
+					class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center"
+					aria-label="Last page"
+				>»</a>
+			{:else}
+				<span class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-muted)] opacity-40 min-h-[44px] inline-flex items-center">Next</span>
+				<span class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-muted)] opacity-40 min-h-[44px] inline-flex items-center">»</span>
+			{/if}
+		</div>
+	</div>
+{/if}
 </div>
