@@ -1,8 +1,7 @@
 import { getDatabase } from '$lib/db/index.js';
+import { readSenderSettingsWithFallback } from '$lib/server/senderSettings.js';
 
 const LOCK_KEY = 'cron:send_due_posts:lock';
-const DEFAULT_TTL_MS = 120_000;
-
 let inProcessHeld = false;
 
 type LockRecord = {
@@ -12,10 +11,7 @@ type LockRecord = {
 };
 
 function readTtlMs(): number {
-	const raw = process.env.SENDER_LOCK_TTL_MS;
-	const n = raw ? Number.parseInt(raw, 10) : NaN;
-	if (!Number.isFinite(n) || n < 1_000) return DEFAULT_TTL_MS;
-	return n;
+	return readSenderSettingsWithFallback().lockTtlMs;
 }
 
 function parseLockRecord(value: string | null | undefined): LockRecord | null {
