@@ -13,6 +13,63 @@ function resolveDbPath(): string {
 	return fromEnv && fromEnv.length > 0 ? fromEnv : path.join(process.cwd(), 'data', 'postplan.db');
 }
 
+/** Rebuild post so status CHECK includes 'sending' when older DBs are missing it. Idempotent. */
+function migratePostStatusAllowSending(database: Database.Database) {
+	const sqlRow = database
+		.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='post'")
+		.get() as { sql: string } | undefined;
+	if (!sqlRow?.sql) return;
+	if (sqlRow.sql.includes("'sending'")) return;
+
+	database.pragma('foreign_keys = OFF');
+	database.exec('BEGIN');
+	try {
+		database.exec('DROP TABLE IF EXISTS post__status_mig');
+		database.exec(`CREATE TABLE post__status_mig (
+			id TEXT PRIMARY KEY,
+			account_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+			webhook_id TEXT REFERENCES webhook_config(id),
+			schedule_id TEXT REFERENCES schedule(id),
+			title TEXT NOT NULL,
+			content TEXT,
+			image_url TEXT,
+			color TEXT,
+			payload_override TEXT,
+			scheduled_at TEXT,
+			status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'sending', 'sent', 'failed')),
+			sent_at TEXT,
+			error_message TEXT,
+			import_source_id TEXT,
+			created_at TEXT DEFAULT (datetime('now')),
+			updated_at TEXT DEFAULT (datetime('now'))
+		)`);
+		database.exec(
+			`INSERT INTO post__status_mig SELECT id, account_id, webhook_id, schedule_id, title, content, image_url, color, payload_override, scheduled_at, status, sent_at, error_message, import_source_id, created_at, updated_at FROM post`
+		);
+		database.exec('DROP TABLE post');
+		database.exec('ALTER TABLE post__status_mig RENAME TO post');
+		const postIdx = [
+			'CREATE INDEX IF NOT EXISTS idx_post_webhook ON post(webhook_id)',
+			'CREATE INDEX IF NOT EXISTS idx_post_scheduled_at ON post(scheduled_at)',
+			'CREATE INDEX IF NOT EXISTS idx_post_status ON post(status)',
+			'CREATE INDEX IF NOT EXISTS idx_post_import_source ON post(account_id, import_source_id)',
+			'CREATE INDEX IF NOT EXISTS idx_post_account ON post(account_id)',
+			'CREATE INDEX IF NOT EXISTS idx_post_account_scheduled_at ON post(account_id, scheduled_at)'
+		];
+		for (const sql of postIdx) database.exec(sql);
+		database.exec('COMMIT');
+	} catch (e) {
+		try {
+			database.exec('ROLLBACK');
+		} catch {
+			/* ignore */
+		}
+		throw e;
+	} finally {
+		database.pragma('foreign_keys = ON');
+	}
+}
+
 /** Rebuild post + post_webhook so post.webhook_id can be NULL (imports without destination webhook). */
 function migratePostWebhookIdNullable(database: Database.Database) {
 	const cols = database.prepare('PRAGMA table_info(post)').all() as { name: string; notnull: number }[];
@@ -38,7 +95,7 @@ function migratePostWebhookIdNullable(database: Database.Database) {
 			color TEXT,
 			payload_override TEXT,
 			scheduled_at TEXT,
-			status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'sent', 'failed')),
+			status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'sending', 'sent', 'failed')),
 			sent_at TEXT,
 			error_message TEXT,
 			import_source_id TEXT,
@@ -258,6 +315,19 @@ function getDb(): Database.Database {
 			console.error('[db] migratePostWebhookIdNullable failed:', e);
 			throw e;
 		}
+		try {
+			migratePostStatusAllowSending(db);
+		} catch (e) {
+			console.error('[db] migratePostStatusAllowSending failed:', e);
+			throw e;
+		}
+		try {
+			db.prepare(
+				"UPDATE post SET status = 'scheduled', updated_at = datetime('now') WHERE status = 'sending'"
+			).run();
+		} catch {
+			// ignore
+		}
 
 		// Seed immutable default custom-field template if missing.
 		const hasDefaultInstagramTemplate = db
@@ -367,7 +437,7 @@ type Post = {
 	color: string | null;
 	payload_override: string | null;
 	scheduled_at: string | null;
-	status: 'draft' | 'scheduled' | 'sent' | 'failed';
+	status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';
 	sent_at: string | null;
 	error_message: string | null;
 	created_at: string;

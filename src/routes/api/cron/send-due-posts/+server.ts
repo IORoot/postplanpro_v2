@@ -1,5 +1,6 @@
 import { env } from '$env/dynamic/private';
 import { sendDuePosts } from '$lib/scheduler/sendDuePosts.js';
+import { tryAcquireSendLock } from '$lib/scheduler/cronLock.js';
 import { json } from '@sveltejs/kit';
 import { timingSafeEqual } from 'node:crypto';
 import type { RequestHandler } from './$types';
@@ -22,6 +23,14 @@ export const GET: RequestHandler = async ({ request }) => {
 	if (!CRON_SECRET || !headerSecret || !secretsMatch(headerSecret, CRON_SECRET)) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
-	const result = await sendDuePosts();
-	return json(result);
+	const lock = tryAcquireSendLock();
+	if (!lock.ok) {
+		return json({ skipped: true, reason: lock.reason });
+	}
+	try {
+		const result = await sendDuePosts();
+		return json(result);
+	} finally {
+		lock.handle.release();
+	}
 };
