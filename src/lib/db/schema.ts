@@ -155,7 +155,7 @@ CREATE TABLE IF NOT EXISTS post (
   color TEXT,
   payload_override TEXT,
   scheduled_at TEXT,
-  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'sent', 'failed')),
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'sending', 'sent', 'failed')),
   sent_at TEXT,
   error_message TEXT,
   import_source_id TEXT,

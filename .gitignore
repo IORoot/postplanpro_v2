@@ -42,3 +42,4 @@ vite.config.ts.timestamp-*
 coverage
 playwright-report
 test-results
+loadtest_results

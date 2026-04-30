@@ -1,4 +1,5 @@
 import { sendDuePosts } from '$lib/scheduler/sendDuePosts.js';
+import { tryAcquireSendLock } from '$lib/scheduler/cronLock.js';
 
 let started = false;
 
@@ -16,12 +17,18 @@ export function startInternalCronIfEnabled(): void {
 	if (v !== '1' && v !== 'true') return;
 	started = true;
 	const intervalMs = parseIntervalMs();
-	const run = () => {
-		void sendDuePosts().catch((err) => {
+	const run = async () => {
+		const lock = tryAcquireSendLock();
+		if (!lock.ok) return;
+		try {
+			await sendDuePosts();
+		} catch (err) {
 			console.error('[cron] sendDuePosts failed:', err instanceof Error ? err.message : err);
-		});
+		} finally {
+			lock.handle.release();
+		}
 	};
-	run();
-	setInterval(run, intervalMs);
+	void run();
+	setInterval(() => void run(), intervalMs);
 	console.log(`[cron] internal scheduler enabled (every ${intervalMs}ms)`);
 }
