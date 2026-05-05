@@ -9,10 +9,10 @@ UI_ITERATIONS="${UI_ITERATIONS:-3}"
 PLAYWRIGHT_LOAD_WORKERS="${PLAYWRIGHT_LOAD_WORKERS:-12}"
 
 # Production app images may not ship Playwright tests/config.
-# Copy required files into the running container before executing.
-docker exec "${APP_C}" sh -lc "mkdir -p /app/tests/e2e"
+# Copy required files into running container before executing.
+docker exec "${APP_C}" sh -lc "mkdir -p /app/tests"
 docker cp "${REPO_ROOT}/playwright.config.ts" "${APP_C}:/app/playwright.config.ts"
-docker cp "${REPO_ROOT}/tests/e2e/." "${APP_C}:/app/tests/e2e/"
+docker cp "${REPO_ROOT}/tests/." "${APP_C}:/app/tests/"
 
 docker exec \
   -e PLAYWRIGHT_LOAD_MODE=1 \
