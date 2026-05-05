@@ -84,6 +84,30 @@ export TARGET_URL="http://${LISTENER_HOST}:${LISTENER_PORT}/webhook"
 export BASE_URL="https://postplanpro.com"
 ```
 
+### 0b) Shortcut scripts (recommended)
+
+Instead of long commands, run:
+
+```bash
+./scripts/load/test-load-seed.sh
+./scripts/load/test-load-k6-posting.sh
+./scripts/load/test-load-ui-pw.sh
+./scripts/load/test-load-k6-ui.sh
+./scripts/load/test-load-summary.sh
+./scripts/load/test-load-cleanup.sh
+```
+
+All scripts read env vars from step 0. Useful overrides:
+
+```bash
+USERS=200 POSTS_PER_USER=10 ./scripts/load/test-load-seed.sh
+VUS=2000 RUN_TO_COMPLETION=1 ./scripts/load/test-load-k6-posting.sh
+UI_USERS=50 PLAYWRIGHT_LOAD_WORKERS=8 ./scripts/load/test-load-ui-pw.sh
+VUS=10000 DURATION=3m ./scripts/load/test-load-k6-ui.sh
+POST_THROUGHPUT_MIN_RPS=250 ./scripts/load/test-load-summary.sh
+./scripts/load/test-load-cleanup.sh --dry-run
+```
+
 ### 1) Receiver machine: install + run listener
 
 SSH into receiver machine:
