@@ -5,7 +5,7 @@ import { ensureValidTimeZone, localDateTimeToUtcIso } from '$lib/server/timezone
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-const MAX_POST_COUNT = 5000;
+const MAX_POST_COUNT = 100000;
 const HIGH_VOLUME_CONFIRM_THRESHOLD = 1000;
 const MIN_START_OFFSET_MS = 60_000;
 const MAX_INTERVAL_SECONDS = 3600;

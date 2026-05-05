@@ -414,6 +414,36 @@
 						</div>
 					</div>
 				{/each}
+
+				{#if (data.logsTotalPages ?? 1) > 1}
+					<div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+						<p class="text-sm text-[var(--text-muted)]">
+							Page {data.logsPage} of {data.logsTotalPages}
+							<span class="mx-1">·</span>
+							{data.logsTotal} total logs
+						</p>
+						<div class="flex items-center gap-2">
+							<a
+								href={`/reports?report=logs&page=${Math.max(1, (data.logsPage ?? 1) - 1)}`}
+								aria-disabled={(data.logsPage ?? 1) <= 1}
+								class="inline-flex min-h-[36px] items-center rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium transition-colors {(data.logsPage ?? 1) <= 1
+									? 'pointer-events-none cursor-not-allowed opacity-50'
+									: 'hover:bg-[var(--surface-hover)]'}"
+							>
+								← Prev
+							</a>
+							<a
+								href={`/reports?report=logs&page=${Math.min((data.logsTotalPages ?? 1), (data.logsPage ?? 1) + 1)}`}
+								aria-disabled={(data.logsPage ?? 1) >= (data.logsTotalPages ?? 1)}
+								class="inline-flex min-h-[36px] items-center rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium transition-colors {(data.logsPage ?? 1) >= (data.logsTotalPages ?? 1)
+									? 'pointer-events-none cursor-not-allowed opacity-50'
+									: 'hover:bg-[var(--surface-hover)]'}"
+							>
+								Next →
+							</a>
+						</div>
+					</div>
+				{/if}
 			{/if}
 		{:else}
 			<!-- Callback stages (reportType === 'callback-stages') -->
@@ -424,7 +454,7 @@
 
 			<form method="GET" action="/reports" class="content-card rounded-xl border border-[var(--border)] p-4">
 				<input type="hidden" name="report" value="callback-stages" />
-				<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+				<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
 					<div>
 						<label for="filterTitle" class="mb-1 block text-xs font-medium text-[var(--text-muted)]">Post title</label>
 						<input
@@ -464,6 +494,19 @@
 						<button type="submit" class="btn-primary btn-touch">Apply filters</button>
 						<a href="/reports?report=callback-stages" class="rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] inline-flex items-center">Reset</a>
 					</div>
+					<div>
+						<label for="cbPageSize" class="mb-1 block text-xs font-medium text-[var(--text-muted)]">Rows per page</label>
+						<select
+							id="cbPageSize"
+							name="pageSize"
+							class="w-full rounded border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
+						>
+							<option value="20" selected={(data.callbackPageSize ?? 50) === 20}>20</option>
+							<option value="50" selected={(data.callbackPageSize ?? 50) === 50}>50</option>
+							<option value="100" selected={(data.callbackPageSize ?? 50) === 100}>100</option>
+							<option value="200" selected={(data.callbackPageSize ?? 50) === 200}>200</option>
+						</select>
+					</div>
 				</div>
 				<div class="mt-4 flex flex-wrap items-center gap-4">
 					<label class="flex items-center gap-2 text-sm text-[var(--text-muted)]">
@@ -491,6 +534,7 @@
 						</select>
 					</label>
 				</div>
+				<input type="hidden" name="page" value="1" />
 			</form>
 
 			{#if data.callbackStages.length === 0}
@@ -535,6 +579,35 @@
 						</table>
 					</div>
 				</div>
+				{#if (data.callbackTotalPages ?? 1) > 1}
+					<div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+						<p class="text-sm text-[var(--text-muted)]">
+							Page {data.callbackPage} of {data.callbackTotalPages}
+							<span class="mx-1">·</span>
+							{data.callbackTotal} total rows
+						</p>
+						<div class="flex items-center gap-2">
+							<a
+								href={`/reports?report=callback-stages&page=${Math.max(1, (data.callbackPage ?? 1) - 1)}&pageSize=${data.callbackPageSize ?? 50}&orderBy=${encodeURIComponent(data.callbackOrderBy ?? 'date')}&orderDir=${encodeURIComponent(data.callbackOrderDir ?? 'desc')}&filterTitle=${encodeURIComponent(data.callbackFilters?.title ?? '')}&filterStage=${encodeURIComponent(data.callbackFilters?.stage ?? '')}&filterStatus=${encodeURIComponent(data.callbackFilters?.status ?? '')}`}
+								aria-disabled={(data.callbackPage ?? 1) <= 1}
+								class="inline-flex min-h-[36px] items-center rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium transition-colors {(data.callbackPage ?? 1) <= 1
+									? 'pointer-events-none cursor-not-allowed opacity-50'
+									: 'hover:bg-[var(--surface-hover)]'}"
+							>
+								← Prev
+							</a>
+							<a
+								href={`/reports?report=callback-stages&page=${Math.min((data.callbackTotalPages ?? 1), (data.callbackPage ?? 1) + 1)}&pageSize=${data.callbackPageSize ?? 50}&orderBy=${encodeURIComponent(data.callbackOrderBy ?? 'date')}&orderDir=${encodeURIComponent(data.callbackOrderDir ?? 'desc')}&filterTitle=${encodeURIComponent(data.callbackFilters?.title ?? '')}&filterStage=${encodeURIComponent(data.callbackFilters?.stage ?? '')}&filterStatus=${encodeURIComponent(data.callbackFilters?.status ?? '')}`}
+								aria-disabled={(data.callbackPage ?? 1) >= (data.callbackTotalPages ?? 1)}
+								class="inline-flex min-h-[36px] items-center rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium transition-colors {(data.callbackPage ?? 1) >= (data.callbackTotalPages ?? 1)
+									? 'pointer-events-none cursor-not-allowed opacity-50'
+									: 'hover:bg-[var(--surface-hover)]'}"
+							>
+								Next →
+							</a>
+						</div>
+					</div>
+				{/if}
 			{/if}
 		{/if}
 	</main>

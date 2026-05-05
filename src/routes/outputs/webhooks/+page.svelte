@@ -12,6 +12,9 @@
 	let editingHeaders = $state<{ key: string; value: string }[]>([]);
 	let newWebhookHeaders = $state<{ key: string; value: string }[]>([]);
 	let showAnimOutputWebhooks = $state(false);
+	const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
+	const showingFrom = $derived((data.page - 1) * data.pageSize + 1);
+	const showingTo = $derived(Math.min(data.page * data.pageSize, data.total));
 
 	syncDiagramDefaultWithViewport((open) => {
 		showAnimOutputWebhooks = open;
@@ -24,6 +27,13 @@
 	function openNewWebhook() {
 		newWebhook = true;
 		newWebhookHeaders = [];
+	}
+
+	function pageHref(page: number): string {
+		const params = new URLSearchParams();
+		params.set('page', String(page));
+		params.set('pageSize', String(data.pageSize));
+		return `/outputs/webhooks?${params.toString()}`;
 	}
 </script>
 
@@ -71,6 +81,21 @@
 	{/if}
 
 	<div class="mt-4 space-y-3">
+		<form method="get" action="/outputs/webhooks" class="flex flex-wrap items-center gap-2">
+			<select name="pageSize" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] min-h-[44px] shadow-sm">
+				<option value="20" selected={data.pageSize === 20}>20 per page</option>
+				<option value="50" selected={data.pageSize === 50}>50 per page</option>
+				<option value="100" selected={data.pageSize === 100}>100 per page</option>
+				<option value="200" selected={data.pageSize === 200}>200 per page</option>
+			</select>
+			<input type="hidden" name="page" value="1" />
+			<button type="submit" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] shadow-sm">Apply</button>
+			{#if data.total > 0}
+				<p class="text-xs text-[var(--text-muted)]">
+					Showing {showingFrom.toLocaleString()}-{showingTo.toLocaleString()} of {data.total.toLocaleString()}
+				</p>
+			{/if}
+		</form>
 		{#each data.webhooks as webhook}
 			{#if editingWebhookId === webhook.id}
 				<form
@@ -302,6 +327,27 @@
 			</form>
 		{/if}
 	</div>
+	{#if totalPages > 1}
+		<div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+			<p class="text-sm text-[var(--text-muted)]">Page {data.page} of {totalPages}</p>
+			<div class="flex items-center gap-2">
+				<a
+					href={pageHref(Math.max(1, data.page - 1))}
+					aria-disabled={data.page <= 1}
+					class="inline-flex min-h-[36px] items-center rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium transition-colors {data.page <= 1
+						? 'pointer-events-none cursor-not-allowed opacity-50'
+						: 'hover:bg-[var(--surface-hover)]'}"
+				>Prev</a>
+				<a
+					href={pageHref(Math.min(totalPages, data.page + 1))}
+					aria-disabled={data.page >= totalPages}
+					class="inline-flex min-h-[36px] items-center rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium transition-colors {data.page >= totalPages
+						? 'pointer-events-none cursor-not-allowed opacity-50'
+						: 'hover:bg-[var(--surface-hover)]'}"
+				>Next</a>
+			</div>
+		</div>
+	{/if}
 	{#if !newWebhook}
 		<button
 			type="button"

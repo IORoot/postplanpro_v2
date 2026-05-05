@@ -10,6 +10,8 @@ import type { Actions, PageServerLoad } from './$types';
 
 const CALLBACK_ORDER_COLS = ['title', 'stage', 'status', 'date'] as const;
 type CallbackOrderCol = (typeof CALLBACK_ORDER_COLS)[number];
+const PAGED_SIZES = [20, 50, 100, 200] as const;
+type PageSize = (typeof PAGED_SIZES)[number];
 
 function shiftYearMonth(yearMonth: string, delta: number): string {
 	const [ys, ms] = yearMonth.split('-');
@@ -51,6 +53,17 @@ function parseReportType(url: URL): 'logs' | 'callback-stages' | 'statistics' {
 	if (r === 'callback-stages') return 'callback-stages';
 	if (r === 'statistics') return 'statistics';
 	return 'logs';
+}
+
+function parsePositiveInt(raw: string | null, fallback: number): number {
+	const n = Number(raw);
+	if (!Number.isFinite(n)) return fallback;
+	return Math.max(1, Math.floor(n));
+}
+
+function parsePageSize(raw: string | null): PageSize {
+	const n = Number(raw);
+	return (PAGED_SIZES.includes(n as PageSize) ? n : 50) as PageSize;
 }
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -113,35 +126,54 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		statsChartNextMonth = shiftYearMonth(statsChartMonth, 1);
 	}
 
+	const logsPageSize = 20;
+	let logsPage = 1;
+	let logsTotal = 0;
+	let logsTotalPages = 1;
 	const reports =
 		reportType === 'logs'
-			? (db
-					.prepare(
-						`SELECT l.id, l.post_id, l.sent_at, l.request_json, l.response_status, l.response_body, l.success,
+			? (() => {
+					logsPage = parsePositiveInt(url.searchParams.get('page'), 1);
+					const countRow = db
+						.prepare('SELECT COUNT(*) as count FROM send_log WHERE account_id = ?')
+						.get(accountId) as { count: number } | undefined;
+					logsTotal = Number(countRow?.count ?? 0);
+					logsTotalPages = Math.max(1, Math.ceil(logsTotal / logsPageSize));
+					logsPage = Math.min(logsPage, logsTotalPages);
+					const offset = (logsPage - 1) * logsPageSize;
+					return db
+						.prepare(
+							`SELECT l.id, l.post_id, l.sent_at, l.request_json, l.response_status, l.response_body, l.success,
         p.title as post_title,
         COALESCE(w.name, 'No webhook') as webhook_name
      FROM send_log l
      JOIN post p ON p.id = l.post_id
      LEFT JOIN webhook_config w ON w.id = p.webhook_id
      WHERE l.account_id = ?
-     ORDER BY l.sent_at DESC`
-					)
-					.all(accountId) as {
-					id: string;
-					post_id: string;
-					sent_at: string;
-					request_json: string;
-					response_status: number | null;
-					response_body: string | null;
-					success: number;
-					post_title: string;
-					webhook_name: string;
-				}[])
+     ORDER BY l.sent_at DESC
+     LIMIT ? OFFSET ?`
+						)
+						.all(accountId, logsPageSize, offset) as {
+						id: string;
+						post_id: string;
+						sent_at: string;
+						request_json: string;
+						response_status: number | null;
+						response_body: string | null;
+						success: number;
+						post_title: string;
+						webhook_name: string;
+					}[];
+				})()
 			: [];
 
 	let callbackStages: { post_id: string; post_title: string; stage: string; status: string; completed_at: string }[] = [];
 	let callbackOrderBy = 'date';
 	let callbackOrderDir: 'asc' | 'desc' = 'desc';
+	let callbackPage = 1;
+	let callbackPageSize: PageSize = 50;
+	let callbackTotal = 0;
+	let callbackTotalPages = 1;
 	const filterTitle = (url.searchParams.get('filterTitle') ?? '').trim();
 	const filterStage = (url.searchParams.get('filterStage') ?? '').trim();
 	const filterStatus = (url.searchParams.get('filterStatus') ?? '').trim();
@@ -152,6 +184,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		callbackOrderBy =
 			orderByParam && CALLBACK_ORDER_COLS.includes(orderByParam as CallbackOrderCol) ? orderByParam : 'date';
 		callbackOrderDir = orderDirParam === 'asc' ? 'asc' : 'desc';
+		callbackPage = parsePositiveInt(url.searchParams.get('page'), 1);
+		callbackPageSize = parsePageSize(url.searchParams.get('pageSize'));
 
 		const baseSql = `
       SELECT s.post_id, p.title as post_title, s.stage, s.status, s.completed_at
@@ -183,9 +217,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 						? 's.status'
 						: 's.completed_at';
 		const orderSql = `ORDER BY ${orderCol} ${callbackOrderDir.toUpperCase()}`;
+		const countRow = db
+			.prepare(`SELECT COUNT(*) as count FROM post_stage s JOIN post p ON p.id = s.post_id WHERE p.account_id = ?${where}`)
+			.get(...params) as { count: number } | undefined;
+		callbackTotal = Number(countRow?.count ?? 0);
+		callbackTotalPages = Math.max(1, Math.ceil(callbackTotal / callbackPageSize));
+		callbackPage = Math.min(callbackPage, callbackTotalPages);
+		const offset = (callbackPage - 1) * callbackPageSize;
 		callbackStages = db
-			.prepare(`${baseSql}${where} ${orderSql}`)
-			.all(...params) as { post_id: string; post_title: string; stage: string; status: string; completed_at: string }[];
+			.prepare(`${baseSql}${where} ${orderSql} LIMIT ? OFFSET ?`)
+			.all(...params, callbackPageSize, offset) as { post_id: string; post_title: string; stage: string; status: string; completed_at: string }[];
 	}
 
 	return {
@@ -195,12 +236,20 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		callbackStages,
 		callbackOrderBy,
 		callbackOrderDir,
+		callbackPage,
+		callbackPageSize,
+		callbackTotal,
+		callbackTotalPages,
 		callbackFilters: { title: filterTitle, stage: filterStage, status: filterStatus },
 		statsChartMonth,
 		statsChartSeries,
 		statsChartTitle,
 		statsChartPrevMonth,
 		statsChartNextMonth,
+		logsPage,
+		logsPageSize,
+		logsTotal,
+		logsTotalPages,
 		...statistics,
 		...overview
 	};
