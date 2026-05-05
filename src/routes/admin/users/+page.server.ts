@@ -11,6 +11,46 @@ import { getTierLimits } from '$lib/tiers.js';
 import type { Actions, PageServerLoad } from './$types';
 
 const VALID_TIERS = ['free', 'pro', 'enterprise', 'admin', 'blocked'] as const;
+const VALID_PAGE_SIZES = [20, 50, 100, 200] as const;
+type PageSize = (typeof VALID_PAGE_SIZES)[number];
+const SORT_FIELDS = [
+	'user',
+	'tier',
+	'joined',
+	'posts',
+	'callbacks',
+	'imports',
+	'postCount',
+	'scheduleCount',
+	'webhookCount'
+] as const;
+type SortField = (typeof SORT_FIELDS)[number];
+type SortDir = 'asc' | 'desc';
+
+function parsePageSize(raw: string | null): PageSize {
+	const n = Number(raw);
+	return (VALID_PAGE_SIZES.includes(n as PageSize) ? n : 50) as PageSize;
+}
+
+function parsePage(raw: string | null): number {
+	const n = Number(raw);
+	return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+}
+
+function parseSortField(raw: string | null): SortField {
+	return (SORT_FIELDS.includes((raw ?? '') as SortField) ? raw : 'joined') as SortField;
+}
+
+function parseSortDir(raw: string | null): SortDir {
+	return raw === 'asc' ? 'asc' : 'desc';
+}
+
+function parseNullableInt(raw: string | null): number | null {
+	if (raw == null || raw.trim() === '') return null;
+	const n = Number(raw);
+	if (!Number.isFinite(n)) return null;
+	return Math.floor(n);
+}
 
 function countSendLogSuccessForMonth(
 	db: ReturnType<typeof getDatabase>,
@@ -31,6 +71,27 @@ export const load: PageServerLoad = async (event) => {
 	requireAdmin(event);
 	const db = getDatabase();
 	const month = currentMonthKey();
+	const page = parsePage(event.url.searchParams.get('page'));
+	const pageSize = parsePageSize(event.url.searchParams.get('pageSize'));
+	const sort = parseSortField(event.url.searchParams.get('sort'));
+	const dir = parseSortDir(event.url.searchParams.get('dir'));
+	const q = (event.url.searchParams.get('q') ?? '').trim().toLowerCase();
+	const tier = (event.url.searchParams.get('tier') ?? '').trim().toLowerCase();
+	const joinedFrom = (event.url.searchParams.get('joinedFrom') ?? '').trim();
+	const joinedTo = (event.url.searchParams.get('joinedTo') ?? '').trim();
+	const postsMin = parseNullableInt(event.url.searchParams.get('postsMin'));
+	const postsMax = parseNullableInt(event.url.searchParams.get('postsMax'));
+	const callbacksMin = parseNullableInt(event.url.searchParams.get('callbacksMin'));
+	const callbacksMax = parseNullableInt(event.url.searchParams.get('callbacksMax'));
+	const importsMin = parseNullableInt(event.url.searchParams.get('importsMin'));
+	const importsMax = parseNullableInt(event.url.searchParams.get('importsMax'));
+	const postCountMin = parseNullableInt(event.url.searchParams.get('postCountMin'));
+	const postCountMax = parseNullableInt(event.url.searchParams.get('postCountMax'));
+	const scheduleCountMin = parseNullableInt(event.url.searchParams.get('scheduleCountMin'));
+	const scheduleCountMax = parseNullableInt(event.url.searchParams.get('scheduleCountMax'));
+	const webhookCountMin = parseNullableInt(event.url.searchParams.get('webhookCountMin'));
+	const webhookCountMax = parseNullableInt(event.url.searchParams.get('webhookCountMax'));
+
 	const users = db
 		.prepare(
 			`SELECT u.id, u.email, u.name, u.tier, u.created_at, u.last_login_at, u.email_verified_at, u.timezone,
@@ -77,7 +138,92 @@ export const load: PageServerLoad = async (event) => {
 			}
 		};
 	});
-	return { users: usersWithUsage, usageMonthKey: month };
+
+	const filtered = usersWithUsage.filter((u) => {
+		if (q) {
+			const haystack = [u.id, u.email ?? '', u.name ?? ''].join(' ').toLowerCase();
+			if (!haystack.includes(q)) return false;
+		}
+		if (tier && u.tier !== tier) return false;
+		if (joinedFrom && u.created_at.slice(0, 10) < joinedFrom) return false;
+		if (joinedTo && u.created_at.slice(0, 10) > joinedTo) return false;
+
+		if (postsMin != null && u.usage.postsTotal < postsMin) return false;
+		if (postsMax != null && u.usage.postsTotal > postsMax) return false;
+		if (callbacksMin != null && u.usage.callbackInputs < callbacksMin) return false;
+		if (callbacksMax != null && u.usage.callbackInputs > callbacksMax) return false;
+		if (importsMin != null && u.usage.importOperations < importsMin) return false;
+		if (importsMax != null && u.usage.importOperations > importsMax) return false;
+		if (postCountMin != null && u.post_count < postCountMin) return false;
+		if (postCountMax != null && u.post_count > postCountMax) return false;
+		if (scheduleCountMin != null && u.schedule_count < scheduleCountMin) return false;
+		if (scheduleCountMax != null && u.schedule_count > scheduleCountMax) return false;
+		if (webhookCountMin != null && u.webhook_count < webhookCountMin) return false;
+		if (webhookCountMax != null && u.webhook_count > webhookCountMax) return false;
+		return true;
+	});
+
+	filtered.sort((a, b) => {
+		const mult = dir === 'asc' ? 1 : -1;
+		switch (sort) {
+			case 'user': {
+				const av = (a.email ?? a.name ?? a.id).toLowerCase();
+				const bv = (b.email ?? b.name ?? b.id).toLowerCase();
+				return av.localeCompare(bv) * mult;
+			}
+			case 'tier':
+				return a.tier.localeCompare(b.tier) * mult;
+			case 'joined':
+				return a.created_at.localeCompare(b.created_at) * mult;
+			case 'posts':
+				return (a.usage.postsTotal - b.usage.postsTotal) * mult;
+			case 'callbacks':
+				return (a.usage.callbackInputs - b.usage.callbackInputs) * mult;
+			case 'imports':
+				return (a.usage.importOperations - b.usage.importOperations) * mult;
+			case 'postCount':
+				return (a.post_count - b.post_count) * mult;
+			case 'scheduleCount':
+				return (a.schedule_count - b.schedule_count) * mult;
+			case 'webhookCount':
+				return (a.webhook_count - b.webhook_count) * mult;
+			default:
+				return 0;
+		}
+	});
+
+	const total = filtered.length;
+	const offset = (page - 1) * pageSize;
+	const paged = filtered.slice(offset, offset + pageSize);
+
+	return {
+		users: paged,
+		usageMonthKey: month,
+		page,
+		pageSize,
+		total,
+		filters: {
+			q,
+			tier,
+			joinedFrom,
+			joinedTo,
+			postsMin,
+			postsMax,
+			callbacksMin,
+			callbacksMax,
+			importsMin,
+			importsMax,
+			postCountMin,
+			postCountMax,
+			scheduleCountMin,
+			scheduleCountMax,
+			webhookCountMin,
+			webhookCountMax,
+			sort,
+			dir
+		},
+		sortOptions: SORT_FIELDS
+	};
 };
 
 export const actions: Actions = {

@@ -7,6 +7,9 @@
 	let { data, form }: { data: PageData; form?: ActionData } = $props();
 
 	type AdminUser = PageData['users'][number];
+	const totalPages = $derived(Math.max(1, Math.ceil(data.total / data.pageSize)));
+	const showingFrom = $derived(data.total === 0 ? 0 : (data.page - 1) * data.pageSize + 1);
+	const showingTo = $derived(Math.min(data.page * data.pageSize, data.total));
 
 	let selected = $state<AdminUser | null>(null);
 	let editTier = $state('');
@@ -61,6 +64,51 @@
 		if (tier === 'enterprise') return 'bg-amber-500/15 text-amber-900 dark:text-amber-200';
 		return 'bg-[var(--surface-hover)] text-[var(--text-muted)]';
 	}
+
+	function pageHref(page: number): string {
+		const params = new URLSearchParams(baseFilterParams());
+		params.set('page', String(page));
+		return `/admin/users?${params.toString()}`;
+	}
+
+	function baseFilterParams(): URLSearchParams {
+		const params = new URLSearchParams();
+		params.set('pageSize', String(data.pageSize));
+		params.set('sort', data.filters.sort);
+		params.set('dir', data.filters.dir);
+		if (data.filters.q) params.set('q', data.filters.q);
+		if (data.filters.tier) params.set('tier', data.filters.tier);
+		if (data.filters.joinedFrom) params.set('joinedFrom', data.filters.joinedFrom);
+		if (data.filters.joinedTo) params.set('joinedTo', data.filters.joinedTo);
+		const numKeys = [
+			'postsMin',
+			'postsMax',
+			'callbacksMin',
+			'callbacksMax',
+			'importsMin',
+			'importsMax',
+			'postCountMin',
+			'postCountMax',
+			'scheduleCountMin',
+			'scheduleCountMax',
+			'webhookCountMin',
+			'webhookCountMax'
+		] as const;
+		for (const key of numKeys) {
+			const v = data.filters[key];
+			if (v !== null && v !== undefined) params.set(key, String(v));
+		}
+		return params;
+	}
+
+	function sortHref(field: string): string {
+		const params = baseFilterParams();
+		params.set('page', '1');
+		const nextDir = data.filters.sort === field && data.filters.dir === 'asc' ? 'desc' : 'asc';
+		params.set('sort', field);
+		params.set('dir', nextDir);
+		return `/admin/users?${params.toString()}`;
+	}
 </script>
 
 <svelte:window onkeydown={onModalKeydown} />
@@ -73,6 +121,87 @@
 	title="Users"
 	description="Open a user to view activity, change tier, adjust monthly usage, or remove the account."
 />
+
+<form method="get" action="/admin/users" class="mt-4 grid gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 md:grid-cols-6">
+	<input
+		name="q"
+		value={data.filters.q}
+		placeholder="Search user/email/name"
+		class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] md:col-span-2"
+	/>
+	<select
+		name="tier"
+		class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
+	>
+		<option value="" selected={data.filters.tier === ''}>All tiers</option>
+		<option value="free" selected={data.filters.tier === 'free'}>Free</option>
+		<option value="pro" selected={data.filters.tier === 'pro'}>Pro</option>
+		<option value="enterprise" selected={data.filters.tier === 'enterprise'}>Enterprise</option>
+		<option value="admin" selected={data.filters.tier === 'admin'}>Admin</option>
+		<option value="blocked" selected={data.filters.tier === 'blocked'}>Blocked</option>
+	</select>
+	<input
+		name="joinedFrom"
+		type="date"
+		value={data.filters.joinedFrom}
+		class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
+	/>
+	<input
+		name="joinedTo"
+		type="date"
+		value={data.filters.joinedTo}
+		class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
+	/>
+	<select
+		name="pageSize"
+		class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
+	>
+		<option value="20" selected={data.pageSize === 20}>20 per page</option>
+		<option value="50" selected={data.pageSize === 50}>50 per page</option>
+		<option value="100" selected={data.pageSize === 100}>100 per page</option>
+		<option value="200" selected={data.pageSize === 200}>200 per page</option>
+	</select>
+	<select name="sort" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]">
+		<option value="joined" selected={data.filters.sort === 'joined'}>Sort: Joined</option>
+		<option value="user" selected={data.filters.sort === 'user'}>Sort: User</option>
+		<option value="tier" selected={data.filters.sort === 'tier'}>Sort: Tier</option>
+		<option value="posts" selected={data.filters.sort === 'posts'}>Sort: Posts month</option>
+		<option value="callbacks" selected={data.filters.sort === 'callbacks'}>Sort: Callbacks month</option>
+		<option value="imports" selected={data.filters.sort === 'imports'}>Sort: Imports month</option>
+		<option value="postCount" selected={data.filters.sort === 'postCount'}>Sort: Post count</option>
+		<option value="scheduleCount" selected={data.filters.sort === 'scheduleCount'}>Sort: Schedule count</option>
+		<option value="webhookCount" selected={data.filters.sort === 'webhookCount'}>Sort: Webhook count</option>
+	</select>
+	<select name="dir" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]">
+		<option value="asc" selected={data.filters.dir === 'asc'}>Asc</option>
+		<option value="desc" selected={data.filters.dir === 'desc'}>Desc</option>
+	</select>
+	<input type="number" name="postsMin" min="0" value={data.filters.postsMin ?? ''} placeholder="Posts min" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" />
+	<input type="number" name="postsMax" min="0" value={data.filters.postsMax ?? ''} placeholder="Posts max" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" />
+	<input type="number" name="callbacksMin" min="0" value={data.filters.callbacksMin ?? ''} placeholder="Callbacks min" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" />
+	<input type="number" name="callbacksMax" min="0" value={data.filters.callbacksMax ?? ''} placeholder="Callbacks max" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" />
+	<input type="number" name="importsMin" min="0" value={data.filters.importsMin ?? ''} placeholder="Imports min" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" />
+	<input type="number" name="importsMax" min="0" value={data.filters.importsMax ?? ''} placeholder="Imports max" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" />
+	<input type="number" name="postCountMin" min="0" value={data.filters.postCountMin ?? ''} placeholder="Post count min" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" />
+	<input type="number" name="postCountMax" min="0" value={data.filters.postCountMax ?? ''} placeholder="Post count max" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" />
+	<input type="number" name="scheduleCountMin" min="0" value={data.filters.scheduleCountMin ?? ''} placeholder="Schedule count min" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" />
+	<input type="number" name="scheduleCountMax" min="0" value={data.filters.scheduleCountMax ?? ''} placeholder="Schedule count max" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" />
+	<input type="number" name="webhookCountMin" min="0" value={data.filters.webhookCountMin ?? ''} placeholder="Webhook count min" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" />
+	<input type="number" name="webhookCountMax" min="0" value={data.filters.webhookCountMax ?? ''} placeholder="Webhook count max" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" />
+	<input type="hidden" name="page" value="1" />
+	<button
+		type="submit"
+		class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)]"
+	>
+		Apply
+	</button>
+	<a href="/admin/users" class="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--surface-hover)]">Reset</a>
+	{#if data.total > 0}
+		<p class="text-xs text-[var(--text-muted)] md:col-span-6">
+			Showing {showingFrom.toLocaleString()}-{showingTo.toLocaleString()} of {data.total.toLocaleString()}
+		</p>
+	{/if}
+</form>
 
 {#if form?.error}
 	<p class="mt-4 rounded-lg px-3 py-2 text-sm alert-error">{form.error}</p>
@@ -92,10 +221,10 @@
 		<table class="w-full min-w-[640px] text-left text-sm">
 			<thead>
 				<tr class="border-b border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text)]">
-					<th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider">User</th>
-					<th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider">Tier</th>
-					<th class="hidden px-4 py-3 text-xs font-semibold uppercase tracking-wider sm:table-cell">Joined</th>
-					<th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider">This month</th>
+					<th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider"><a href={sortHref('user')} class="hover:underline">User</a></th>
+					<th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider"><a href={sortHref('tier')} class="hover:underline">Tier</a></th>
+					<th class="hidden px-4 py-3 text-xs font-semibold uppercase tracking-wider sm:table-cell"><a href={sortHref('joined')} class="hover:underline">Joined</a></th>
+					<th class="px-4 py-3 text-xs font-semibold uppercase tracking-wider"><a href={sortHref('posts')} class="hover:underline">This month</a></th>
 					<th class="w-10 px-2 py-3" aria-hidden="true"></th>
 				</tr>
 			</thead>
@@ -145,6 +274,28 @@
 		carryover where applicable). Optional post field in the user dialog pins send count for quota; blank uses send log.
 	</p>
 </div>
+
+{#if totalPages > 1}
+	<div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-4">
+		<p class="text-sm text-[var(--text-muted)]">Page {data.page} of {totalPages}</p>
+		<div class="flex items-center gap-2">
+			<a
+				href={pageHref(Math.max(1, data.page - 1))}
+				aria-disabled={data.page <= 1}
+				class="inline-flex min-h-[36px] items-center rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium transition-colors {data.page <= 1
+					? 'pointer-events-none cursor-not-allowed opacity-50'
+					: 'hover:bg-[var(--surface-hover)]'}"
+			>Prev</a>
+			<a
+				href={pageHref(Math.min(totalPages, data.page + 1))}
+				aria-disabled={data.page >= totalPages}
+				class="inline-flex min-h-[36px] items-center rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium transition-colors {data.page >= totalPages
+					? 'pointer-events-none cursor-not-allowed opacity-50'
+					: 'hover:bg-[var(--surface-hover)]'}"
+			>Next</a>
+		</div>
+	</div>
+{/if}
 
 {#if selected}
 	<div class="fixed inset-0 z-[100] flex items-end justify-center p-4 sm:items-center">
