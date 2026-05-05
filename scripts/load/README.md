@@ -31,15 +31,236 @@ The Playwright multi-user runner lives next to the rest of the e2e tests at
 
 | Script | What it does |
 | --- | --- |
-| `bun run load:install-deps` | Install apt + k6 deps from the manifest. Use `-- --dry-run` first. |
-| `bun run load:cleanup-deps` | Reverse the install. Requires `-- --confirm-destroy`. |
-| `bun run load:listener` | Start the receiver listener. Defaults to port 4000. |
-| `bun run load:seed` | Insert tagged users/posts into the app DB. |
-| `bun run load:cleanup` | Delete only tagged rows by `--run-id` or `--all`. |
-| `bun run load:ui:pw` | Run the Playwright multi-user UI suite. |
-| `bun run load:ui:k6` | Run the k6 high-scale UI script. |
-| `bun run load:posting:k6` | Run the k6 multi-user posting script. |
-| `bun run load:summary` | Aggregate run artifacts into `summary.json` + `summary.md`. |
+| `npm run load:install-deps` | Install apt + k6 deps from the manifest. Use `-- --dry-run` first. |
+| `npm run load:cleanup-deps` | Reverse the install. Requires `-- --confirm-destroy`. |
+| `npm run load:listener` | Start the receiver listener. Defaults to port 4000. |
+| `npm run load:seed` | Insert tagged users/posts into the app DB. |
+| `npm run load:cleanup` | Delete only tagged rows by `--run-id` or `--all`. |
+| `npm run load:ui:pw` | Run the Playwright multi-user UI suite. |
+| `npm run load:ui:k6` | Run the k6 high-scale UI script. |
+| `npm run load:posting:k6` | Run the k6 multi-user posting script. |
+| `npm run load:summary` | Aggregate run artifacts into `summary.json` + `summary.md`. |
+
+## Container-first production setup
+
+Production host may not have `bun`. This runbook assumes `node` + `npm` exist inside app container.
+
+- Run app-side scripts (`load:seed`, `load:cleanup`, `load:summary`, `load:ui:pw`) **inside app container**.
+- Run k6 either:
+  - inside app container if `k6` installed there, or
+  - on separate runner host/container with network access.
+- Run listener on receiver host (bash + python3 only).
+
+Example aliases (Docker Compose):
+
+```bash
+APP_C="postplanpro_v2-app-1"   # change to your container name
+DC="docker compose"             # or docker-compose
+
+# run npm script inside container
+$DC exec -e ALLOW_PROD_LOAD_TEST=1 -e FORCE_PROD_LOAD_TEST=1 "$APP_C" npm run load:seed -- --help
+```
+
+Example aliases (plain Docker):
+
+```bash
+APP_C="postplanpro_v2-app-1"
+docker exec -e ALLOW_PROD_LOAD_TEST=1 -e FORCE_PROD_LOAD_TEST=1 "$APP_C" npm run load:seed -- --help
+```
+
+## Exact commands (copy/paste)
+
+### 0) Set shared vars (runner shell)
+
+```bash
+export APP_C="postplanpro_v2-app-1"
+export RUN_ID="$(date -u +loadtest-%Y%m%dT%H%M%SZ-multi)"
+export APP_HOST="147.182.254.224"
+export LISTENER_HOST="188.166.156.198"
+export LISTENER_PORT="4000"
+export LISTENER_TOKEN="CHANGE_ME_STRONG_TOKEN"
+export TARGET_URL="http://${LISTENER_HOST}:${LISTENER_PORT}/webhook"
+export BASE_URL="https://postplanpro.com"
+```
+
+### 1) Receiver machine: install + run listener
+
+SSH into receiver machine:
+
+```bash
+ssh root@188.166.156.198
+```
+
+Create folder and copy listener:
+
+```bash
+mkdir -p /opt/postplanpro-load/listener
+cd /opt/postplanpro-load/listener
+```
+
+Paste `scripts/load/listener/load-test-listener-standalone.sh` into this folder, then:
+
+```bash
+chmod +x load-test-listener-standalone.sh
+```
+
+Open firewall (Ubuntu UFW example):
+
+```bash
+ufw allow ${LISTENER_PORT}/tcp
+ufw status
+```
+
+Start listener (exact command):
+
+```bash
+HOST=0.0.0.0 \
+PORT=${LISTENER_PORT} \
+LOG_DIR=/var/log/postplanpro-load \
+ROLLUP_WINDOW_SECONDS=10 \
+AUTH_TOKEN=${LISTENER_TOKEN} \
+./load-test-listener-standalone.sh
+```
+
+Run listener in background with log file (optional):
+
+```bash
+nohup env HOST=0.0.0.0 PORT=${LISTENER_PORT} LOG_DIR=/var/log/postplanpro-load ROLLUP_WINDOW_SECONDS=10 AUTH_TOKEN=${LISTENER_TOKEN} \
+  ./load-test-listener-standalone.sh > /var/log/postplanpro-load/listener.out 2>&1 &
+echo $! > /var/run/postplanpro-load-listener.pid
+```
+
+Health checks:
+
+```bash
+curl -fsS "http://127.0.0.1:${LISTENER_PORT}/healthz"
+curl -fsS "http://127.0.0.1:${LISTENER_PORT}/metrics" | head -n 20
+```
+
+Stop background listener:
+
+```bash
+kill "$(cat /var/run/postplanpro-load-listener.pid)"
+```
+
+### 2) Runner machine: verify app container tools
+
+```bash
+docker exec "$APP_C" npm --version
+docker exec "$APP_C" node --version
+docker exec "$APP_C" npm run load:seed -- --help
+docker exec "$APP_C" npm run load:summary -- --help
+```
+
+If k6 installed in app container:
+
+```bash
+docker exec "$APP_C" k6 version
+```
+
+### 3) Seed multi-user test data (inside app container)
+
+```bash
+docker exec \
+  -e ALLOW_PROD_LOAD_TEST=1 \
+  -e FORCE_PROD_LOAD_TEST=1 \
+  -e LOAD_TEST_RUN_ID="$RUN_ID" \
+  "$APP_C" \
+  npm run load:seed -- \
+  --users 1000 \
+  --posts-per-user 5 \
+  --target "$TARGET_URL" \
+  --run-id "$RUN_ID" \
+  --tier admin
+```
+
+### 4) Run k6 posting test (inside app container)
+
+```bash
+docker exec \
+  -e ALLOW_PROD_LOAD_TEST=1 \
+  -e FORCE_PROD_LOAD_TEST=1 \
+  -e LOAD_TEST_RUN_ID="$RUN_ID" \
+  "$APP_C" \
+  npm run load:posting:k6 -- \
+  -e TARGET_URL="$TARGET_URL" \
+  -e LISTENER_TOKEN="$LISTENER_TOKEN" \
+  -e USERS=1000 \
+  -e POSTS_PER_USER=5 \
+  -e VUS=500 \
+  -e RUN_TO_COMPLETION=1 \
+  -e MAX_DURATION=20m \
+  -e LOAD_TEST_RUN_ID="$RUN_ID"
+```
+
+### 5) Run Playwright multi-user UI test (inside app container)
+
+```bash
+docker exec \
+  -e PLAYWRIGHT_LOAD_MODE=1 \
+  -e LOAD_TEST_SEED_USERS=100 \
+  -e UI_USERS=100 \
+  -e UI_ITERATIONS=3 \
+  -e PLAYWRIGHT_LOAD_WORKERS=12 \
+  -e BASE_URL="$BASE_URL" \
+  -e PLAYWRIGHT_BASE_URL="$BASE_URL" \
+  -e LOAD_TEST_RUN_ID="$RUN_ID" \
+  "$APP_C" \
+  npm run test:e2e
+```
+
+### 6) Run k6 high-scale UI test (inside app container)
+
+```bash
+docker exec \
+  -e ALLOW_PROD_LOAD_TEST=1 \
+  -e FORCE_PROD_LOAD_TEST=1 \
+  -e LOAD_TEST_RUN_ID="$RUN_ID" \
+  "$APP_C" \
+  npm run load:ui:k6 -- \
+  -e BASE_URL="$BASE_URL" \
+  -e VUS=5000 \
+  -e DURATION=2m \
+  -e LOAD_TEST_RUN_ID="$RUN_ID"
+```
+
+### 7) Summarize pass/fail
+
+```bash
+docker exec \
+  -e ERROR_RATE_MAX=0.05 \
+  -e UI_LATENCY_P95_MS_MAX=2000 \
+  -e POST_LATENCY_P95_MS_MAX=2000 \
+  -e POST_THROUGHPUT_MIN_RPS=100 \
+  -e LOAD_TEST_RUN_ID="$RUN_ID" \
+  "$APP_C" \
+  npm run load:summary -- \
+  --run-id "$RUN_ID"
+```
+
+Read summary files:
+
+```bash
+docker exec "$APP_C" sh -lc "cat loadtest_results/$RUN_ID/summary.md"
+docker exec "$APP_C" sh -lc "cat loadtest_results/$RUN_ID/summary.json"
+```
+
+### 8) Cleanup seeded data
+
+```bash
+docker exec \
+  -e ALLOW_PROD_LOAD_TEST=1 \
+  -e FORCE_PROD_LOAD_TEST=1 \
+  "$APP_C" \
+  npm run load:cleanup -- \
+  --run-id "$RUN_ID"
+```
+
+Dry-run cleanup first (optional):
+
+```bash
+docker exec "$APP_C" npm run load:cleanup -- --run-id "$RUN_ID" --dry-run
+```
 
 ## Production guardrails
 
@@ -86,8 +307,8 @@ The receiver writes per-run artifacts under `<log-dir>/<run_id>/` (see
      --log-dir /var/log/postplanpro-load
    ```
 
-2. On the runner host (staging by default — switch to prod only with the
-   guardrail flags above):
+2. On runner side (inside app container for npm/node steps; staging by default
+   — switch to prod only with guardrail flags):
 
    ```bash
    export RUN_ID=$(date -u +loadtest-%Y%m%dT%H%M%SZ-multi)
@@ -96,19 +317,23 @@ The receiver writes per-run artifacts under `<log-dir>/<run_id>/` (see
    export BASE_URL=https://staging.postplanpro.com
    export LOAD_TEST_RUN_ID=$RUN_ID
 
-   bun run load:seed -- \
+   docker exec -e ALLOW_PROD_LOAD_TEST=1 -e FORCE_PROD_LOAD_TEST=1 \
+     -e LOAD_TEST_RUN_ID=$RUN_ID "$APP_C" \
+     npm run load:seed -- \
      --users 1000 --posts-per-user 5 --target $TARGET_URL --run-id $RUN_ID
 
-   bun run load:posting:k6 -- \
+   docker exec -e ALLOW_PROD_LOAD_TEST=1 -e FORCE_PROD_LOAD_TEST=1 \
+     -e LOAD_TEST_RUN_ID=$RUN_ID "$APP_C" \
+     npm run load:posting:k6 -- \
      -e TARGET_URL=$TARGET_URL -e LISTENER_TOKEN=$LISTENER_TOKEN \
      -e USERS=1000 -e POSTS_PER_USER=5 -e VUS=500 \
      -e LOAD_TEST_RUN_ID=$RUN_ID
 
-   PLAYWRIGHT_LOAD_MODE=1 LOAD_TEST_SEED_USERS=10 UI_USERS=10 \
-     LOAD_TEST_RUN_ID=$RUN_ID bun run test:e2e
+   docker exec -e PLAYWRIGHT_LOAD_MODE=1 -e LOAD_TEST_SEED_USERS=10 -e UI_USERS=10 \
+     -e LOAD_TEST_RUN_ID=$RUN_ID "$APP_C" npm run test:e2e
 
-   bun run load:summary -- --run-id $RUN_ID
-   bun run load:cleanup -- --run-id $RUN_ID
+   docker exec -e LOAD_TEST_RUN_ID=$RUN_ID "$APP_C" npm run load:summary -- --run-id $RUN_ID
+   docker exec -e LOAD_TEST_RUN_ID=$RUN_ID "$APP_C" npm run load:cleanup -- --run-id $RUN_ID
    ```
 
 3. Inspect:
@@ -120,8 +345,12 @@ The receiver writes per-run artifacts under `<log-dir>/<run_id>/` (see
 ## Recipe: UI realism only (Playwright)
 
 ```bash
-PLAYWRIGHT_LOAD_MODE=1 LOAD_TEST_SEED_USERS=50 UI_USERS=50 \
-  PLAYWRIGHT_LOAD_WORKERS=8 bun run test:e2e
+docker exec \
+  -e PLAYWRIGHT_LOAD_MODE=1 \
+  -e LOAD_TEST_SEED_USERS=50 \
+  -e UI_USERS=50 \
+  -e PLAYWRIGHT_LOAD_WORKERS=8 \
+  "$APP_C" npm run test:e2e
 ```
 
 `SCENARIO_MIX` and `UI_USERS` are also editable in the admin "Multi-user load
@@ -129,6 +358,16 @@ test settings" panel. The Playwright process reads env first; export the same
 values to mirror the admin DB.
 
 ## Recipe: high-scale virtual users only (k6)
+
+If k6 is inside app container:
+
+```bash
+docker exec "$APP_C" npm run load:ui:k6 -- \
+  -e BASE_URL=https://staging.postplanpro.com \
+  -e VUS=5000 -e DURATION=2m
+```
+
+If k6 is outside app container (runner host/container):
 
 ```bash
 k6 run scripts/load/k6-multi-user-ui.js \
@@ -144,7 +383,7 @@ splitting across two runner hosts.
 - Ctrl+C the foreground load runner.
 - Send `SIGTERM` to the listener; it flushes a final rollup before exit.
 - If a seed left posts in the app DB you don't want fired, run
-  `bun run load:cleanup -- --run-id <id>` immediately. The cleanup is
+  `npm run load:cleanup -- --run-id <id>` immediately. The cleanup is
   transactional and removes only tagged data.
 
 ## Suggested wider tests
