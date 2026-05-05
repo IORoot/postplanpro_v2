@@ -35,6 +35,9 @@ COPY --from=builder /app/build ./build
 # Without these, `npm run load:*` fails in the slim runtime image.
 COPY --from=builder /app/scripts/load ./scripts/load
 COPY --from=builder /app/src/lib/db ./src/lib/db
+# Include Playwright load suite assets so `npm run load:ui:pw` works in deployed container.
+COPY --from=builder /app/playwright.config.ts ./playwright.config.ts
+COPY --from=builder /app/tests/e2e ./tests/e2e
 
 RUN npm rebuild better-sqlite3
 
