@@ -1,9 +1,5 @@
 import { getDatabase } from '$lib/db/index.js';
-import {
-	currentMonthKey,
-	getUsageForMonth,
-	getUsageMonthAccountRow
-} from '$lib/usage.js';
+import { currentMonthKey } from '$lib/usage.js';
 import { mergeAccountUsageIntoEmailCarryover, normalizeQuotaEmail } from '$lib/server/emailQuotaCarryover.js';
 import { requireAdmin } from '$lib/admin.js';
 import { fail } from '@sveltejs/kit';
@@ -52,19 +48,30 @@ function parseNullableInt(raw: string | null): number | null {
 	return Math.floor(n);
 }
 
-function countSendLogSuccessForMonth(
-	db: ReturnType<typeof getDatabase>,
-	accountId: string,
-	month: string
-): number {
-	return (
-		db
-			.prepare(
-				`SELECT COUNT(*) as n FROM send_log
-         WHERE account_id = ? AND success = 1 AND strftime('%Y-%m', sent_at) = ?`
-			)
-			.get(accountId, month) as { n: number }
-	).n;
+function orderByFor(sort: SortField, dir: SortDir): string {
+	const direction = dir === 'asc' ? 'ASC' : 'DESC';
+	switch (sort) {
+		case 'user':
+			return `sort_user ${direction}, id ASC`;
+		case 'tier':
+			return `tier ${direction}, id ASC`;
+		case 'joined':
+			return `created_at ${direction}, id ASC`;
+		case 'posts':
+			return `usage_posts_total ${direction}, id ASC`;
+		case 'callbacks':
+			return `usage_callback_inputs ${direction}, id ASC`;
+		case 'imports':
+			return `usage_import_operations ${direction}, id ASC`;
+		case 'postCount':
+			return `post_count ${direction}, id ASC`;
+		case 'scheduleCount':
+			return `schedule_count ${direction}, id ASC`;
+		case 'webhookCount':
+			return `webhook_count ${direction}, id ASC`;
+		default:
+			return `created_at DESC, id ASC`;
+	}
 }
 
 export const load: PageServerLoad = async (event) => {
@@ -91,46 +98,182 @@ export const load: PageServerLoad = async (event) => {
 	const scheduleCountMax = parseNullableInt(event.url.searchParams.get('scheduleCountMax'));
 	const webhookCountMin = parseNullableInt(event.url.searchParams.get('webhookCountMin'));
 	const webhookCountMax = parseNullableInt(event.url.searchParams.get('webhookCountMax'));
+	const whereClauses: string[] = [];
+	const whereParams: (string | number)[] = [];
+	if (q) {
+		whereClauses.push('(lower(id) LIKE ? OR lower(coalesce(email, \'\')) LIKE ? OR lower(coalesce(name, \'\')) LIKE ?)');
+		const like = `%${q}%`;
+		whereParams.push(like, like, like);
+	}
+	if (tier) {
+		whereClauses.push('tier = ?');
+		whereParams.push(tier);
+	}
+	if (joinedFrom) {
+		whereClauses.push("substr(created_at, 1, 10) >= ?");
+		whereParams.push(joinedFrom);
+	}
+	if (joinedTo) {
+		whereClauses.push("substr(created_at, 1, 10) <= ?");
+		whereParams.push(joinedTo);
+	}
+	if (postsMin != null) {
+		whereClauses.push('usage_posts_total >= ?');
+		whereParams.push(postsMin);
+	}
+	if (postsMax != null) {
+		whereClauses.push('usage_posts_total <= ?');
+		whereParams.push(postsMax);
+	}
+	if (callbacksMin != null) {
+		whereClauses.push('usage_callback_inputs >= ?');
+		whereParams.push(callbacksMin);
+	}
+	if (callbacksMax != null) {
+		whereClauses.push('usage_callback_inputs <= ?');
+		whereParams.push(callbacksMax);
+	}
+	if (importsMin != null) {
+		whereClauses.push('usage_import_operations >= ?');
+		whereParams.push(importsMin);
+	}
+	if (importsMax != null) {
+		whereClauses.push('usage_import_operations <= ?');
+		whereParams.push(importsMax);
+	}
+	if (postCountMin != null) {
+		whereClauses.push('post_count >= ?');
+		whereParams.push(postCountMin);
+	}
+	if (postCountMax != null) {
+		whereClauses.push('post_count <= ?');
+		whereParams.push(postCountMax);
+	}
+	if (scheduleCountMin != null) {
+		whereClauses.push('schedule_count >= ?');
+		whereParams.push(scheduleCountMin);
+	}
+	if (scheduleCountMax != null) {
+		whereClauses.push('schedule_count <= ?');
+		whereParams.push(scheduleCountMax);
+	}
+	if (webhookCountMin != null) {
+		whereClauses.push('webhook_count >= ?');
+		whereParams.push(webhookCountMin);
+	}
+	if (webhookCountMax != null) {
+		whereClauses.push('webhook_count <= ?');
+		whereParams.push(webhookCountMax);
+	}
+	const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-	const users = db
-		.prepare(
-			`SELECT u.id, u.email, u.name, u.tier, u.created_at, u.last_login_at, u.email_verified_at, u.timezone,
-            u.stripe_customer_id, u.stripe_subscription_id,
-            (SELECT COUNT(*) FROM post WHERE account_id = u.id) AS post_count,
-            (SELECT COUNT(*) FROM schedule WHERE account_id = u.id) AS schedule_count,
-            (SELECT COUNT(*) FROM webhook_config WHERE account_id = u.id) AS webhook_count
-       FROM user u ORDER BY u.created_at ASC`
-		)
-		.all() as {
-			id: string;
-			email: string | null;
-			name: string | null;
-			tier: string;
-			created_at: string;
-			last_login_at: string | null;
-			email_verified_at: string | null;
-			timezone: string | null;
-			stripe_customer_id: string | null;
-			stripe_subscription_id: string | null;
-			post_count: number;
-			schedule_count: number;
-			webhook_count: number;
-		}[];
-	const usersWithUsage = users.map((u) => {
-		const usage = getUsageForMonth(db, u.id, month);
-		const usageMonth = getUsageMonthAccountRow(db, u.id, month);
-		const postSendsFromLog = countSendLogSuccessForMonth(db, u.id, month);
+	const baseSql = `
+    WITH
+      send_counts AS (
+        SELECT account_id, COUNT(*) AS c
+        FROM send_log
+        WHERE success = 1 AND strftime('%Y-%m', sent_at) = ?
+        GROUP BY account_id
+      ),
+      queued_counts AS (
+        SELECT account_id, COUNT(*) AS c
+        FROM post
+        WHERE scheduled_at IS NOT NULL
+          AND strftime('%Y-%m', scheduled_at) = ?
+          AND status IN ('scheduled', 'failed')
+        GROUP BY account_id
+      ),
+      post_counts AS (
+        SELECT account_id, COUNT(*) AS c FROM post GROUP BY account_id
+      ),
+      schedule_counts AS (
+        SELECT account_id, COUNT(*) AS c FROM schedule GROUP BY account_id
+      ),
+      webhook_counts AS (
+        SELECT account_id, COUNT(*) AS c FROM webhook_config GROUP BY account_id
+      )
+    SELECT
+      u.id,
+      u.email,
+      u.name,
+      u.tier,
+      u.created_at,
+      u.last_login_at,
+      u.email_verified_at,
+      u.timezone,
+      u.stripe_customer_id,
+      u.stripe_subscription_id,
+      coalesce(pc.c, 0) AS post_count,
+      coalesce(sc.c, 0) AS schedule_count,
+      coalesce(wc.c, 0) AS webhook_count,
+      coalesce(send_counts.c, 0) AS post_sends_from_log,
+      coalesce(qc.c, 0) AS posts_queued,
+      coalesce(um.callback_inputs, 0) + coalesce(eq.callback_inputs, 0) AS usage_callback_inputs,
+      coalesce(um.import_operations, 0) + coalesce(eq.import_operations, 0) AS usage_import_operations,
+      coalesce(um.post_sends_override, coalesce(send_counts.c, 0)) + coalesce(eq.output_sends, 0) AS usage_posts_total,
+      coalesce(um.callback_inputs, 0) AS usage_callback_inputs_account,
+      coalesce(um.import_operations, 0) AS usage_import_operations_account,
+      coalesce(um.post_sends_override, NULL) AS usage_post_override,
+      lower(coalesce(u.email, u.name, u.id)) AS sort_user
+    FROM user u
+    LEFT JOIN post_counts pc ON pc.account_id = u.id
+    LEFT JOIN schedule_counts sc ON sc.account_id = u.id
+    LEFT JOIN webhook_counts wc ON wc.account_id = u.id
+    LEFT JOIN send_counts ON send_counts.account_id = u.id
+    LEFT JOIN queued_counts qc ON qc.account_id = u.id
+    LEFT JOIN usage_month um ON um.account_id = u.id AND um.month = ?
+    LEFT JOIN email_quota_carryover_month eq ON eq.email_norm = lower(trim(coalesce(u.email, ''))) AND eq.month = ?
+  `;
+	const commonParams: (string | number)[] = [month, month, month, month];
+
+	const total =
+		(db
+			.prepare(`SELECT COUNT(*) AS n FROM (${baseSql}) user_base ${whereSql}`)
+			.get(...commonParams, ...whereParams) as { n: number } | undefined)?.n ?? 0;
+	const offset = (page - 1) * pageSize;
+	const orderBy = orderByFor(sort, dir);
+	const rows = db
+		.prepare(`${baseSql} ${whereSql} ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
+		.all(...commonParams, ...whereParams, pageSize, offset) as {
+		id: string;
+		email: string | null;
+		name: string | null;
+		tier: string;
+		created_at: string;
+		last_login_at: string | null;
+		email_verified_at: string | null;
+		timezone: string | null;
+		stripe_customer_id: string | null;
+		stripe_subscription_id: string | null;
+		post_count: number;
+		schedule_count: number;
+		webhook_count: number;
+		post_sends_from_log: number;
+		posts_queued: number;
+		usage_callback_inputs: number;
+		usage_import_operations: number;
+		usage_posts_total: number;
+		usage_callback_inputs_account: number;
+		usage_import_operations_account: number;
+		usage_post_override: number | null;
+	}[];
+
+	const paged = rows.map((u) => {
 		const limits = getTierLimits(u.tier);
 		return {
 			...u,
+			postSendsFromLog: u.post_sends_from_log,
 			usage: {
-				postsTotal: usage.postOutputSends,
-				postsQueued: usage.postsQueuedForSend,
-				callbackInputs: usage.callbackInputs,
-				importOperations: usage.importOperations
+				postsTotal: u.usage_posts_total,
+				postsQueued: u.posts_queued,
+				callbackInputs: u.usage_callback_inputs,
+				importOperations: u.usage_import_operations
 			},
-			usageMonthAccount: usageMonth,
-			postSendsFromLog,
+			usageMonthAccount: {
+				callback_inputs: u.usage_callback_inputs_account,
+				import_operations: u.usage_import_operations_account,
+				post_sends_override: u.usage_post_override
+			},
 			limits: {
 				posts: limits.postsSentPerMonth,
 				callbacks: limits.callbackInputsPerMonth,
@@ -138,63 +281,6 @@ export const load: PageServerLoad = async (event) => {
 			}
 		};
 	});
-
-	const filtered = usersWithUsage.filter((u) => {
-		if (q) {
-			const haystack = [u.id, u.email ?? '', u.name ?? ''].join(' ').toLowerCase();
-			if (!haystack.includes(q)) return false;
-		}
-		if (tier && u.tier !== tier) return false;
-		if (joinedFrom && u.created_at.slice(0, 10) < joinedFrom) return false;
-		if (joinedTo && u.created_at.slice(0, 10) > joinedTo) return false;
-
-		if (postsMin != null && u.usage.postsTotal < postsMin) return false;
-		if (postsMax != null && u.usage.postsTotal > postsMax) return false;
-		if (callbacksMin != null && u.usage.callbackInputs < callbacksMin) return false;
-		if (callbacksMax != null && u.usage.callbackInputs > callbacksMax) return false;
-		if (importsMin != null && u.usage.importOperations < importsMin) return false;
-		if (importsMax != null && u.usage.importOperations > importsMax) return false;
-		if (postCountMin != null && u.post_count < postCountMin) return false;
-		if (postCountMax != null && u.post_count > postCountMax) return false;
-		if (scheduleCountMin != null && u.schedule_count < scheduleCountMin) return false;
-		if (scheduleCountMax != null && u.schedule_count > scheduleCountMax) return false;
-		if (webhookCountMin != null && u.webhook_count < webhookCountMin) return false;
-		if (webhookCountMax != null && u.webhook_count > webhookCountMax) return false;
-		return true;
-	});
-
-	filtered.sort((a, b) => {
-		const mult = dir === 'asc' ? 1 : -1;
-		switch (sort) {
-			case 'user': {
-				const av = (a.email ?? a.name ?? a.id).toLowerCase();
-				const bv = (b.email ?? b.name ?? b.id).toLowerCase();
-				return av.localeCompare(bv) * mult;
-			}
-			case 'tier':
-				return a.tier.localeCompare(b.tier) * mult;
-			case 'joined':
-				return a.created_at.localeCompare(b.created_at) * mult;
-			case 'posts':
-				return (a.usage.postsTotal - b.usage.postsTotal) * mult;
-			case 'callbacks':
-				return (a.usage.callbackInputs - b.usage.callbackInputs) * mult;
-			case 'imports':
-				return (a.usage.importOperations - b.usage.importOperations) * mult;
-			case 'postCount':
-				return (a.post_count - b.post_count) * mult;
-			case 'scheduleCount':
-				return (a.schedule_count - b.schedule_count) * mult;
-			case 'webhookCount':
-				return (a.webhook_count - b.webhook_count) * mult;
-			default:
-				return 0;
-		}
-	});
-
-	const total = filtered.length;
-	const offset = (page - 1) * pageSize;
-	const paged = filtered.slice(offset, offset + pageSize);
 
 	return {
 		users: paged,
