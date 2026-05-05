@@ -9,6 +9,7 @@ the receiving server and a result summarizer.
 ```
 scripts/load/
 ├── README.md                          (this file)
+├── docker-compose.k6.yml              (dedicated k6 runner container)
 ├── deps-manifest.txt                  (declared install/cleanup deps)
 ├── install-prod-deps.sh               (apt + k6 installer; idempotent, supports --dry-run)
 ├── cleanup-prod-deps.sh               (matching uninstall; needs --confirm-destroy)
@@ -152,10 +153,10 @@ docker exec "$APP_C" npm run load:seed -- --help
 docker exec "$APP_C" npm run load:summary -- --help
 ```
 
-If k6 installed in app container:
+Verify dedicated k6 compose file exists:
 
 ```bash
-docker exec "$APP_C" k6 version
+test -f scripts/load/docker-compose.k6.yml && echo "OK k6 compose file"
 ```
 
 ### 3) Seed multi-user test data (inside app container)
@@ -174,15 +175,23 @@ docker exec \
   --tier admin
 ```
 
-### 4) Run k6 posting test (inside app container)
+### 4) Run k6 posting test (separate k6 container)
 
 ```bash
-docker exec \
+ALLOW_PROD_LOAD_TEST=1 \
+FORCE_PROD_LOAD_TEST=1 \
+LOAD_TEST_RUN_ID="$RUN_ID" \
+TARGET_URL="$TARGET_URL" \
+LISTENER_TOKEN="$LISTENER_TOKEN" \
+USERS=1000 \
+POSTS_PER_USER=5 \
+VUS=500 \
+RUN_TO_COMPLETION=1 \
+MAX_DURATION=20m \
+docker compose -f scripts/load/docker-compose.k6.yml run --rm k6 \
+  run scripts/load/k6-multi-user-posting.js \
   -e ALLOW_PROD_LOAD_TEST=1 \
   -e FORCE_PROD_LOAD_TEST=1 \
-  -e LOAD_TEST_RUN_ID="$RUN_ID" \
-  "$APP_C" \
-  npm run load:posting:k6 -- \
   -e TARGET_URL="$TARGET_URL" \
   -e LISTENER_TOKEN="$LISTENER_TOKEN" \
   -e USERS=1000 \
@@ -209,15 +218,19 @@ docker exec \
   npm run test:e2e
 ```
 
-### 6) Run k6 high-scale UI test (inside app container)
+### 6) Run k6 high-scale UI test (separate k6 container)
 
 ```bash
-docker exec \
+ALLOW_PROD_LOAD_TEST=1 \
+FORCE_PROD_LOAD_TEST=1 \
+LOAD_TEST_RUN_ID="$RUN_ID" \
+BASE_URL="$BASE_URL" \
+VUS=5000 \
+DURATION=2m \
+docker compose -f scripts/load/docker-compose.k6.yml run --rm k6 \
+  run scripts/load/k6-multi-user-ui.js \
   -e ALLOW_PROD_LOAD_TEST=1 \
   -e FORCE_PROD_LOAD_TEST=1 \
-  -e LOAD_TEST_RUN_ID="$RUN_ID" \
-  "$APP_C" \
-  npm run load:ui:k6 -- \
   -e BASE_URL="$BASE_URL" \
   -e VUS=5000 \
   -e DURATION=2m \
@@ -359,15 +372,26 @@ values to mirror the admin DB.
 
 ## Recipe: high-scale virtual users only (k6)
 
-If k6 is inside app container:
+Preferred (dedicated k6 container via compose file):
 
 ```bash
-docker exec "$APP_C" npm run load:ui:k6 -- \
+ALLOW_PROD_LOAD_TEST=1 \
+FORCE_PROD_LOAD_TEST=1 \
+LOAD_TEST_RUN_ID="$RUN_ID" \
+BASE_URL=https://staging.postplanpro.com \
+VUS=5000 \
+DURATION=2m \
+docker compose -f scripts/load/docker-compose.k6.yml run --rm k6 \
+  run scripts/load/k6-multi-user-ui.js \
+  -e ALLOW_PROD_LOAD_TEST=1 \
+  -e FORCE_PROD_LOAD_TEST=1 \
   -e BASE_URL=https://staging.postplanpro.com \
-  -e VUS=5000 -e DURATION=2m
+  -e VUS=5000 \
+  -e DURATION=2m \
+  -e LOAD_TEST_RUN_ID="$RUN_ID"
 ```
 
-If k6 is outside app container (runner host/container):
+Alternative (native k6 on host):
 
 ```bash
 k6 run scripts/load/k6-multi-user-ui.js \
