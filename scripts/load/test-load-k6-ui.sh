@@ -9,6 +9,7 @@ VUS="${VUS:-5000}"
 DURATION="${DURATION:-2m}"
 
 cd "${REPO_ROOT}"
+mkdir -p "loadtest_results/${RUN_ID}"
 
 ALLOW_PROD_LOAD_TEST=1 \
 FORCE_PROD_LOAD_TEST=1 \
