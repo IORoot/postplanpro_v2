@@ -405,6 +405,20 @@
 		return postsByYearMonth.get(`${year}-${monthIndex}`) ?? [];
 	}
 
+	type PostGroup = { rep: CalendarPost; count: number };
+
+	/** Collapse posts at the same minute ("YYYY-MM-DDTHH:MM") into a single representative entry. */
+	function groupByMinute(list: CalendarPost[]): PostGroup[] {
+		const map = new Map<string, PostGroup>();
+		for (const p of list) {
+			const key = p.scheduled_at.slice(0, 16);
+			const g = map.get(key);
+			if (g) g.count++;
+			else map.set(key, { rep: p, count: 1 });
+		}
+		return [...map.values()];
+	}
+
 	function formatTime(iso: string) {
 		return formatScheduledAt(iso, { hour: '2-digit', minute: '2-digit' });
 	}
@@ -985,34 +999,37 @@
 						>
 							<span class={isToday(cell.date) ? 'calendar-today-num' : ''}>{cell.date.getDate()}</span>
 						</button>
-						<div class="mt-1 flex flex-wrap justify-center gap-1">
-							{#each postsForDay(cell.date) as post (post.id)}
-								<button
-									type="button"
-									class="touch-manipulation overflow-hidden rounded-md border border-[var(--border)] shadow-sm outline-none ring-offset-1 {touchListHighlightPostId === post.id
-										? 'ring-2 ring-[var(--primary)]'
-										: calendarUnselectedCellClass}"
-									onclick={() => selectTouchListDay(cell.date, post.id)}
-									aria-label={`Show ${post.title} in the list below`}
-								>
-									{#if post.image_url}
-										<img
-											src={post.image_url}
-											alt=""
-											class="h-10 w-10 object-cover sm:h-11 sm:w-11"
-											loading="lazy"
-										/>
-									{:else}
-										<div
-											class="flex h-10 w-10 items-center justify-center bg-[var(--surface-hover)] text-[10px] font-semibold text-[var(--text-muted)] sm:h-11 sm:w-11"
-											aria-hidden="true"
-										>
-											{post.title.trim().slice(0, 1).toUpperCase() || '·'}
-										</div>
-									{/if}
-								</button>
-							{/each}
-						</div>
+					<div class="mt-1 flex flex-wrap justify-center gap-1">
+						{#each groupByMinute(postsForDay(cell.date)) as grp (grp.rep.id)}
+							<button
+								type="button"
+								class="relative touch-manipulation overflow-hidden rounded-md border border-[var(--border)] shadow-sm outline-none ring-offset-1 {touchListHighlightPostId === grp.rep.id
+									? 'ring-2 ring-[var(--primary)]'
+									: calendarUnselectedCellClass}"
+								onclick={() => selectTouchListDay(cell.date, grp.rep.id)}
+								aria-label={grp.count > 1 ? `Show ${grp.count} posts at this time in the list below` : `Show ${grp.rep.title} in the list below`}
+							>
+								{#if grp.rep.image_url}
+									<img
+										src={grp.rep.image_url}
+										alt=""
+										class="h-10 w-10 object-cover sm:h-11 sm:w-11"
+										loading="lazy"
+									/>
+								{:else}
+									<div
+										class="flex h-10 w-10 items-center justify-center bg-[var(--surface-hover)] text-[10px] font-semibold text-[var(--text-muted)] sm:h-11 sm:w-11"
+										aria-hidden="true"
+									>
+										{grp.rep.title.trim().slice(0, 1).toUpperCase() || '·'}
+									</div>
+								{/if}
+								{#if grp.count > 1}
+									<span class="pointer-events-none absolute bottom-0.5 right-0.5 rounded bg-[var(--primary)] px-1 py-0.5 text-[9px] font-bold leading-none text-white shadow">+{grp.count - 1}</span>
+								{/if}
+							</button>
+						{/each}
+					</div>
 					</div>
 				{/each}
 			</div>
@@ -1045,53 +1062,60 @@
 						>
 							<span class={isToday(cell.date) ? 'calendar-today-num' : ''}>{cell.date.getDate()}</span>
 						</div>
-						<div class="mt-2 space-y-1">
-							{#each postsForDay(cell.date) as post (post.id)}
-								<div
-									class="calendar-post-accent rounded-lg px-2 py-2 {calendarDragEnabled
-										? 'cursor-grab active:cursor-grabbing'
-										: ''} {dragPostId === post.id ? 'opacity-50' : ''}"
-									style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? '#fafafa'};`}
-									role="button"
-									tabindex="-1"
-									aria-label={calendarDragEnabled ? 'Drag to reschedule' : 'Post'}
-									draggable={calendarDragEnabled}
-									ondragstart={(e) => handleDragStart(e, post)}
-									ondragend={handleDragEnd}
-								>
-									<div class="flex items-center gap-1">
-										{#if post.image_url}
-											<img src={post.image_url} alt={"Preview for " + post.title} class="h-5 w-5 rounded object-cover border border-[var(--border)]" loading="lazy" />
-										{/if}
+					<div class="mt-2 space-y-1">
+						{#each groupByMinute(postsForDay(cell.date)) as grp (grp.rep.id)}
+							<div
+								class="calendar-post-accent rounded-lg px-2 py-2 {calendarDragEnabled
+									? 'cursor-grab active:cursor-grabbing'
+									: ''} {dragPostId === grp.rep.id ? 'opacity-50' : ''}"
+								style={`background-color: ${grp.rep.color ?? '#fafafa'}; border-left-color: ${grp.rep.color ?? '#fafafa'};`}
+								role="button"
+								tabindex="-1"
+								aria-label={calendarDragEnabled ? 'Drag to reschedule' : 'Post'}
+								draggable={calendarDragEnabled}
+								ondragstart={(e) => handleDragStart(e, grp.rep)}
+								ondragend={handleDragEnd}
+							>
+								<div class="flex items-center gap-1">
+									{#if grp.rep.image_url}
+										<img src={grp.rep.image_url} alt={"Preview for " + grp.rep.title} class="h-5 w-5 rounded object-cover border border-[var(--border)]" loading="lazy" />
+									{/if}
+									<a
+										href={"/posts/" + grp.rep.id}
+										class="relative z-[1] min-w-0 flex-1 touch-manipulation truncate text-xs font-medium text-neutral-900 hover:underline"
+									>
+										{formatTime(grp.rep.scheduled_at)} {grp.rep.title}
+									</a>
+									{#if grp.count > 1}
 										<a
-											href={"/posts/" + post.id}
-											class="relative z-[1] min-w-0 flex-1 touch-manipulation truncate text-xs font-medium text-neutral-900 hover:underline"
-										>
-											{formatTime(post.scheduled_at)} {post.title}
-										</a>
-									</div>
-									<div class="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-										<CalendarPostBadges
-											status={post.status}
-											hasOutputWebhook={post.has_output_webhook}
-											postHref={'/posts/' + post.id}
-											textOnly={false}
-											hideStatus={false}
-										/>
-										{#if post.has_output_webhook}
-											<button
-												type="button"
-												disabled={sendingId === post.id}
-												onclick={(e) => sendNow(post.id, e)}
-												class="min-h-[36px] min-w-[44px] shrink-0 touch-manipulation rounded px-2 py-1 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)] disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5"
-											>
-												{sendingId === post.id ? '…' : 'Send'}
-											</button>
-										{/if}
-									</div>
+											href="/posts?scheduled=yes"
+											class="ml-1 shrink-0 rounded-full bg-[var(--primary)] px-1.5 py-0.5 text-[9px] font-bold leading-none text-white hover:opacity-90"
+											title="{grp.count} posts at this time"
+										>+{grp.count - 1}</a>
+									{/if}
 								</div>
-							{/each}
-						</div>
+								<div class="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+									<CalendarPostBadges
+										status={grp.rep.status}
+										hasOutputWebhook={grp.rep.has_output_webhook}
+										postHref={'/posts/' + grp.rep.id}
+										textOnly={false}
+										hideStatus={false}
+									/>
+									{#if grp.rep.has_output_webhook}
+										<button
+											type="button"
+											disabled={sendingId === grp.rep.id}
+											onclick={(e) => sendNow(grp.rep.id, e)}
+											class="min-h-[36px] min-w-[44px] shrink-0 touch-manipulation rounded px-2 py-1 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)] disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5"
+										>
+											{sendingId === grp.rep.id ? '…' : 'Send'}
+										</button>
+									{/if}
+								</div>
+							</div>
+						{/each}
+					</div>
 					</div>
 				{/each}
 			</div>
@@ -1297,42 +1321,47 @@
 							ondragover={(e) => dayDragOver(e, hour)}
 							ondrop={(e) => dayDrop(e, hour)}
 						>
-							{#each postsAtHour(hour) as post (post.id)}
-								<div
-									class="calendar-post-accent min-w-0 max-w-sm flex-[1_1_240px] rounded-lg p-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === post.id ? 'opacity-50' : ''}"
-									style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? 'var(--border)'};`}
-									role="button"
-									tabindex="-1"
-									aria-label="Drag to reschedule"
-									draggable={true}
-									ondragstart={(e) => handleDragStart(e, post)}
-									ondragend={handleDragEnd}
-								>
-									<div class="flex min-w-0 flex-col gap-1">
-										{#if post.image_url}
-											<img src={post.image_url} alt="" class="h-8 w-8 shrink-0 rounded border border-[var(--border)] object-cover" loading="lazy" />
+						{#each groupByMinute(postsAtHour(hour)) as grp (grp.rep.id)}
+							<div
+								class="calendar-post-accent min-w-0 max-w-sm flex-[1_1_240px] rounded-lg p-2 shadow-sm cursor-grab active:cursor-grabbing {dragPostId === grp.rep.id ? 'opacity-50' : ''}"
+								style={`background-color: ${grp.rep.color ?? '#fafafa'}; border-left-color: ${grp.rep.color ?? 'var(--border)'};`}
+								role="button"
+								tabindex="-1"
+								aria-label="Drag to reschedule"
+								draggable={true}
+								ondragstart={(e) => handleDragStart(e, grp.rep)}
+								ondragend={handleDragEnd}
+							>
+								<div class="flex min-w-0 flex-col gap-1">
+									{#if grp.rep.image_url}
+										<img src={grp.rep.image_url} alt="" class="h-8 w-8 shrink-0 rounded border border-[var(--border)] object-cover" loading="lazy" />
+									{/if}
+									<div class="flex items-start gap-1">
+										<a href={"/posts/" + grp.rep.id} class="min-w-0 flex-1 break-words text-sm font-medium text-neutral-900 hover:underline" title={grp.rep.title}>{grp.rep.title}</a>
+										{#if grp.count > 1}
+											<a href="/posts?scheduled=yes" class="ml-1 shrink-0 rounded-full bg-[var(--primary)] px-1.5 py-0.5 text-[9px] font-bold leading-none text-white hover:opacity-90" title="{grp.count} posts at this time">+{grp.count - 1}</a>
 										{/if}
-										<a href={"/posts/" + post.id} class="break-words text-sm font-medium text-neutral-900 hover:underline" title={post.title}>{post.title}</a>
-										<p class="break-words text-[10px] text-neutral-600">{formatTime(post.scheduled_at)} · {post.webhook_name}</p>
-										<div class="mt-1 flex flex-wrap items-center gap-1">
-											<span class={"shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium " + statusClass(post.status)}>{post.status}</span>
-											{#if !post.has_output_webhook}
-												<span class={calendarNoOutputPillClass} role="status">No output webhook</span>
-											{/if}
-											{#if post.has_output_webhook}
-												<button
-													type="button"
-													class="shrink-0 rounded bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)]"
-													disabled={sendingId === post.id}
-													onclick={(e) => sendNow(post.id, e)}
-												>
-													{sendingId === post.id ? '…' : 'Send'}
-												</button>
-											{/if}
-										</div>
+									</div>
+									<p class="break-words text-[10px] text-neutral-600">{formatTime(grp.rep.scheduled_at)} · {grp.rep.webhook_name}</p>
+									<div class="mt-1 flex flex-wrap items-center gap-1">
+										<span class={"shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium " + statusClass(grp.rep.status)}>{grp.rep.status}</span>
+										{#if !grp.rep.has_output_webhook}
+											<span class={calendarNoOutputPillClass} role="status">No output webhook</span>
+										{/if}
+										{#if grp.rep.has_output_webhook}
+											<button
+												type="button"
+												class="shrink-0 rounded bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)]"
+												disabled={sendingId === grp.rep.id}
+												onclick={(e) => sendNow(grp.rep.id, e)}
+											>
+												{sendingId === grp.rep.id ? '…' : 'Send'}
+											</button>
+										{/if}
 									</div>
 								</div>
-							{/each}
+							</div>
+						{/each}
 						</div>
 					</div>
 				{/each}
@@ -1346,10 +1375,11 @@
 				{#each yearMonthAnchors as monthDate}
 					{@const monthIndex = monthDate.getMonth()}
 					{@const monthPosts = postsForYearMonth(anchor.getFullYear(), monthIndex)}
+					{@const monthGroups = groupByMinute(monthPosts)}
 					{@const isCurrentMonth = new Date().getMonth() === monthIndex && new Date().getFullYear() === anchor.getFullYear()}
 					{@const yearMonth = yearMonthKey(anchor.getFullYear(), monthIndex)}
 					{@const isExpanded = expandedYearMonths.has(yearMonth)}
-					{@const postsToShow = isExpanded ? monthPosts : monthPosts.slice(0, 4)}
+					{@const groupsToShow = isExpanded ? monthGroups : monthGroups.slice(0, 4)}
 					<div
 						class="min-h-[140px] bg-[var(--surface)] p-3 {isCurrentMonth ? 'calendar-today' : ''}"
 						role="group"
@@ -1362,31 +1392,40 @@
 							{monthPosts.length} {monthPosts.length === 1 ? 'post' : 'posts'}
 						</p>
 						<div class="mt-2 space-y-1">
-							{#each postsToShow as post (post.id)}
-								<a
-									href={"/posts/" + post.id}
-									class="calendar-post-accent flex min-w-0 touch-manipulation items-center gap-1 rounded-md px-2 py-1 text-xs text-neutral-900 hover:underline {calendarDragEnabled
+							{#each groupsToShow as grp (grp.rep.id)}
+								<div
+									role="button"
+									tabindex="-1"
+									class="calendar-post-accent flex min-w-0 touch-manipulation items-center gap-1 rounded-md px-2 py-1 text-xs text-neutral-900 {calendarDragEnabled
 										? 'cursor-grab active:cursor-grabbing'
-										: ''} {dragPostId === post.id ? 'opacity-50' : ''}"
-									style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? '#fafafa'};`}
-									title={`${formatScheduledAt(post.scheduled_at, { day: '2-digit', month: 'short' })} · ${post.title}${!post.has_output_webhook ? ' · No output webhook' : ''}`}
+										: ''} {dragPostId === grp.rep.id ? 'opacity-50' : ''}"
+									style={`background-color: ${grp.rep.color ?? '#fafafa'}; border-left-color: ${grp.rep.color ?? '#fafafa'};`}
 									draggable={calendarDragEnabled}
-									ondragstart={(e) => handleDragStart(e, post)}
+									ondragstart={(e) => handleDragStart(e, grp.rep)}
 									ondragend={handleDragEnd}
 								>
-									<span class="min-w-0 truncate">{formatScheduledAt(post.scheduled_at, { day: '2-digit', month: 'short' })} · {post.title}</span>
-									{#if !post.has_output_webhook}
+									<a
+										href={"/posts/" + grp.rep.id}
+										class="min-w-0 flex-1 truncate hover:underline"
+										title={`${formatScheduledAt(grp.rep.scheduled_at, { day: '2-digit', month: 'short' })} · ${grp.rep.title}${!grp.rep.has_output_webhook ? ' · No output webhook' : ''}`}
+									>
+										{formatScheduledAt(grp.rep.scheduled_at, { day: '2-digit', month: 'short' })} · {grp.rep.title}
+									</a>
+									{#if grp.count > 1}
+										<a href="/posts?scheduled=yes" class="shrink-0 rounded-full bg-[var(--primary)] px-1.5 py-0.5 text-[9px] font-bold leading-none text-white hover:opacity-90" title="{grp.count} posts at this time">+{grp.count - 1}</a>
+									{/if}
+									{#if !grp.rep.has_output_webhook}
 										<span class={calendarNoOutputPillClass} role="status">No output webhook</span>
 									{/if}
-								</a>
+								</div>
 							{/each}
-							{#if monthPosts.length > 4}
+							{#if monthGroups.length > 4}
 								<button
 									type="button"
 									onclick={() => toggleYearMonthExpanded(anchor.getFullYear(), monthIndex)}
 									class="mt-0.5 text-xs font-medium text-[var(--primary)] hover:underline"
 								>
-									{isExpanded ? 'Show less' : `+${monthPosts.length - 4} more`}
+									{isExpanded ? 'Show less' : `+${monthGroups.length - 4} more`}
 								</button>
 							{/if}
 						</div>
@@ -1405,36 +1444,39 @@
 			</p>
 		{:else}
 			<div class="space-y-2">
-				{#each posts as post (post.id)}
-					{@const postDate = parseScheduledAt(post.scheduled_at)}
+				{#each groupByMinute(posts) as grp (grp.rep.id)}
+					{@const postDate = parseScheduledAt(grp.rep.scheduled_at)}
 					{@const isPostToday = isToday(postDate)}
 					<div
 						class="calendar-post-accent rounded-lg p-2 {isPostToday ? 'calendar-today' : ''}"
-						style={`background-color: ${post.color ?? '#fafafa'}; border-left-color: ${post.color ?? '#fafafa'};`}
+						style={`background-color: ${grp.rep.color ?? '#fafafa'}; border-left-color: ${grp.rep.color ?? '#fafafa'};`}
 					>
 						<div class="flex min-w-0 flex-wrap items-start gap-2">
-							{#if post.image_url}
-								<img src={post.image_url} alt={"Preview for " + post.title} class="h-8 w-8 shrink-0 rounded object-cover border border-[var(--border)]" loading="lazy" />
+							{#if grp.rep.image_url}
+								<img src={grp.rep.image_url} alt={"Preview for " + grp.rep.title} class="h-8 w-8 shrink-0 rounded object-cover border border-[var(--border)]" loading="lazy" />
 							{/if}
 							<a
-								href={"/posts/" + post.id}
+								href={"/posts/" + grp.rep.id}
 								class="min-w-0 max-w-full flex-1 break-words text-sm font-medium leading-snug text-neutral-900 hover:underline md:truncate"
 							>
-								<span class="text-[var(--text-muted)]">{formatScheduledAt(post.scheduled_at)}</span>
+								<span class="text-[var(--text-muted)]">{formatScheduledAt(grp.rep.scheduled_at)}</span>
 								<span class="text-[var(--text-muted)]"> · </span>
-								<span>{post.title}</span>
+								<span>{grp.rep.title}</span>
 							</a>
-							{#if !post.has_output_webhook}
+							{#if grp.count > 1}
+								<a href="/posts?scheduled=yes" class="shrink-0 rounded-full bg-[var(--primary)] px-2 py-0.5 text-xs font-bold text-white hover:opacity-90" title="{grp.count} posts at this time">+{grp.count - 1} more</a>
+							{/if}
+							{#if !grp.rep.has_output_webhook}
 								<span class={calendarNoOutputPillClass} role="status">No output webhook</span>
 							{/if}
-							{#if post.has_output_webhook}
+							{#if grp.rep.has_output_webhook}
 								<button
 									type="button"
 									class="shrink-0 rounded px-2 py-1 text-xs font-medium text-[var(--primary)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
-									disabled={sendingId === post.id}
-									onclick={(e) => sendNow(post.id, e)}
+									disabled={sendingId === grp.rep.id}
+									onclick={(e) => sendNow(grp.rep.id, e)}
 								>
-									{sendingId === post.id ? '…' : 'Send'}
+									{sendingId === grp.rep.id ? '…' : 'Send'}
 								</button>
 							{/if}
 						</div>
@@ -1455,22 +1497,27 @@
 						{/each}
 					</div>
 					<div class="grid grid-cols-7 gap-1">
-						{#each scheduleMiniMonthGrids?.get(monthDate.getMonth()) ?? [] as cell}
-							{@const dayPosts = postsForDay(cell.date)}
-							<div class="relative h-8 rounded bg-[var(--bg)]/60 px-1 pt-1 {cell.inMonth ? '' : 'opacity-35'} {isToday(cell.date) ? 'calendar-today' : ''}">
-								<div class="text-[10px] leading-none text-[var(--text-muted)]">{cell.date.getDate()}</div>
-								<div class="mt-0.5 flex flex-wrap gap-0.5">
-									{#each dayPosts as post (post.id)}
-										<a
-											href={"/posts/" + post.id}
-											class="h-1.5 w-1.5 rounded-full {!post.has_output_webhook ? 'ring-1 ring-amber-500' : ''}"
-											style={`background-color: ${darkenMarkerColor(post.color)};`}
-											title={`${post.title} • ${formatScheduledAt(post.scheduled_at, { hour: '2-digit', minute: '2-digit' })}${!post.has_output_webhook ? ' • No output webhook' : ''}`}
-										></a>
-									{/each}
-								</div>
+					{#each scheduleMiniMonthGrids?.get(monthDate.getMonth()) ?? [] as cell}
+						{@const dayPosts = postsForDay(cell.date)}
+						{@const dotsToShow = dayPosts.slice(0, 5)}
+						{@const extraDots = dayPosts.length - dotsToShow.length}
+						<div class="relative h-8 rounded bg-[var(--bg)]/60 px-1 pt-1 {cell.inMonth ? '' : 'opacity-35'} {isToday(cell.date) ? 'calendar-today' : ''}">
+							<div class="text-[10px] leading-none text-[var(--text-muted)]">{cell.date.getDate()}</div>
+							<div class="mt-0.5 flex flex-wrap items-center gap-0.5">
+								{#each dotsToShow as post (post.id)}
+									<a
+										href={"/posts/" + post.id}
+										class="h-1.5 w-1.5 rounded-full {!post.has_output_webhook ? 'ring-1 ring-amber-500' : ''}"
+										style={`background-color: ${darkenMarkerColor(post.color)};`}
+										title={`${post.title} • ${formatScheduledAt(post.scheduled_at, { hour: '2-digit', minute: '2-digit' })}${!post.has_output_webhook ? ' • No output webhook' : ''}`}
+									></a>
+								{/each}
+								{#if extraDots > 0}
+									<a href="/posts?scheduled=yes" class="text-[8px] font-bold leading-none text-[var(--primary)] hover:underline" title="{dayPosts.length} posts this day">+{extraDots}</a>
+								{/if}
 							</div>
-						{/each}
+						</div>
+					{/each}
 					</div>
 				</div>
 			{/each}
