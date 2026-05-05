@@ -12,6 +12,7 @@ import {
 	E2E_RESET_USER_PASSWORD,
 	PLAYWRIGHT_AUTH_SECRET
 } from './playwright-test-env.js';
+import { buildLoadUserPool, LOAD_TEST_USER_PASSWORD } from './load/load-test-env.js';
 
 function rmDbArtifacts(base: string): void {
 	for (const suf of ['', '-wal', '-shm']) {
@@ -58,5 +59,27 @@ export default async function globalSetup(): Promise<void> {
 		`INSERT INTO user (id, email, email_verified_at, password_hash, tier, callback_token)
      VALUES (?, ?, datetime('now'), ?, 'free', 'e2e-reset-callback')`
 	).run(E2E_RESET_USER_ID, E2E_RESET_USER_EMAIL, resetHash);
+
+	const seedCount = Number.parseInt(process.env.LOAD_TEST_SEED_USERS ?? '0', 10);
+	if (Number.isFinite(seedCount) && seedCount > 0) {
+		const pool = buildLoadUserPool(seedCount);
+		const loadHash = hashPasswordForTest(LOAD_TEST_USER_PASSWORD);
+		const insertUser = db.prepare(
+			`INSERT INTO user (id, email, email_verified_at, password_hash, tier, callback_token)
+       VALUES (?, ?, datetime('now'), ?, ?, ?)`
+		);
+		const insertWh = db.prepare(
+			'INSERT INTO webhook_config (id, account_id, name, url) VALUES (?, ?, ?, ?)'
+		);
+		const tx = db.transaction((users: typeof pool) => {
+			for (const u of users) {
+				db.prepare('DELETE FROM webhook_config WHERE account_id = ?').run(u.id);
+				db.prepare('DELETE FROM user WHERE id = ? OR email = ?').run(u.id, u.email);
+				insertUser.run(u.id, u.email, loadHash, u.tier, `${u.id}-cb`);
+				insertWh.run(randomUUID(), u.id, 'Load Webhook', 'https://example.com/load-webhook');
+			}
+		});
+		tx(pool);
+	}
 	closeDatabaseForTesting();
 }

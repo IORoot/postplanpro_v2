@@ -16,5 +16,5 @@ export const load: PageServerLoad = async (event) => {
 	if (!isVitest && !isTestUrl) {
 		throw redirect(302, '/outputs/webhooks');
 	}
-	return loadWebhooksPageData(event.locals);
+	return loadWebhooksPageData(event.locals, event.url);
 };

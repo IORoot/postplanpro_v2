@@ -4,7 +4,7 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { loadWebhooksPageData } from './loadWebhooksPageData.js';
 
-export const load: PageServerLoad = async ({ locals }) => loadWebhooksPageData(locals);
+export const load: PageServerLoad = async ({ locals, url }) => loadWebhooksPageData(locals, url);
 
 export const actions: Actions = {
 	createWebhook: async ({ request, locals }) => {

@@ -5,12 +5,23 @@ import {
 	readSenderSettingsForAdmin,
 	upsertSenderSettings
 } from '$lib/server/senderSettings.js';
+import {
+	clearLoadTestSettingsOverrides,
+	parseScenarioMix,
+	readLoadTestSettingsForAdmin,
+	upsertLoadTestSettings,
+	LOAD_TEST_LIMITS
+} from '$lib/server/loadTestSettings.js';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
 	requireAdmin(event);
-	return { cronDaemon: getCronDaemonStatus(), senderSettings: readSenderSettingsForAdmin() };
+	return {
+		cronDaemon: getCronDaemonStatus(),
+		senderSettings: readSenderSettingsForAdmin(),
+		loadTestSettings: readLoadTestSettingsForAdmin()
+	};
 };
 
 export const actions: Actions = {
@@ -36,5 +47,35 @@ export const actions: Actions = {
 		requireAdmin(event);
 		clearSenderSettingsOverrides();
 		return { senderSettingsCleared: true as const };
+	},
+	saveLoadTestSettings: async (event) => {
+		requireAdmin(event);
+		const data = await event.request.formData();
+		const allowProdLoadTest = String(data.get('allowProdLoadTest') ?? '') === 'on';
+		const uiUsers = Number.parseInt(String(data.get('uiUsers') ?? ''), 10);
+		const scenarioMixRaw = String(data.get('scenarioMix') ?? '').trim();
+		if (
+			!Number.isFinite(uiUsers) ||
+			uiUsers < LOAD_TEST_LIMITS.uiUsersMin ||
+			uiUsers > LOAD_TEST_LIMITS.uiUsersMax
+		) {
+			return fail(400, {
+				error: `UI users must be between ${LOAD_TEST_LIMITS.uiUsersMin} and ${LOAD_TEST_LIMITS.uiUsersMax}.`
+			});
+		}
+		const scenarioMix = parseScenarioMix(scenarioMixRaw);
+		if (!scenarioMix) {
+			return fail(400, {
+				error:
+					'Scenario mix must be JSON like [{"name":"browse_calendar","weight":30}] with positive numeric weights.'
+			});
+		}
+		upsertLoadTestSettings({ allowProdLoadTest, uiUsers, scenarioMix });
+		return { loadTestSettingsSaved: true as const };
+	},
+	clearLoadTestSettings: async (event) => {
+		requireAdmin(event);
+		clearLoadTestSettingsOverrides();
+		return { loadTestSettingsCleared: true as const };
 	}
 };

@@ -1,0 +1,19 @@
+# Multi-user load suite dependency manifest
+#
+# Format
+#   <kind>:<package>
+# Kind is one of:
+#   apt          installed via `apt-get install -y`
+#   k6           k6 binary installed via the official Grafana apt repo
+#   marker       state file we manage so cleanup is idempotent
+#
+# Edit with care - install/cleanup scripts read this file.
+
+apt:python3
+apt:curl
+apt:ca-certificates
+apt:gnupg
+apt:jq
+apt:tar
+k6:k6
+marker:/var/lib/postplanpro-load-deps.installed

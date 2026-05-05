@@ -1,0 +1,21 @@
+services:
+  k6:
+    image: grafana/k6:latest
+    working_dir: /work
+    volumes:
+      - ../../:/work
+    environment:
+      ALLOW_PROD_LOAD_TEST: ${ALLOW_PROD_LOAD_TEST:-1}
+      FORCE_PROD_LOAD_TEST: ${FORCE_PROD_LOAD_TEST:-0}
+      LOAD_TEST_RUN_ID: ${LOAD_TEST_RUN_ID:-}
+      BASE_URL: ${BASE_URL:-}
+      TARGET_URL: ${TARGET_URL:-}
+      LISTENER_TOKEN: ${LISTENER_TOKEN:-}
+      VUS: ${VUS:-1000}
+      DURATION: ${DURATION:-2m}
+      USERS: ${USERS:-1000}
+      POSTS_PER_USER: ${POSTS_PER_USER:-5}
+      RUN_TO_COMPLETION: ${RUN_TO_COMPLETION:-1}
+      MAX_DURATION: ${MAX_DURATION:-20m}
+    # default command; override in `docker compose run`
+    command: ["run", "scripts/load/k6-multi-user-ui.js"]

@@ -31,6 +31,10 @@ RUN apt-get update \
 COPY package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/build ./build
+# Include load-test tooling and DB source modules used by tsx runtime scripts.
+# Without these, `npm run load:*` fails in the slim runtime image.
+COPY --from=builder /app/scripts/load ./scripts/load
+COPY --from=builder /app/src/lib/db ./src/lib/db
 
 RUN npm rebuild better-sqlite3
 
