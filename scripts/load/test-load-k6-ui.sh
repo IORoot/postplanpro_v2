@@ -10,6 +10,7 @@ DURATION="${DURATION:-2m}"
 
 cd "${REPO_ROOT}"
 mkdir -p "loadtest_results/${RUN_ID}"
+chmod 0777 "loadtest_results/${RUN_ID}" || true
 
 ALLOW_PROD_LOAD_TEST=1 \
 FORCE_PROD_LOAD_TEST=1 \
@@ -17,7 +18,9 @@ LOAD_TEST_RUN_ID="${RUN_ID}" \
 BASE_URL="${BASE_URL}" \
 VUS="${VUS}" \
 DURATION="${DURATION}" \
-docker compose -f scripts/load/docker-compose.k6.yml run --rm k6 \
+docker compose -f scripts/load/docker-compose.k6.yml run --rm \
+  --user "$(id -u):$(id -g)" \
+  k6 \
   run scripts/load/k6-multi-user-ui.js \
   -e ALLOW_PROD_LOAD_TEST=1 \
   -e FORCE_PROD_LOAD_TEST=1 \

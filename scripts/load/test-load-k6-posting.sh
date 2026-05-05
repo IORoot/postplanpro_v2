@@ -13,6 +13,7 @@ MAX_DURATION="${MAX_DURATION:-20m}"
 
 cd "${REPO_ROOT}"
 mkdir -p "loadtest_results/${RUN_ID}"
+chmod 0777 "loadtest_results/${RUN_ID}" || true
 
 ALLOW_PROD_LOAD_TEST=1 \
 FORCE_PROD_LOAD_TEST=1 \
@@ -24,7 +25,9 @@ POSTS_PER_USER="${POSTS_PER_USER}" \
 VUS="${VUS}" \
 RUN_TO_COMPLETION="${RUN_TO_COMPLETION}" \
 MAX_DURATION="${MAX_DURATION}" \
-docker compose -f scripts/load/docker-compose.k6.yml run --rm k6 \
+docker compose -f scripts/load/docker-compose.k6.yml run --rm \
+  --user "$(id -u):$(id -g)" \
+  k6 \
   run scripts/load/k6-multi-user-posting.js \
   -e ALLOW_PROD_LOAD_TEST=1 \
   -e FORCE_PROD_LOAD_TEST=1 \

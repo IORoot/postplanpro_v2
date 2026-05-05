@@ -31,7 +31,7 @@ export default defineConfig({
 	},
 	projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 	webServer: {
-		command: `bun run dev -- --port ${port}`,
+		command: `npm run dev -- --port ${port}`,
 		url: baseURL,
 		// Must spawn with webServer.env so E2E DB + AUTH_SECRET match globalSetup.
 		reuseExistingServer: false,

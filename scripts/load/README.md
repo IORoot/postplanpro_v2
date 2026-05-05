@@ -30,17 +30,19 @@ The Playwright multi-user runner lives next to the rest of the e2e tests at
 
 ## Wired npm scripts
 
-| Script | What it does |
-| --- | --- |
+
+| Script                      | What it does                                                       |
+| --------------------------- | ------------------------------------------------------------------ |
 | `npm run load:install-deps` | Install apt + k6 deps from the manifest. Use `-- --dry-run` first. |
-| `npm run load:cleanup-deps` | Reverse the install. Requires `-- --confirm-destroy`. |
-| `npm run load:listener` | Start the receiver listener. Defaults to port 4000. |
-| `npm run load:seed` | Insert tagged users/posts into the app DB. |
-| `npm run load:cleanup` | Delete only tagged rows by `--run-id` or `--all`. |
-| `npm run load:ui:pw` | Run the Playwright multi-user UI suite. |
-| `npm run load:ui:k6` | Run the k6 high-scale UI script. |
-| `npm run load:posting:k6` | Run the k6 multi-user posting script. |
-| `npm run load:summary` | Aggregate run artifacts into `summary.json` + `summary.md`. |
+| `npm run load:cleanup-deps` | Reverse the install. Requires `-- --confirm-destroy`.              |
+| `npm run load:listener`     | Start the receiver listener. Defaults to port 4000.                |
+| `npm run load:seed`         | Insert tagged users/posts into the app DB.                         |
+| `npm run load:cleanup`      | Delete only tagged rows by `--run-id` or `--all`.                  |
+| `npm run load:ui:pw`        | Run the Playwright multi-user UI suite.                            |
+| `npm run load:ui:k6`        | Run the k6 high-scale UI script.                                   |
+| `npm run load:posting:k6`   | Run the k6 multi-user posting script.                              |
+| `npm run load:summary`      | Aggregate run artifacts into `summary.json` + `summary.md`.        |
+
 
 ## Container-first production setup
 
@@ -79,7 +81,7 @@ export RUN_ID="$(date -u +loadtest-%Y%m%dT%H%M%SZ-multi)"
 export APP_HOST="147.182.254.224"
 export LISTENER_HOST="188.166.156.198"
 export LISTENER_PORT="4000"
-export LISTENER_TOKEN="CHANGE_ME_STRONG_TOKEN"
+export LISTENER_TOKEN="dG9rZW4xMjMK"
 export TARGET_URL="http://${LISTENER_HOST}:${LISTENER_PORT}/webhook"
 export BASE_URL="https://postplanpro.com"
 ```
@@ -162,6 +164,17 @@ curl -fsS "http://127.0.0.1:${LISTENER_PORT}/healthz"
 curl -fsS "http://127.0.0.1:${LISTENER_PORT}/metrics" | head -n 20
 ```
 
+Token/auth preflight from runner:
+
+```bash
+curl -i -X POST "${TARGET_URL}" \
+  -H "content-type: application/json" \
+  -H "x-load-test-token: ${LISTENER_TOKEN}" \
+  --data '{"load_test_run_id":"manual-check","load_test_sequence":1,"sent_at":"2026-01-01T00:00:00Z"}'
+```
+
+Expected: `HTTP/1.1 200`. If `401`, token mismatch.
+
 Stop background listener:
 
 ```bash
@@ -202,17 +215,11 @@ docker exec \
 ### 4) Run k6 posting test (separate k6 container)
 
 ```bash
-ALLOW_PROD_LOAD_TEST=1 \
-FORCE_PROD_LOAD_TEST=1 \
-LOAD_TEST_RUN_ID="$RUN_ID" \
-TARGET_URL="$TARGET_URL" \
-LISTENER_TOKEN="$LISTENER_TOKEN" \
-USERS=1000 \
-POSTS_PER_USER=5 \
-VUS=500 \
-RUN_TO_COMPLETION=1 \
-MAX_DURATION=20m \
-docker compose -f scripts/load/docker-compose.k6.yml run --rm k6 \
+mkdir -p "loadtest_results/${RUN_ID}"
+chmod 0777 "loadtest_results/${RUN_ID}" || true
+docker compose -f scripts/load/docker-compose.k6.yml run --rm \
+  --user "$(id -u):$(id -g)" \
+  k6 \
   run scripts/load/k6-multi-user-posting.js \
   -e ALLOW_PROD_LOAD_TEST=1 \
   -e FORCE_PROD_LOAD_TEST=1 \
@@ -239,19 +246,17 @@ docker exec \
   -e PLAYWRIGHT_BASE_URL="$BASE_URL" \
   -e LOAD_TEST_RUN_ID="$RUN_ID" \
   "$APP_C" \
-  npm run test:e2e
+  npm run load:ui:pw -- tests/e2e/load/multi-user-ui.spec.ts
 ```
 
 ### 6) Run k6 high-scale UI test (separate k6 container)
 
 ```bash
-ALLOW_PROD_LOAD_TEST=1 \
-FORCE_PROD_LOAD_TEST=1 \
-LOAD_TEST_RUN_ID="$RUN_ID" \
-BASE_URL="$BASE_URL" \
-VUS=5000 \
-DURATION=2m \
-docker compose -f scripts/load/docker-compose.k6.yml run --rm k6 \
+mkdir -p "loadtest_results/${RUN_ID}"
+chmod 0777 "loadtest_results/${RUN_ID}" || true
+docker compose -f scripts/load/docker-compose.k6.yml run --rm \
+  --user "$(id -u):$(id -g)" \
+  k6 \
   run scripts/load/k6-multi-user-ui.js \
   -e ALLOW_PROD_LOAD_TEST=1 \
   -e FORCE_PROD_LOAD_TEST=1 \
@@ -337,47 +342,28 @@ The receiver writes per-run artifacts under `<log-dir>/<run_id>/` (see
 ## Recipe: full multi-user round trip
 
 1. On the receiver host:
-
-   ```bash
+  ```bash
    ./scripts/load/listener/load-test-listener-standalone.sh \
      --port 4000 --auth-token CHANGEME \
      --log-dir /var/log/postplanpro-load
-   ```
+  ```
+2. On runner side:
+  ```bash
+  export RUN_ID=$(date -u +loadtest-%Y%m%dT%H%M%SZ-multi)
+  export TARGET_URL=http://188.166.156.198:4000/webhook
+  export LISTENER_TOKEN=dG9rZW4xMjMK
+  export BASE_URL=https://postplanpro.com
 
-2. On runner side (inside app container for npm/node steps; staging by default
-   — switch to prod only with guardrail flags):
-
-   ```bash
-   export RUN_ID=$(date -u +loadtest-%Y%m%dT%H%M%SZ-multi)
-   export TARGET_URL=http://<receiver>:4000/webhook
-   export LISTENER_TOKEN=CHANGEME
-   export BASE_URL=https://staging.postplanpro.com
-   export LOAD_TEST_RUN_ID=$RUN_ID
-
-   docker exec -e ALLOW_PROD_LOAD_TEST=1 -e FORCE_PROD_LOAD_TEST=1 \
-     -e LOAD_TEST_RUN_ID=$RUN_ID "$APP_C" \
-     npm run load:seed -- \
-     --users 1000 --posts-per-user 5 --target $TARGET_URL --run-id $RUN_ID
-
-   docker exec -e ALLOW_PROD_LOAD_TEST=1 -e FORCE_PROD_LOAD_TEST=1 \
-     -e LOAD_TEST_RUN_ID=$RUN_ID "$APP_C" \
-     npm run load:posting:k6 -- \
-     -e TARGET_URL=$TARGET_URL -e LISTENER_TOKEN=$LISTENER_TOKEN \
-     -e USERS=1000 -e POSTS_PER_USER=5 -e VUS=500 \
-     -e LOAD_TEST_RUN_ID=$RUN_ID
-
-   docker exec -e PLAYWRIGHT_LOAD_MODE=1 -e LOAD_TEST_SEED_USERS=10 -e UI_USERS=10 \
-     -e LOAD_TEST_RUN_ID=$RUN_ID "$APP_C" npm run test:e2e
-
-   docker exec -e LOAD_TEST_RUN_ID=$RUN_ID "$APP_C" npm run load:summary -- --run-id $RUN_ID
-   docker exec -e LOAD_TEST_RUN_ID=$RUN_ID "$APP_C" npm run load:cleanup -- --run-id $RUN_ID
-   ```
-
+  ./scripts/load/test-load-seed.sh
+  ./scripts/load/test-load-k6-posting.sh
+  ./scripts/load/test-load-ui-pw.sh
+  ./scripts/load/test-load-k6-ui.sh
+  ./scripts/load/test-load-summary.sh
+  ```
 3. Inspect:
-
-   ```bash
-   cat loadtest_results/$RUN_ID/summary.md
-   ```
+  ```bash
+  cat loadtest_results/$RUN_ID/summary.md
+  ```
 
 ## Recipe: UI realism only (Playwright)
 
@@ -387,7 +373,7 @@ docker exec \
   -e LOAD_TEST_SEED_USERS=50 \
   -e UI_USERS=50 \
   -e PLAYWRIGHT_LOAD_WORKERS=8 \
-  "$APP_C" npm run test:e2e
+  "$APP_C" npm run load:ui:pw -- tests/e2e/load/multi-user-ui.spec.ts
 ```
 
 `SCENARIO_MIX` and `UI_USERS` are also editable in the admin "Multi-user load
@@ -399,13 +385,11 @@ values to mirror the admin DB.
 Preferred (dedicated k6 container via compose file):
 
 ```bash
-ALLOW_PROD_LOAD_TEST=1 \
-FORCE_PROD_LOAD_TEST=1 \
-LOAD_TEST_RUN_ID="$RUN_ID" \
-BASE_URL=https://staging.postplanpro.com \
-VUS=5000 \
-DURATION=2m \
-docker compose -f scripts/load/docker-compose.k6.yml run --rm k6 \
+mkdir -p "loadtest_results/${RUN_ID}"
+chmod 0777 "loadtest_results/${RUN_ID}" || true
+docker compose -f scripts/load/docker-compose.k6.yml run --rm \
+  --user "$(id -u):$(id -g)" \
+  k6 \
   run scripts/load/k6-multi-user-ui.js \
   -e ALLOW_PROD_LOAD_TEST=1 \
   -e FORCE_PROD_LOAD_TEST=1 \
@@ -431,8 +415,8 @@ splitting across two runner hosts.
 - Ctrl+C the foreground load runner.
 - Send `SIGTERM` to the listener; it flushes a final rollup before exit.
 - If a seed left posts in the app DB you don't want fired, run
-  `npm run load:cleanup -- --run-id <id>` immediately. The cleanup is
-  transactional and removes only tagged data.
+`npm run load:cleanup -- --run-id <id>` immediately. The cleanup is
+transactional and removes only tagged data.
 
 ## Suggested wider tests
 
@@ -440,23 +424,25 @@ The plan also covers these "wise extras" you can mix in by combining the
 existing scripts:
 
 - Burst login storm: `k6-multi-user-ui.js` with `VUS=2000 DURATION=1m` and no
-  `SESSION_COOKIE` so all VUs hit `/auth/login`.
+`SESSION_COOKIE` so all VUs hit `/auth/login`.
 - Read-while-send: run `load:posting:k6` and `load:ui:k6` simultaneously
-  against the same `RUN_ID`.
+against the same `RUN_ID`.
 - Callback flood: re-use `load:posting:k6` pointed at the app's callback URL
-  rather than the listener (configure via `TARGET_URL`).
+rather than the listener (configure via `TARGET_URL`).
 - Failure spike: use a flaky listener (kill mid-run) and verify the app's retry
-  counters in `/reports`.
+counters in `/reports`.
 
 ## Thresholds
 
 `load:summary` evaluates four thresholds (overridable via env):
 
-| Env | Default | Meaning |
-| --- | --- | --- |
-| `ERROR_RATE_MAX` | 0.05 | Max combined error rate across UI + posting. |
-| `UI_LATENCY_P95_MS_MAX` | 2000 | UI p95 latency ceiling. |
-| `POST_LATENCY_P95_MS_MAX` | 2000 | Posting p95 latency ceiling. |
-| `POST_THROUGHPUT_MIN_RPS` | 100 | Min listener peak rps. |
+
+| Env                       | Default | Meaning                                      |
+| ------------------------- | ------- | -------------------------------------------- |
+| `ERROR_RATE_MAX`          | 0.05    | Max combined error rate across UI + posting. |
+| `UI_LATENCY_P95_MS_MAX`   | 2000    | UI p95 latency ceiling.                      |
+| `POST_LATENCY_P95_MS_MAX` | 2000    | Posting p95 latency ceiling.                 |
+| `POST_THROUGHPUT_MIN_RPS` | 100     | Min listener peak rps.                       |
+
 
 Exit code is non-zero when any threshold fails, so this script can gate CI.

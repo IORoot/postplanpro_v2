@@ -18,5 +18,5 @@ docker exec \
   -e PLAYWRIGHT_BASE_URL="${BASE_URL}" \
   -e LOAD_TEST_RUN_ID="${RUN_ID}" \
   "${APP_C}" \
-  npm run test:e2e \
+  npm run load:ui:pw -- tests/e2e/load/multi-user-ui.spec.ts \
   "$@"
