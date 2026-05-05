@@ -20,7 +20,6 @@ require_cmd() {
 }
 
 require_cmd docker
-require_cmd npm
 
 echo "APP_C=${APP_C}"
 echo "RUN_ID=${RUN_ID}"

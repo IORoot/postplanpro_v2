@@ -2,6 +2,8 @@
 set -euo pipefail
 
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)/test-load-common.sh"
+command -v docker >/dev/null 2>&1 || { echo "Missing command: docker" >&2; exit 1; }
+docker compose version >/dev/null 2>&1 || { echo "Missing command: docker compose" >&2; exit 1; }
 
 USERS="${USERS:-1000}"
 POSTS_PER_USER="${POSTS_PER_USER:-5}"
