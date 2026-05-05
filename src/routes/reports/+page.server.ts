@@ -126,13 +126,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		statsChartNextMonth = shiftYearMonth(statsChartMonth, 1);
 	}
 
-	const logsPageSize = 20;
+	let logsPageSize: PageSize = 20;
 	let logsPage = 1;
 	let logsTotal = 0;
 	let logsTotalPages = 1;
 	const reports =
 		reportType === 'logs'
 			? (() => {
+					logsPageSize = parsePageSize(url.searchParams.get('pageSize'));
 					logsPage = parsePositiveInt(url.searchParams.get('page'), 1);
 					const countRow = db
 						.prepare('SELECT COUNT(*) as count FROM send_log WHERE account_id = ?')

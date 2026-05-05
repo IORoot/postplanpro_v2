@@ -348,6 +348,22 @@
 					{/if}
 				{/snippet}
 			</PageSectionHeading>
+			<form method="GET" action="/reports" class="mb-4 flex flex-wrap items-center gap-2">
+				<input type="hidden" name="report" value="logs" />
+				<select name="pageSize" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] min-h-[44px] shadow-sm">
+					<option value="20" selected={(data.logsPageSize ?? 20) === 20}>20 per page</option>
+					<option value="50" selected={(data.logsPageSize ?? 20) === 50}>50 per page</option>
+					<option value="100" selected={(data.logsPageSize ?? 20) === 100}>100 per page</option>
+					<option value="200" selected={(data.logsPageSize ?? 20) === 200}>200 per page</option>
+				</select>
+				<input type="hidden" name="page" value="1" />
+				<button type="submit" class="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] min-h-[44px] shadow-sm">Apply</button>
+				{#if (data.logsTotal ?? 0) > 0}
+					<p class="text-xs text-[var(--text-muted)]">
+						Showing {(((data.logsPage ?? 1) - 1) * (data.logsPageSize ?? 20) + 1).toLocaleString()}-{Math.min((data.logsPage ?? 1) * (data.logsPageSize ?? 20), data.logsTotal ?? 0).toLocaleString()} of {(data.logsTotal ?? 0).toLocaleString()}
+					</p>
+				{/if}
+			</form>
 
 			{#if data.reports.length === 0}
 				<EmptyState title="No send history yet">
@@ -424,7 +440,7 @@
 						</p>
 						<div class="flex items-center gap-2">
 							<a
-								href={`/reports?report=logs&page=${Math.max(1, (data.logsPage ?? 1) - 1)}`}
+								href={`/reports?report=logs&page=${Math.max(1, (data.logsPage ?? 1) - 1)}&pageSize=${data.logsPageSize ?? 20}`}
 								aria-disabled={(data.logsPage ?? 1) <= 1}
 								class="inline-flex min-h-[36px] items-center rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium transition-colors {(data.logsPage ?? 1) <= 1
 									? 'pointer-events-none cursor-not-allowed opacity-50'
@@ -433,7 +449,7 @@
 								← Prev
 							</a>
 							<a
-								href={`/reports?report=logs&page=${Math.min((data.logsTotalPages ?? 1), (data.logsPage ?? 1) + 1)}`}
+								href={`/reports?report=logs&page=${Math.min((data.logsTotalPages ?? 1), (data.logsPage ?? 1) + 1)}&pageSize=${data.logsPageSize ?? 20}`}
 								aria-disabled={(data.logsPage ?? 1) >= (data.logsTotalPages ?? 1)}
 								class="inline-flex min-h-[36px] items-center rounded-md border border-[var(--border)] px-3 py-1.5 text-sm font-medium transition-colors {(data.logsPage ?? 1) >= (data.logsTotalPages ?? 1)
 									? 'pointer-events-none cursor-not-allowed opacity-50'
